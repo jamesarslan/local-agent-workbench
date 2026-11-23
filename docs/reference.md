@@ -1,6 +1,6 @@
 # Reference
 
-This page lists every command-line verb and flag, every environment variable Agent Workbench reads, the engines, the ports, how to repeat the measurements, and the upstream projects.
+This page lists every command-line verb and flag, every environment variable Agent Workbench reads, the engines, the files you can read and commit, the ports, how to repeat the measurements, and the upstream projects.
 
 ## Command line
 
@@ -97,6 +97,17 @@ A Custom engine is a JSON file with an `argv` list. Choose it under **Custom eng
 Workbench replaces `{model}` with the model file, `{context}` with the context size, `{alias}` with `local-agent`, `{host}` with `127.0.0.1`, `{port}` with the local model port and `{keyfile}` with the path of `api-key.txt`, starts the program, and waits until `GET /v1/models` lists `local-agent`. The engine gets the loopback address and the key only when your manifest uses `{host}` and `{keyfile}`. On Windows, name the engine's `.exe`, not a `.cmd` or `.bat` wrapper.
 
 The **Matched Qwen LoRA** toggle loads the LoRA adapter for Pi that comes with the Qwen3.8-27B UD-Q4_K_XL catalog entry. It runs on llama.cpp; there is no separate engine for it. For 32 GB NVIDIA cards the catalog lists the 128K profile with the adapter as the second choice, for long inputs and for Pi ([Model sources](model-sources.md#recommended-models)).
+
+## Files you can read and commit
+
+Workbench keeps these files in plain JSON. You can read them without Workbench, and none of them holds a key. Paths marked "data folder" are inside the data folder ([Security and your data](security-and-data.md#where-workbench-keeps-data)).
+
+| File | Where | What it holds |
+| --- | --- | --- |
+| `.agent-workbench/profiles.json` | The project folder | Named profiles: an object from each profile name to its settings ([Project setup](project-setup.md#what-is-remembered)). From the next release, one profile can carry `"default": true`, which makes it the folder default ([Settings that travel with the folder](project-setup.md#settings-that-travel-with-the-folder)). Safe to commit |
+| `.agent-workbench/project.json` | The project folder | The project's MCP servers, with variable names instead of values ([MCP servers](project-setup.md#mcp-servers)). Safe to commit |
+| `runs/<id>.json` | The data folder | From the next release: one run record per agent launch ([Run summaries](sessions.md#run-summaries)). It stays on this computer |
+| `projects.json` | The data folder | The last choices for each folder and your consent answers. It stays on this computer |
 
 ## Ports
 
