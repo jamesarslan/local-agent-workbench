@@ -27,10 +27,10 @@ Every key below is required. Any other key is an error.
 | `label` | Shown in the kit list, at most 60 characters |
 | `summary` | One sentence, at most 200 characters |
 | `works_with` | Product names, at most 120 characters; may be empty |
-| `version` | Three numbers, for example `0.4.0` |
+| `version` | Three numbers, for example `0.5.0`. Raise it when the kit's own files change |
 | `priority` | 0 to 100; decides between kits that both match a folder strongly |
 | `detect` | `{"strong": [rule], "weak": [rule]}`, at most 24 rules in each list |
-| `skills` | At most 5 entries `{"name": "workbench-…", "when": rule}`; `when` is optional |
+| `skills` | At most 6 entries `{"name": "workbench-…", "when": rule}`; `when` is optional |
 | `mcp` | At most 12 server entries; may be empty |
 
 ## Server entries
@@ -46,7 +46,7 @@ A server entry describes one MCP server the kit offers. The launch fields follow
 | `version` | The pinned version, at most 40 characters; `hosted` for a remote service |
 | `checked` | `registry` or `launched`, see below |
 | `transport` | `stdio` or `http` |
-| `command`, `args` | For `stdio`: a program name found on PATH (`npx`, `uvx`, `docker`) and its arguments, with the version pinned |
+| `command`, `args` | For `stdio`: a program name found on PATH (`npx`, `uvx`, `docker`) and its arguments, with the version pinned. Leave both out when `platforms` gives a command per system |
 | `env` | For `stdio`: fixed, non-secret environment values |
 | `env_from` | For `stdio`: names of environment variables whose values you supply; the values never enter a project file |
 | `url` | For `http`: an `https://` address, or `http://` on this computer only |
@@ -56,14 +56,16 @@ A server entry describes one MCP server the kit offers. The launch fields follow
 | `when` | Optional rule; a `default` entry is preselected only when the rule matches the folder |
 | `network` | What the server contacts, at most 200 characters |
 | `warning` | What you should know before switching it on, at most 200 characters; may be empty |
-| `platforms` | Optional subset of `darwin`, `linux`, `win32`; the entry is hidden elsewhere |
+| `platforms` | Optional. A list, a subset of `darwin`, `linux`, `win32`: the entry is hidden elsewhere. Or an object that maps some of those systems to `{"command": …, "args": […]}` for a program each system installs in its own place; the command may then be a full path, and a path may start with `~/`, `%LOCALAPPDATA%`, `%APPDATA%` or `%USERPROFILE%`. An object entry is listed on every system, and on one it does not name it is off and says where it runs |
+| `installed` | Optional: `{"app": "Roblox Studio", "darwin": path, "win32": path}`, the file that shows the application is installed on each system. A `default` entry is preselected only when that path is a file on this computer; otherwise the preview says "Install Roblox Studio to use this." The path follows the same rules as a command in `platforms`, and only the variables named there are expanded, without a shell |
+| `runs_code` | Optional `true` when the server can run code the agent writes; the preview marks it |
 
 `checked` says how far an entry was verified, and the app shows it:
 
 - `registry`: version, licence and program name were read from the package registry and the publisher's documentation. The server was not started.
 - `launched`: the server was started and listed its tools.
 
-Every server in the kits shipped here is marked `registry`. None of them was started while these kits were prepared.
+Every server in the kits shipped here is marked `registry` except Roblox Studio MCP. None of the `registry` servers was started while these kits were prepared. Roblox Studio MCP is marked `launched`: it ships inside Roblox Studio, and it was started from an installed Roblox Studio and listed its tools.
 
 A built-in tool of Agent Workbench is offered with a shorter entry. Selecting it switches that tool on for the folder instead of writing a server:
 
@@ -76,7 +78,21 @@ A built-in tool of Agent Workbench is offered with a shorter entry. Selecting it
 
 The same server may appear in several kits. Its launch fields must then be identical in each.
 
-Servers are not bundled. A selected server is downloaded from its publisher by `npx`, `uvx` or `docker` the first time an agent starts it, under the publisher's own licence.
+Servers are not bundled. A selected server is downloaded from its publisher by `npx`, `uvx` or `docker` the first time an agent starts it, under the publisher's own licence. Roblox Studio MCP is the exception: it is part of Roblox Studio, under the Roblox Terms of Use, and Workbench starts the program Studio installed.
+
+The Game development kit's Roblox entry shows the per-system form:
+
+```json
+{"name": "roblox-studio", "transport": "stdio",
+ "platforms": {"darwin": {"command": "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP"},
+               "win32": {"command": "cmd.exe", "args": ["/c", "%LOCALAPPDATA%\\Roblox\\mcp.bat"]}},
+ "installed": {"app": "Roblox Studio",
+               "darwin": "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP",
+               "win32": "%LOCALAPPDATA%\\Roblox\\mcp.bat"},
+ "default": true, "runs_code": true, "…": "…"}
+```
+
+These are the commands Roblox documents. The selected entry is written to `.agent-workbench/project.json` with every system's command, so the folder works on a Mac and on Windows. `%LOCALAPPDATA%` stays as written there and is expanded only when Workbench starts a session, so a user folder whose name has a space still works through `cmd.exe /c`.
 
 ## Rules
 

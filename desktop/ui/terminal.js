@@ -88,7 +88,7 @@
 
   function make(row, workspace) {
     const rec = {
-      id: row.id, workspace, title: "", kind: "", harness: "", watch: false, ended: false, closed: false, done: false, stopped: false,
+      id: row.id, workspace, title: "", kind: "", harness: "", run: "", watch: false, ended: false, closed: false, done: false, stopped: false,
       detached: false, offset: 0, idle: 0, timer: null, reading: false, queue: Promise.resolve(), sized: "", opened: false,
       box: el("div", { class: "term-box", hidden: true }), term: null, fit: null,
     };
@@ -104,7 +104,10 @@
   function update(rec, row) {
     rec.title = typeof row.title === "string" && row.title.trim() ? row.title.trim() : "Terminal";
     rec.kind = typeof row.kind === "string" ? row.kind : "";
+    // A remote session without tmux (Windows) cannot be detached; closing it ends it.
+    if (typeof row.lasting === "boolean") rec.lasting = row.lasting;
     rec.harness = typeof row.harness === "string" ? row.harness : "";
+    if (typeof row.run === "string") rec.run = row.run;
     rec.watch = Boolean(row.watch);
     if (row.ended) rec.ended = true;
     rec.detached = false;
@@ -427,7 +430,8 @@
     const close = AW.$("term-close");
     if (rec) close.removeAttribute("aria-disabled");
     else close.setAttribute("aria-disabled", "true");
-    close.textContent = rec && rec.kind === "remote" && live(rec) ? "Detach" : "End";
+    close.textContent = rec && rec.kind === "remote" && rec.lasting !== false && live(rec) ? "Detach" : "End";
+    AW.$("term-run").hidden = !(rec && rec.run);
     AW.$("term-quit-hint").hidden = ![...sessions.values()].some((other) => live(other) && !other.watch);
     dock().classList.toggle("term-empty", !rec);
     info();
@@ -573,9 +577,13 @@
       return true;
     }
     if (live(rec) && !rec.watch) {
-      const remote = rec.kind === "remote";
+      const remote = rec.kind === "remote" && rec.lasting !== false;
       const ok = await AW.ui.confirm({
-        text: remote ? "Detach from this remote session? It keeps running on " + machineOf(rec) + "." : "End this terminal session?",
+        text: remote
+          ? "Detach from this remote session? It keeps running on " + machineOf(rec) + "."
+          : rec.kind === "remote"
+            ? "End this session on " + machineOf(rec) + "? Windows sessions are not kept after they close."
+            : "End this terminal session?",
         ok: remote ? "Detach" : "End",
         danger: !remote,
       });
@@ -610,7 +618,7 @@
         continue;
       }
       const rec = make({ id: row.terminal }, row.workspace);
-      update(rec, { title: row.title, kind: row.kind, harness: row.harness, watch: false, ended: false });
+      update(rec, { title: row.title, kind: row.kind, harness: row.harness, lasting: row.lasting, watch: false, ended: false });
       schedule(rec, 0);
     }
     if (here) refresh();
@@ -767,6 +775,10 @@
     onClick("term-agent", startAgent);
     onClick("term-resume", () => AW.sessions.picker("resume"));
     onClick("term-watch", () => AW.sessions.picker("watch"));
+    onClick("term-run", (button) => {
+      const rec = current();
+      return rec && rec.run ? AW.runs.open({ workspace: rec.workspace, id: rec.run, origin: button }) : null;
+    });
     onClick("term-close", (button) => (button.getAttribute("aria-disabled") === "true" ? false : end(currentId)));
     AW.$("terminal-list").addEventListener("change", (event) => select(event.currentTarget.value));
     wireResize();

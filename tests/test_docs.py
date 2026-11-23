@@ -21,7 +21,7 @@ NOTES = "docs/launch-posts.md"
 # Files written by later documentation packages: a link to one of them may point ahead until it exists.
 PENDING = {"CHANGELOG.md", *GUIDE_FILES}
 
-IMAGES = ("guide-computer", "guide-model", "launch", "project-setup", "overview", "attach", "terminal")
+IMAGES = ("guide-computer", "guide-model", "launch", "project-setup", "overview", "attach", "terminal", "run-summary", "recent-runs", "folder-default", "settings-places", "machines")
 IMAGE_FILES = {f"docs/images/{name}{theme}.png" for name in IMAGES for theme in ("", "-dark")}
 OLD_IMAGES = ("launcher.png", "launcher-light.png", "workbench.png", "project-launch.png", "project-terminal.png", "ssh-machine.png")
 IMAGE_BUDGET = 400 * 1024
@@ -64,29 +64,28 @@ CHECKS = {
 MAC_GATE = ("unit-tests", "desktop-smoke", "ci", "install-script", "install-manual", "first-start", "engine-install", "model-serve", "agent-window", "terminal-dock", "doctor")
 PLATFORM_NAMES = {"linux": "Linux", "macos": "macOS", "windows": "Windows"}
 
-SECTIONS = ["install", "how", "features", "fit", "privacy", "kits", "faq"]
+SECTIONS = ["install", "folders", "how", "features", "kits", "runs", "portable", "tested", "status", "privacy", "fit", "faq"]
 HEADINGS = [
-    ("h1", "Pick a model and a coding agent for each project folder."),
+    ("h1", "Pick where your model runs and which coding agent you use, remembered per project folder."),
     ("h2", "Install"),
     ("h3", "Linux x64"),
     ("h3", "macOS on Apple Silicon (preview)"),
     ("h3", "Windows x64"),
+    ("h2", "One folder, one setup"),
     ("h2", "How it works"),
+    ("h3", "Run the setup guide"),
+    ("h3", "Choose where the model runs"),
+    ("h3", "Launch the agent in your folder"),
     ("h2", "What it does"),
-    ("h3", "Guided setup"),
-    ("h3", "Attach what already runs"),
-    ("h3", "A GPU machine over plain SSH"),
-    ("h3", "Settings that stay with the folder"),
-    ("h3", "Project setup per agent"),
-    ("h3", "Sessions at a glance"),
+    ("h3", "Model sources"),
+    ("h3", "Project setup you can read first"),
+    ("h3", "Terminals and sessions"),
+    ("h3", "The right API for each agent"),
     ("h3", "Doctor"),
     ("h3", "Measure your own setup"),
-    ("h2", "When another tool is the better choice"),
-    ("h3", "Use something else when"),
-    ("h3", "Workbench fits when you want to"),
-    ("h2", "What leaves your computer"),
-    ("h3", "Keys"),
-    ("h3", "The agents themselves"),
+    ("h3", "Inkling 2 Mini with Unsloth's build"),
+    ("h3", "Roblox Studio in the Game development kit"),
+    ("h3", "Claude Code and Codex on local Qwen models"),
     ("h2", "Starter kits"),
     ("h3", "General software"),
     ("h3", "Web front end"),
@@ -96,10 +95,31 @@ HEADINGS = [
     ("h3", "DevOps and infrastructure"),
     ("h3", "Game development"),
     ("h3", "Blank"),
+    ("h2", "Run summaries"),
+    ("h3", "What a summary holds"),
+    ("h3", "What you can do with it"),
+    ("h2", "Settings that travel with the folder"),
+    ("h3", "From one machine to the next"),
+    ("h3", "Where settings live"),
+    ("h2", "Tested on real machines"),
+    ("h3", "Test suites on three systems"),
+    ("h3", "Memory each model used"),
+    ("h3", "Agents that wrote a file"),
+    ("h2", "What was run for 0.5.0"),
+    ("h2", "What leaves your computer"),
+    ("h3", "No telemetry, no account"),
+    ("h3", "Keys stay in your credential vault"),
+    ("h3", "Checked downloads, per-user install"),
+    ("h3", "The agents themselves"),
+    ("h2", "What it is not"),
+    ("h3", "Use something else when"),
+    ("h3", "Workbench fits when you want to"),
     ("h2", "Questions"),
 ]
 QUESTIONS = [
     "What does it cost, and what are you selling?",
+    "Does it keep per-folder config in plain files?",
+    "Can I rerun an old task after the folder's setup has changed?",
     "I already use Ollama or LM Studio. What does this add?",
     "Do I need a GPU?",
     "Which agents can it start, and with which models?",
@@ -119,6 +139,8 @@ README_HEADINGS = [
     "What leaves your computer",
     "Tested configurations",
     "First run",
+    "Run summaries",
+    "Where settings live",
     "Guides",
     "Command line",
     "Building from source",
@@ -301,7 +323,7 @@ class Page(HTMLParser):
         if tag in ("h1", "h2", "h3"):
             kinds.append(("heading", tag, self.section_id()))
         if tag == "summary":
-            kinds.append(("summary",))
+            kinds.append(("summary", self.section_id()))
         if "eyebrow" in classes:
             kinds.append(("eyebrow",))
         if tag == "label":
@@ -336,7 +358,7 @@ class Page(HTMLParser):
         if kind[0] == "heading":
             self.headings.append((kind[1], text, kind[2]))
         elif kind[0] == "summary":
-            self.summaries.append(text)
+            self.summaries.append((kind[1], text))
         elif kind[0] == "eyebrow":
             self.eyebrow = text
         elif kind[0] == "label":
@@ -575,10 +597,13 @@ class RecordTests(unittest.TestCase):
     def test_site_file(self):
         data = site()
         self.assertEqual(set(data), {"version", "tag", "repo", "branch", "site"}, msg="docs/site.json must hold exactly version, tag, repo, branch and site.")
-        self.assertEqual(data["version"], "0.4.0", msg="docs/site.json version must be 0.4.0 (D19).")
+        self.assertEqual(data["version"], "0.5.0", msg="docs/site.json version must be 0.5.0.")
         self.assertEqual(data["tag"], "v" + data["version"], msg="docs/site.json tag must be v plus the version.")
         self.assertRegex(data["repo"], r"^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$", msg="docs/site.json repo must be owner/name.")
         self.assertTrue(data["site"].startswith("https://") and data["site"].endswith("/"), msg="docs/site.json site must be an https address ending in /.")
+
+    @unittest.skipUnless((ROOT / ".git").exists(), "release kits leave out docs/.nojekyll; only the repository's docs/ is served by GitHub Pages")
+    def test_pages_marker(self):
         self.assertTrue((DOCS / ".nojekyll").is_file(), msg="docs/.nojekyll is missing; GitHub Pages would run Jekyll over the guides.")
 
     def test_verification_record(self):
@@ -669,6 +694,23 @@ class ClaimTests(unittest.TestCase):
         problems = claim_problems("docs/index.html", page().text)
         self.assertEqual(problems, [], msg="\n".join(problems))
         self.assertTrue(any(attrs.get("href", "").endswith("MEASUREMENTS.md") for tag, attrs in page().tags if tag == "a"), msg="docs/index.html must link MEASUREMENTS.md for the numbers it does not show.")
+
+    def test_no_secrets_in_public_documents(self):
+        patterns = (
+            r"https?://[^/\s)\"'<>]*@",
+            r"https?://[^\s)\"'<>]*\?[^\s)\"'<>]*(key|token|secret|password|sig)=",
+            r"\bsk-[A-Za-z0-9_-]{16,}",
+            r"\b(ghp|gho|github_pat|hf|xox[bp])_[A-Za-z0-9_]{16,}",
+            r"\bAKIA[0-9A-Z]{16}\b",
+            r"\bBearer\s+[A-Za-z0-9._~+/-]{16,}",
+        )
+        problems = []
+        for rel in [*PUBLIC, "docs/index.html"]:
+            if exists(rel):
+                for pattern in patterns:
+                    for m in re.finditer(pattern, read(rel)):
+                        problems.append(f'{rel} contains "{m.group(0)[:40]}", which looks like a key or a credential in an address; documents show variable names, never values.')
+        self.assertEqual(problems, [], msg="\n".join(problems))
 
     def test_no_speed_figures_outside_measurements(self):
         problems = []
@@ -799,7 +841,14 @@ class LandingPageTests(unittest.TestCase):
             self.assertIn('base="https://github.com/$REPOSITORY/releases/download/v$VERSION"', read("install.sh"), msg="install.sh must download the kit of its own pinned version.")
 
     def test_faq(self):
-        self.assertEqual(page().summaries, QUESTIONS, msg="docs/index.html FAQ questions differ from QUESTIONS in tests/test_docs.py; change one to match the other.")
+        self.assertEqual([text for where, text in page().summaries if where == "faq"], QUESTIONS, msg="docs/index.html FAQ questions differ from QUESTIONS in tests/test_docs.py; change one to match the other.")
+
+    def test_ui_labels_exist_in_the_interface(self):
+        interface = interface_text()
+        labels = [html.unescape(re.sub(r"<[^>]+>", "", m)).strip() for m in re.findall(r'<b class="ui">(.*?)</b>', PAGE.read_text(encoding="utf-8"), re.S)]
+        missing = [label for label in labels if label not in interface]
+        self.assertTrue(labels, msg='docs/index.html marks interface labels with <b class="ui">.')
+        self.assertEqual(missing, [], msg='docs/index.html: these <b class="ui"> labels are not in the interface; use the label the app shows: ' + ", ".join(missing))
 
     def test_images(self):
         p = page()
@@ -832,17 +881,40 @@ class LandingPageTests(unittest.TestCase):
         for needle in ("prefers-color-scheme: dark", "prefers-reduced-motion", "forced-colors: active", ":focus-visible", "@media print"):
             self.assertIn(needle, page().css, msg=f"docs/index.html CSS must contain {needle}.")
 
-    def test_diagram_has_text_alternatives(self):
-        p = page()
-        diagrams = [attrs for tag, attrs in p.tags if tag == "svg" and attrs.get("role") == "img"]
-        self.assertEqual(len(diagrams), 2, msg="docs/index.html needs the wide and the narrow diagram, each with role=img.")
-        for attrs in diagrams:
+    def test_diagrams_have_text_alternatives(self):
+        p, raw = page(), PAGE.read_text(encoding="utf-8")
+        for attrs in [attrs for tag, attrs in p.tags if tag == "svg" and attrs.get("role") == "img"]:
             refs = attrs.get("aria-labelledby", "").split()
-            self.assertEqual(len(refs), 2, msg="docs/index.html: each diagram is labelled by its title and its desc.")
+            self.assertEqual(len(refs), 2, msg="docs/index.html: each svg diagram is labelled by its title and its desc.")
             for ref in refs:
                 self.assertIn(ref, p.ids, msg=f"docs/index.html: the diagram label {ref} does not exist.")
-        self.assertEqual(len(p.descs), 2, msg="docs/index.html: each diagram needs one desc.")
-        self.assertEqual(p.descs[0], p.descs[1], msg="docs/index.html: the two diagram descriptions must be the same text.")
+        folders = re.search(r'<ol class="folders" aria-label="([^"]+)">(.*?)</ol>', raw, re.S)
+        self.assertTrue(folders and folders.group(1).strip(), msg='docs/index.html: the folder examples are an <ol class="folders"> with an aria-label.')
+        rows = re.findall(r"<li>(.*?)</li>", folders.group(2), re.S)
+        self.assertEqual(len(rows), 3, msg="docs/index.html: the folder examples have three rows.")
+        names = re.findall(r'dict\(id="([^"]+)", cli=', read("providers.py")) if exists("providers.py") else []
+        for row in rows:
+            pill = re.search(r'<span class="pill">(.*?)</span>\s*<span class="f-arrow"', row, re.S)
+            agent = re.sub(r"<[^>]+>|^starts ", "", re.sub(r'<span class="vh">starts </span>', "", pill.group(1) if pill else "")).strip()
+            self.assertIn(agent, names, msg=f"docs/index.html: the folder example agent {agent!r} is not one of providers.HARNESSES.")
+
+    def test_status_table_matches_the_record(self):
+        raw = PAGE.read_text(encoding="utf-8")
+        table = re.search(r'<table class="record[^"]*">(.*?)</table>', raw, re.S)
+        self.assertTrue(table, msg='docs/index.html needs the status table <table class="record"> built from docs/verification.json.')
+        found = {}
+        for row in re.findall(r"<tr>(.*?)</tr>", table.group(1).split("<tbody>", 1)[-1], re.S):
+            label = html.unescape(re.sub(r"<[^>]+>", "", re.search(r"<th[^>]*>(.*?)</th>", row, re.S).group(1))).strip()
+            cells = [[html.unescape(re.sub(r"<[^>]+>", "", li)).strip() for li in re.findall(r"<li>(.*?)</li>", cell, re.S)] for cell in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
+            found[label] = cells
+        expected = {}
+        for system in record()["systems"]:
+            label = system["label"] + (" (preview)" if system["platform"] == "macos" and not mac_gate_met() else "")
+            mine = [r for r in record()["results"] if r["system"] == system["id"]]
+            ok = [CHECKS[c] for c in CHECKS if any(r["check"] == c and r["status"] == "passed" for r in mine)]
+            rest = [CHECKS[c] for c in CHECKS if any(r["check"] == c and r["status"] != "passed" for r in mine)]
+            expected[label] = [ok, rest]
+        self.assertEqual(found, expected, msg="docs/index.html: the status table must list, per system of docs/verification.json, exactly its passed checks and its other checks, in catalogue order.")
 
 
 class ImageTests(unittest.TestCase):
@@ -874,7 +946,7 @@ class SecurityTests(unittest.TestCase):
         self.assertIn(repo_url() + "/security/advisories/new", text, msg="SECURITY.md must give the private advisory address built from docs/site.json.")
         for word in ("vulnerability", "disclosure"):
             self.assertIn(word, text.lower(), msg=f"SECURITY.md must contain the word {word}.")
-        self.assertIn("0.4", section(text, "Supported versions") or "", msg="SECURITY.md: the Supported versions table must name 0.4.")
+        self.assertIn("0.5", section(text, "Supported versions") or "", msg="SECURITY.md: the Supported versions table must name 0.5.")
         self.assertNotIn("if the repository has it enabled", text, msg="SECURITY.md must state the reporting route flatly.")
         self.assertIsNone(re.search(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}", text), msg="SECURITY.md must not publish an email address; the advisory form is the route.")
 
@@ -1100,14 +1172,19 @@ class ChangelogTests(unittest.TestCase):
 
     def test_changelog_shape(self):
         self.assertEqual(self.text.splitlines()[0], "# Changelog", msg="CHANGELOG.md must start with # Changelog.")
-        first = next((t for level, t in headings(self.text) if level == 2), "")
-        self.assertRegex(first, r"^\[" + re.escape(site()["version"]) + r"\] - (unreleased|\d{4}-\d{2}-\d{2})$", msg="CHANGELOG.md: the first entry must be ## [0.4.0] - unreleased or a date.")
-        entry = self.text.split("\n## [", 2)[1] if "\n## [" in self.text else ""
+        entries = self.text.split("\n## [")[1:]
+        if entries and entries[0].startswith("Unreleased]\n"):
+            # Changes on the main branch since the last release come first, in the same heading order.
+            found = [t for level, t in headings(entries.pop(0)) if level == 3]
+            self.assertEqual(found, [h for h in CHANGELOG_HEADINGS if h in found], msg="CHANGELOG.md: the Unreleased headings must keep the order Added, Changed, Fixed, Security, Removed, Known issues.")
+        first = next((t for level, t in headings(self.text) if level == 2 and t != "[Unreleased]"), "")
+        self.assertRegex(first, r"^\[" + re.escape(site()["version"]) + r"\] - (unreleased|\d{4}-\d{2}-\d{2})$", msg="CHANGELOG.md: the first version entry must be ## [<version>] - unreleased or a date, after an optional ## [Unreleased].")
+        entry = entries[0] if entries else ""
         found = [t for level, t in headings(entry) if level == 3]
-        self.assertEqual(found, [h for h in CHANGELOG_HEADINGS if h in found], msg="CHANGELOG.md: the 0.4.0 headings must keep the order Added, Changed, Fixed, Security, Removed, Known issues.")
+        self.assertEqual(found, [h for h in CHANGELOG_HEADINGS if h in found], msg="CHANGELOG.md: the release headings must keep the order Added, Changed, Fixed, Security, Removed, Known issues.")
         for needed in ("Added", "Known issues"):
-            self.assertIn(needed, found, msg=f"CHANGELOG.md: the 0.4.0 entry needs ### {needed}.")
-        self.assertIn("README.md#tested-configurations", entry, msg="CHANGELOG.md: the 0.4.0 entry must link README.md#tested-configurations.")
+            self.assertIn(needed, found, msg=f"CHANGELOG.md: the release entry needs ### {needed}.")
+        self.assertIn("README.md#tested-configurations", entry, msg="CHANGELOG.md: the release entry must link README.md#tested-configurations.")
         if not mac_gate_met():
             known = section(entry, "Known issues", level=3) or ""
             self.assertTrue(any("macOS" in line and "preview" in line for line in known.splitlines()), msg="CHANGELOG.md: Known issues must say macOS is a preview.")

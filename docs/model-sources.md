@@ -51,12 +51,25 @@ workbench setup_engines.py --backend vulkan
 workbench setup_engines.py --backend cpu
 ```
 
-Install the engine with **Install engine** in **Advanced → Model library**, with **Install** next to llama.cpp / Strata in **Advanced → Setup**, or let the setup guide download it with a model. The **Engine release** setting in **Advanced → Model library** has two channels:
+Install the engine with **Install engine** in **Advanced → Model library**, with **Install** next to llama.cpp / Strata in **Advanced → Setup**, or let the setup guide download it with a model. The **Engine release** setting in **Advanced → Model library** has three channels:
 
 - Tested: the pinned build. Each archive is checked against a SHA-256 value pinned in the repository before it is unpacked.
 - Updated: the newest llama.cpp release, checked against the digest GitHub reports for it at that moment. It is not pinned in the repository and has not been run with Workbench.
+- Unsloth: Unsloth's llama.cpp build, pinned like Tested. It adds the DSpark drafter for Inkling 2 Mini ([below](#inkling-2-mini-with-unsloths-build)).
 
 With the CUDA build on Windows or Linux, engine setup also installs Strata, which runs Strata model packs, when Git is installed; `--no-strata` skips it. vLLM is a separate item in **Advanced → Setup**. Strata and vLLM both need an NVIDIA GPU with a working driver; on a Mac, Workbench serves GGUF models with llama.cpp and Metal. On Windows or Linux, when a Strata Flash Next launch preset already exists, the engine list also offers Flash preset, which starts that preset; Setup does not install it. Custom starts an engine you describe in a JSON manifest ([Reference](reference.md#engines)).
+
+### Inkling 2 Mini with Unsloth's build
+
+Unsloth's llama.cpp build adds DSpark, a small drafter model for Inkling 2 Mini: it proposes the next few tokens and Inkling checks them. The build is opt-in, and Tested stays the default.
+
+1. In **Advanced → Model library**, open **More engine settings** and set **Engine release** to **Unsloth**.
+2. Choose **Install Unsloth build**, or run `workbench setup_engines.py --unsloth`. Workbench downloads Unsloth's release `b12649-mix-c7059d6` from GitHub, checks it against a SHA-256 value pinned in the repository and unpacks it into `runtime/llama-unsloth-b12649` in the data folder, beside the Tested build. It picks the build as for Tested: Metal on Apple Silicon, the CUDA build that matches the NVIDIA GPU and driver, Vulkan for AMD and Intel GPUs, and CPU otherwise. AMD GPUs get Vulkan because Workbench does not detect the ROCm target that Unsloth's ROCm builds need.
+3. Select an Inkling 2 Mini GGUF in **Weights**, turn on **Speculative decoding** and choose **Download drafter**. It downloads `dspark-Inkling-2-Mini-Q8_0.gguf` (504 MB) from `unsloth/Inkling-2-Mini-GGUF` at a pinned revision, checks its SHA-256 and places it in the model's folder. The Inkling entries in the catalog list it as an optional file, so a model download does not fetch it.
+
+Workbench then starts `llama-server` with `-md <drafter> --spec-type draft-dspark --spec-draft-n-max 2 -ngld 99`. When the drafter is missing, or **Engine release** is Tested or Updated, Inkling runs without it and the start message says why; the mainline build has no DSpark support. With the drafter, replies can differ slightly from replies without it, even at temperature 0, as is usual for speculative decoding. One run of this setup on a Mac is recorded in [`results/inkling-unsloth-dspark-m3-max.json`](../results/inkling-unsloth-dspark-m3-max.json).
+
+The build and the drafter are Unsloth's work: [unslothai/unsloth](https://github.com/unslothai/unsloth) and [unsloth/Inkling-2-Mini-GGUF](https://huggingface.co/unsloth/Inkling-2-Mini-GGUF).
 
 ### Recommended models
 
@@ -159,13 +172,13 @@ Claude Code sends a system message after the first user message, and Codex sends
 
 For models it serves itself, Workbench handles this: when the template of a GGUF file contains exactly that rejection, it serves a corrected copy that renders the message as a system turn. With the correction in place, on a Mac, Claude Code completed a file-writing task against Qwen3.5-9B and Qwen3.8-27B, and Codex against Qwen3.5-9B, started through Workbench's launch code from the command line. The Inkling template does not need the correction.
 
-For a server you attach, that server's own template handling decides. Workbench does not change it. Claude Code and Codex completed the same task against one model in Ollama 0.40.8; other Ollama models, LM Studio and the other servers were not run with Claude Code or Codex for this release.
+For a server you attach, that server's own template handling decides. Workbench does not change it, but it asks: when you attach a server, and again on **Check**, it sends the chosen model one short chat with a system message after the first turn and, when the server offers the Responses API, one with a developer message there, each asking for a one-token answer. A model the server lists as not loaded is not asked, so the check never loads one. When the server refuses the message, Claude Code and Codex are blocked for that connection with "This server's chat template rejects the system message Claude Code sends mid-conversation. Serve the model with Workbench, which fixes the template, or use OMP, Pi or opencode." (Codex's reason names the developer message), and OMP, Pi and opencode stay available. A llama.cpp server in Docker serving Qwen3.5-9B with its own template, attached from a Mac over SSH, was blocked this way while OMP wrote a file through it; Unsloth's llama.cpp build serving Inkling 2 Mini accepted the message and nothing was blocked. Claude Code and Codex completed the same task against one model in Ollama 0.40.8; other Ollama models, LM Studio and the other servers were not run with Claude Code or Codex for this release.
 
 ## Attach a server that is already running
 
 ### What Workbench looks for
 
-The scan looks only at this computer's loopback address, `127.0.0.1`, on these ports: 11434, 1234, 9931, 8080, 8000, 1337, 5001, 5000, 13305, 30000, 10240 and 9292, leaving out Workbench's own model port. It also checks LM Studio's control ports, so it can tell you when LM Studio is open but its server is off. It never scans your network. A server on another machine is reached through [SSH](#a-gpu-machine-over-ssh) or by an `https://` address you type.
+The scan looks only at this computer's loopback address, `127.0.0.1`, on these ports: 11434, 1234, 9931, 8080, 8081, 8000, 1337, 5001, 5000, 13305, 30000, 10240, 9292 and 8095, leaving out Workbench's own model port. It also checks LM Studio's control ports, so it can tell you when LM Studio is open but its server is off. It never scans your network. A server on another machine is reached through [SSH](#a-gpu-machine-over-ssh) or by an `https://` address you type.
 
 For each server that answers, Workbench reads the model list, the context size of each model where the server reports it, and which of the three APIs it offers. It names the server from what it answers.
 
@@ -175,7 +188,7 @@ The server kinds Workbench recognises, with the APIs their documentation says th
 | --- | --- | --- | --- | --- |
 | Ollama | 11434 | Yes | Yes | Yes |
 | LM Studio | 1234 | Yes | Yes | Yes |
-| llama.cpp server | 9931, 8080 | Yes | Yes | Yes |
+| llama.cpp server | 9931, 8080, 8081 | Yes | Yes | Yes |
 | vLLM | 8000 | Yes | Yes | Yes |
 | MLX LM server | 8080 | Yes | No | No |
 | MLX Omni Server | 10240 | Yes | No | Yes |
@@ -187,13 +200,14 @@ The server kinds Workbench recognises, with the APIs their documentation says th
 | TabbyAPI | 5000 | Yes | No | No |
 | SGLang | 30000 | Yes | Yes | Yes |
 | Lemonade Server | 13305 | Yes | Yes | Yes |
+| Strata | 8095 | Yes | Yes | Yes |
 | Another OpenAI-compatible server | Any address you type | As probed | As probed | As probed |
 
 vLLM, MLX Omni Server, KoboldCpp, LocalAI and llama-swap listen on every network interface by default. When one of them answers without a key, Workbench warns you to bind it to `127.0.0.1` or set a key if other devices share your network.
 
 ### Ollama
 
-These steps were not run for 0.4.0 in the desktop window. Ollama 0.40.8 answered the scan, was attached, and served OMP, Claude Code, Codex and opencode through the same code from the command line on a Mac.
+These steps were not run for 0.5.0 in the desktop window. For 0.4.0, Ollama 0.40.8 answered the scan, was attached, and served OMP, Claude Code, Codex and opencode through the same code from the command line on a Mac.
 
 1. Start Ollama. Pull or load the model you want.
 2. In the setup guide's Model step choose **Use a server that is already running**, or in **Connections** choose **Add**, then **Attach a running server…**.
@@ -205,7 +219,7 @@ If you use Claude Code, Codex or opencode with Ollama, [`ollama launch`](https:/
 
 ### LM Studio
 
-These steps were not run for 0.4.0. LM Studio answered the scan's probes; attaching it was not run.
+These steps were not run for 0.5.0. LM Studio answered the scan's probes; attaching it was not run.
 
 1. In LM Studio, open Developer and start the server, or run `lms server start`. Load a model.
 2. Attach it as for Ollama: pick LM Studio on port 1234.
@@ -245,12 +259,12 @@ On this computer: the OpenSSH client (`ssh` and `ssh-keygen`). Doctor checks it.
 On the machine:
 
 - An SSH server that accepts a login from you.
-- `python3` 3.8 or newer, which Workbench uses to check the machine and find servers.
-- For the Workbench-managed model: Linux on x86_64, `curl`, and 13 GiB free in your home folder. On any other machine with `python3`, Workbench can check it and attach the servers running there, but cannot run the managed model.
+- On Linux and macOS, `python3` 3.8 or newer, which Workbench uses to check the machine and find servers. A Windows machine needs only Windows PowerShell, which Windows includes; see [Windows machines](#windows-machines).
+- For the Workbench-managed model: Linux on x86_64, `curl`, and 13 GiB free in your home folder, or Windows on x86_64 with an NVIDIA GPU of 16 GB or more and Python 3.8 or newer. On any other machine, Workbench can check it and attach the servers running there, but cannot run the managed model.
 
 ### Add and pair a machine
 
-These steps were not run for 0.4.0.
+Pairing was not run for 0.5.0. **Check connection** was run from a Mac against a Windows machine and a Linux machine that already accepted its key.
 
 1. Open **Machines** and choose **Add machine…**. Enter a name and an SSH alias from your SSH config or `user@hostname`, then **Save**.
 2. Open **Pairing and removal** and choose **Pair through SSH**. A terminal opens: confirm the host key and sign in once. Workbench adds its own key for this machine to `~/.ssh/authorized_keys` there. **Show pairing command** gives you the command to run on the machine yourself instead.
@@ -260,7 +274,9 @@ Workbench uses a separate key for each machine, stored in the data folder, and a
 
 ### Use a server that runs there
 
-After the connection check, **Servers running there** lists the model servers answering on the machine's own loopback address. Workbench finds them with one SSH command that runs a small probe on the machine; it does not scan the machine's network. Choose **Attach…** next to a server, pick the model, and attach it. **Look again** repeats the search.
+After the connection check, **Servers running there** lists the model servers answering on the machine's own loopback address. Workbench finds them with one SSH command that runs a small probe on the machine; it does not scan the machine's network. Choose **Attach…** next to a server, pick the model, and attach it. **Look again** repeats the search. A server on a port outside the usual list, such as 9000, is found once you add the port under **Other ports** and choose **Look again**; Workbench remembers the ports for that machine.
+
+On a machine, the search also looks at port 10532, where Agent Workbench installed there serves its own local model, for example Strata with the Inkling SQ-20 pack on an NVIDIA card. Such a server needs its key. When the process answering on that port is the one in `running.json` of a Workbench data folder there, the list shows its model, `local-agent`, and its context, and **Attach…** reads the key from that folder's `api-key.txt` through SSH and keeps it in the key vault on this computer, so you do not paste it. Workbench reads only the key of a server whose process it matched, and only with the SSH account you paired. Keep that machine's Workbench open while you use the model: its server stops when that Workbench stops it.
 
 Attaching opens an SSH tunnel from a free port on this computer's `127.0.0.1` to that server's port on the machine's `127.0.0.1`, one port per server. The connection appears in **Connections** under "Over SSH", and agents talk to the model through the tunnel. **Reconnect** opens a tunnel again after the machine or this computer restarted; **Detach** closes it and removes the connection.
 
@@ -268,7 +284,7 @@ Attaching opens an SSH tunnel from a free port on this computer's `127.0.0.1` to
 
 On a Linux x86_64 machine, **Workbench-managed model** offers **Install…**. Workbench then installs, under `~/.local/share/agent-workbench-node` on the machine, the Vulkan build of llama.cpp b12633, the Inkling 2 Mini UD-IQ3_XXS model and, unless OMP is already installed there, the OMP binary, each checked against a SHA-256 pinned in Workbench. The machine downloads them itself from github.com and huggingface.co. Workbench waits up to an hour for this.
 
-**Start and connect** starts the model on the machine's port 10542, bound to its loopback address with its own key, and opens the tunnel. **Stop…** stops it. The Inkling licence note applies to this model too.
+**Start and connect** starts the model on the machine's port 10542 with a 16K-token window, the catalog's choice for a 16 GB Vulkan card, bound to its loopback address with its own key, and opens the tunnel. **Stop…** stops it. The Inkling licence note applies to this model too.
 
 ### Remove a machine
 
@@ -280,9 +296,24 @@ Remove things in this order, all under **Pairing and removal**:
 
 Remote agent sessions on a machine are covered in [Sessions and terminals](sessions.md#remote-sessions).
 
+### Windows machines
+
+Workbench works with the OpenSSH server that Windows includes, whether its SSH shell is Command Prompt (the default) or PowerShell. **Check connection** finds out which system the machine runs each time, and the machine's row then says Windows.
+
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="images/machines-dark.png">
+<img src="images/machines.png" alt="The Machines view with two machines, gpu-box-linux on Linux and gpu-box-win on Windows, both connected. The Windows machine shows an RTX 5090 with 31.8 GiB of GPU memory and Windows PowerShell, a Strata server on port 10532 that is attached and a llama.cpp server on port 8080, an open tunnel, and the Workbench-managed Inkling 2 Mini model serving on port 10542.">
+</picture>
+
+- Finding servers: the probe runs in Windows PowerShell, so the machine needs no Python for it. It checks the same ports and answers the same way as on Linux. Attaching and tunnels work as above.
+- Remote sessions: Windows has no tmux, so a session opens PowerShell (PowerShell 7 when it is installed) in the folder you chose and starts the agent there. A folder that starts with `~` is under your user folder, and the agent is found the way PowerShell finds it, including `.cmd` and `.ps1` installs. The session ends when its tab or window closes; there is nothing to reattach, so **End** in the dock ends it.
+- Pairing: the Workbench key goes into `.ssh\authorized_keys` in your user folder, or into `administrators_authorized_keys` under `C:\ProgramData\ssh` for an administrator account, as the Windows OpenSSH server expects.
+
+The Workbench-managed model on Windows needs Python 3.8 or newer for your user and an NVIDIA GPU whose driver is version 580 or newer. Workbench installs it under `%LOCALAPPDATA%\agent-workbench-node`: the CUDA build of llama.cpp b12633 with its CUDA runtime, and an Inkling 2 Mini file chosen from the model catalog by the GPU's memory, UD-Q8_K_XL on a 32 GB card, UD-Q4_K_XL on 24 GB and UD-IQ3_XXS on 16 GB, each checked against its pinned SHA-256. If the model file is already on the machine, type its path under the managed model, or choose **Look for it** and then **Use this file**, before **Install…**. Workbench reads the whole file, uses it only if its SHA-256 matches, and links it into the folder instead of copying it when it can; otherwise the machine downloads the file. **Start and connect** starts the model outside the SSH session, so it keeps running after the connection closes, until you choose **Stop…**.
+
 ## Hosted providers
 
-These steps were not run for 0.4.0.
+These steps were not run for 0.5.0.
 
 To add a provider, use **Use a hosted API** in the setup guide, or **Add** then **Hosted API** in **Connections**. Then:
 
@@ -291,7 +322,7 @@ To add a provider, use **Use a hosted API** in the setup guide, or **Add** then 
 3. Enter the model under **Default model**, or choose **Browse models** to pick from the provider's list.
 4. Choose **Save**.
 
-| Provider | Key variable | Chat Completions | Responses | Anthropic Messages | Status for 0.4.0 |
+| Provider | Key variable | Chat Completions | Responses | Anthropic Messages | Status for 0.5.0 |
 | --- | --- | --- | --- | --- | --- |
 | OpenAI | `OPENAI_API_KEY` | Yes | Yes | No | Carried over from earlier versions; not exercised for this release |
 | OpenRouter | `OPENROUTER_API_KEY` | Yes | Yes | Yes | Carried over from earlier versions; not exercised for this release |

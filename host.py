@@ -82,7 +82,11 @@ def resolve_shim(path):
     found = list(SHIM_TARGET.finditer(line))
     if not found:
         return None
-    target = Path(path).parent.joinpath(*found[-1].group(1).split("\\"))
+    # npm writes shims that point into their own node_modules; anything else stays behind cmd.exe.
+    modules = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(path)), "node_modules"))
+    target = Path(os.path.normpath(os.path.join(modules, "..", *found[-1].group(1).split("\\"))))
+    if os.path.commonpath([os.path.normcase(modules), os.path.normcase(str(target))]) != os.path.normcase(modules):
+        return None
     if not target.is_file():
         return None
     suffix = target.suffix.lower()

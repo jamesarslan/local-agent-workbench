@@ -5,7 +5,7 @@ import contextlib
 import io
 import json
 import os
-from pathlib import Path, PureWindowsPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import shlex
 import shutil
 import stat
@@ -126,15 +126,16 @@ class LauncherTests(Base):
         )
 
     def test_posix_script_quotes_paths(self):
+        # POSIX paths on every host: this script is only ever written on macOS and Linux.
         text = shortcuts.posix_script(
-            "/opt/my python/bin/python", Path("/apps/it's here"), Path("/data/$HOME dir"), "abc", True
+            "/opt/my python/bin/python", PurePosixPath("/apps/it's here"), PurePosixPath("/data/$HOME dir"), "abc", True
         )
         lines = text.splitlines()
         self.assertEqual(shlex.split(lines[1]), ["export", "WORKBENCH_DATA=/data/$HOME dir"])
         self.assertIn("'/data/$HOME dir'", lines[1])
         self.assertEqual(
             shlex.split(lines[2]),
-            ["exec", "/opt/my python/bin/python", str(Path("/apps/it's here") / "cli.py"),
+            ["exec", "/opt/my python/bin/python", "/apps/it's here/cli.py",
              "agent", "--here", "--setup-id", "abc"],
         )
 

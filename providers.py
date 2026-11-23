@@ -77,7 +77,11 @@ def _server(id, label, ports, context_source, protocols, **extra):
 
 
 # fmt: off
-SWEEP_PORTS = [11434, 1234, 9931, 8080, 8000, 1337, 5001, 5000, 13305, 30000, 10240, 9292]
+# Each port is a documented default of a server kind below. 8081 is where llama.cpp server is
+# commonly run when 8080 is taken (a second model, or a second instance behind llama-swap).
+SWEEP_PORTS = [11434, 1234, 9931, 8080, 8081, 8000, 1337, 5001, 5000, 13305, 30000, 10240, 9292, 8095]
+# The port of the model server a Workbench on another machine manages; the remote sweep adds it.
+WORKBENCH_PORT = 10532
 LMSTUDIO_CONTROL_PORTS = [41343, 52993, 16141, 39414, 22931]
 SOURCES = [
     _row("Managed local", "Local model", "managed", protocols=_p(True), context_source="settings", evidence="existing"),
@@ -105,7 +109,7 @@ SOURCES = [
     _row("Native login", "Agent account", "native", evidence="existing"),
     _server("ollama", "Ollama", [11434], "ollama", _p(True, True, True)),
     _server("lmstudio", "LM Studio", [1234], "lmstudio", _p(True, True, True)),
-    _server("llamacpp", "llama.cpp server", [9931, 8080], "props", _p(True, True, True),
+    _server("llamacpp", "llama.cpp server", [9931, 8080, 8081], "props", _p(True, True, True),
             identity=dict(server=["llama.cpp"], owned_by=["llamacpp"])),
     _server("vllm", "vLLM", [8000], "item", _p(True, True, True), identity=dict(owned_by=["vllm"]), exposed=True),
     _server("mlx-lm", "MLX LM server", [8080], "none", _p(True, False, False)),
@@ -122,10 +126,12 @@ SOURCES = [
     _server("tabbyapi", "TabbyAPI", [5000], "item", _p(True, False, False), identity=dict(owned_by=["tabbyAPI"])),
     _server("sglang", "SGLang", [30000], "item", _p(True, True, True), identity=dict(owned_by=["sglang"])),
     _server("lemonade", "Lemonade Server", [13305], "item", _p(True, True, True), identity=dict(owned_by=["lemonade"])),
+    _server("strata", "Strata", [8095], "item", _p(True, True, True)),
     _server("generic", "OpenAI-compatible server", [], "item", _p()),
 ]
 KINDS = {row["id"]: row for row in SOURCES if row["kind"] == "local-server" and not row["selectable"]}
 IDENTITY = [
+    ["strata", "/health", "eq", ["service"], "strata"],
     ["koboldcpp", "/api/extra/version", "eq", ["result"], "KoboldCpp"],
     ["localai", "/.well-known/localai.json", "has", ["endpoints", "version"], None],
     ["tabbyapi", "/.well-known/serviceinfo", "eq", ["software", "name"], "TabbyAPI"],

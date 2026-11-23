@@ -71,6 +71,7 @@ ROUTES = (
     ("kit-", "starter_kits"),
     ("model-", "catalog"),
     ("onboarding-", "onboarding"),
+    ("run-", "run_log"),
 )
 PLUGIN_AREA = frozenset(("plugin-describe", "plugin-remove", "plugin-update"))
 INLINE = frozenset(
@@ -102,6 +103,8 @@ INLINE = frozenset(
         "project-save",
         "project-preview",
         "project-apply",
+        "project-default-set",
+        "project-default-clear",
     )
 )
 INTERNAL = (
@@ -465,6 +468,19 @@ def installed_version(harness):
     return value
 
 
+def note_run(harness, kind, facts):
+    """Keep the run summary of a launch that has started; a failure here never fails the launch."""
+    if not isinstance(facts, dict) or not facts.get("settings"):
+        return ""
+    try:
+        import run_log
+
+        return run_log.note(facts, harness, kind, installed_version(harness))
+    except Exception:
+        traceback.print_exc()
+        return ""
+
+
 def dispatch(action, payload, progress=None, cancel=None):
     action = ALIASES.get(action, action)
     payload = payload if isinstance(payload, dict) else {}
@@ -529,8 +545,16 @@ def dispatch(action, payload, progress=None, cancel=None):
     if action == "engine-install":
         import setup_engines
 
+        install, release = setup_engines.install, payload.get("release")
+        if release:
+
+            def install(*args, progress=None, cancel=None):
+                return setup_engines.install(
+                    *args, progress=progress, cancel=cancel, release=release
+                )
+
         return supply(
-            setup_engines.install,
+            install,
             bool(payload.get("update")),
             payload.get("backend"),
             payload.get("strata"),
@@ -563,7 +587,14 @@ def dispatch(action, payload, progress=None, cancel=None):
     if action == "plugin-import":
         return projects.register(manifest(payload))
     if action == "project-list":
+        # The plain name list is the 0.3 shape; detail adds the folder default.
+        if payload.get("detail") is True:
+            return projects.project_list(payload["workspace"])
         return projects.project_names(payload["workspace"])
+    if action == "project-default-set":
+        return projects.set_default(payload["workspace"], payload["name"])
+    if action == "project-default-clear":
+        return projects.clear_default(payload["workspace"])
     s = settings()
     if action == "server-start":
         chosen = (
@@ -582,7 +613,9 @@ def dispatch(action, payload, progress=None, cancel=None):
     names = choices(s)
     out = selection(s, payload, names)
     if action == "project-save":
-        return projects.save_project(out, payload["name"])
+        return projects.save_project(
+            out, payload["name"], default=payload.get("default") is True
+        )
     if action in ("project-preview", "project-apply"):
         weights = (
             [p for p, _, _ in catalog.discover(s["library"])]
@@ -619,7 +652,14 @@ def dispatch(action, payload, progress=None, cancel=None):
             raise ValueError(
                 f"{out['harness']} is missing. Open Advanced → Setup to install it."
             )
-        connections.launch(out)
+        facts = {}
+        connections.launch(out, facts=facts)
+        threading.Thread(
+            target=note_run,
+            args=(out["harness"], "window", facts),
+            name="run-summary",
+            daemon=True,
+        ).start()
     if action in ("launch-start", "launch-save"):
         remember(out["workspace"], {**out, "preset": payload.get("preset", "")})
     if action == "launch-start":

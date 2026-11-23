@@ -31,6 +31,7 @@ import requests
 import runtime
 import setup_engines
 from setup_engines import LLAMA_REPO, LLAMA_TAG, LLAMA_TARGET, STRATA_REPO, Asset
+from setup_engines import UNSLOTH_REPO, UNSLOTH_TAG, UNSLOTH_TARGET
 
 RELEASE = {
     "llama-b12633-bin-win-cuda-13.5-x64.zip": (
@@ -177,11 +178,19 @@ class EngineCase(unittest.TestCase):
         self.addCleanup(setup_engines.detect.cache_clear)
 
     def computer(
-        self, name="linux", arch="x86_64", gpu="", vendors=(), vulkan=False, rows=()
+        self,
+        name="linux",
+        arch="x86_64",
+        gpu="",
+        vendors=(),
+        vulkan=False,
+        rows=(),
+        cuda=((), None),
     ):
         for target, value in (
             ("system", name),
             ("nvidia_gpu", gpu),
+            ("nvidia_cuda", cuda),
             ("linux_adapters", set(vendors)),
             ("windows_adapters", list(rows)),
             ("vulkan_loader", vulkan),
@@ -1527,6 +1536,205 @@ class UpdateTest(EngineCase):
         self.assertTrue((updates / "strata-v0.2.20" / "strata-inkling").is_file())
 
 
+UNSLOTH_MAC = "llama-b12649-mix-c7059d6-bin-macos-arm64.tar.gz"
+
+
+class UnslothTest(EngineCase):
+    def unsloth(self, name):
+        return asset_for(
+            name, self.body, repo=UNSLOTH_REPO, tag=UNSLOTH_TAG, target=UNSLOTH_TARGET
+        )
+
+    def setUp(self):
+        super().setUp()
+        self.body = tarball({"build/llama-server": b"#!/bin/sh\n"})
+
+    def test_every_platform_has_a_pinned_unsloth_build(self):
+        rows = setup_engines.UNSLOTH
+        self.assertEqual(
+            set(rows),
+            {
+                ("macos", "metal"),
+                ("linux", "vulkan"),
+                ("linux", "cpu"),
+                ("windows", "vulkan"),
+                ("windows", "cpu"),
+            },
+        )
+        builds = [a for assets in rows.values() for a in assets]
+        for name, cuda in setup_engines.UNSLOTH_CUDA.items():
+            self.assertEqual(len(cuda), 7, name)
+            self.assertEqual(
+                {(b.line, b.coverage) for b in cuda},
+                {("cuda13", c) for c in ("older", "newer", "portable")}
+                | {("cuda12", c) for c in ("legacy", "older", "newer", "portable")},
+            )
+            for build in cuda:
+                self.assertIn(f"-x64-{build.line}-{build.coverage}.", build.asset.name)
+                self.assertEqual(
+                    (build.min_sm, build.max_sm), (min(build.sms), max(build.sms))
+                )
+                self.assertTrue(build.asset.name.endswith(".zip" if name == "windows" else ".tar.gz"))
+            builds += [b.asset for b in cuda]
+        self.assertEqual(len({a.name for a in builds}), len(builds))
+        for asset in builds:
+            self.assertEqual(
+                (asset.repo, asset.tag, asset.target),
+                ("unslothai/llama.cpp", "b12649-mix-c7059d6", "llama-unsloth-b12649"),
+            )
+            self.assertIn("b12649-mix-c7059d6", asset.name)
+            self.assertRegex(asset.sha256, r"\A[0-9a-f]{64}\Z")
+            self.assertGreater(asset.size, 10**7)
+        mac = rows[("macos", "metal")]
+        self.assertEqual(
+            [(a.name, a.sha256, a.size) for a in mac],
+            [
+                (
+                    UNSLOTH_MAC,
+                    "4e2629c4bf538eb22a75a7e6a7f07cbab606d19f44f8846428df5ce9088267f9",
+                    13205152,
+                )
+            ],
+        )
+        self.assertEqual(setup_engines.PROGRAM[UNSLOTH_REPO], "llama-server")
+        self.assertEqual(LLAMA_TAG, "b12633")
+
+    def test_cuda_build_follows_the_gpu_and_driver(self):
+        pick = setup_engines.unsloth_cuda
+
+        def chosen(name, caps, version):
+            build = pick(name, caps, version)
+            return build and (build.line, build.coverage)
+
+        for name in ("linux", "windows"):
+            with self.subTest(name=name):
+                self.assertEqual(chosen(name, (89,), (13, 0)), ("cuda13", "older"))
+                self.assertEqual(chosen(name, (120,), (13, 2)), ("cuda13", "newer"))
+                self.assertEqual(chosen(name, (89, 120), (13, 0)), ("cuda13", "newer"))
+                self.assertEqual(chosen(name, (75, 120), (13, 0)), ("cuda13", "portable"))
+                self.assertEqual(chosen(name, (120,), (12, 8)), ("cuda12", "newer"))
+                self.assertEqual(chosen(name, (86,), (12, 4)), ("cuda12", "older"))
+                self.assertEqual(chosen(name, (70,), (13, 0)), ("cuda12", "older"))
+                self.assertEqual(chosen(name, (61,), (13, 0)), ("cuda12", "legacy"))
+                self.assertEqual(chosen(name, (), (13, 0)), ("cuda13", "portable"))
+                self.assertEqual(chosen(name, (), (12, 6)), ("cuda12", "portable"))
+                self.assertIsNone(chosen(name, (89,), (12, 2)))
+                self.assertIsNone(chosen(name, (89,), None))
+                self.assertIsNone(chosen(name, (130,), (13, 0)))
+        self.assertIsNone(pick("macos", (89,), (13, 0)))
+
+    def test_nvidia_capabilities_and_driver_are_read_from_nvidia_smi(self):
+        answers = {
+            ("--query-gpu=compute_cap", "--format=csv,noheader"): "8.9\n12.0\n8.9\n",
+            (): "| NVIDIA-SMI 580.95  Driver Version: 580.95  CUDA Version: 13.0 |\n",
+        }
+        setup_engines.nvidia_cuda.cache_clear()
+        self.addCleanup(setup_engines.nvidia_cuda.cache_clear)
+        with patch.object(setup_engines, "smi", side_effect=lambda *a: answers[a]):
+            self.assertEqual(setup_engines.nvidia_cuda(), ((89, 120), (13, 0)))
+        setup_engines.nvidia_cuda.cache_clear()
+        with patch.object(setup_engines, "smi", return_value=""):
+            self.assertEqual(setup_engines.nvidia_cuda(), ((), None))
+
+    def test_build_matches_the_mainline_choice(self):
+        build = setup_engines.unsloth_build
+        for name, backend in setup_engines.UNSLOTH:
+            assets, used, note = build(backend, name)
+            self.assertEqual((assets, used, note), (setup_engines.UNSLOTH[(name, backend)], backend, ""))
+        self.computer("linux", gpu="RTX 4090", cuda=((89,), (13, 0)))
+        assets, used, note = build("cuda", "linux")
+        self.assertEqual(
+            (assets[0].name, used),
+            ("app-b12649-mix-c7059d6-linux-x64-cuda13-older.tar.gz", "cuda"),
+        )
+        self.assertIn("cuda13 older", note)
+        self.computer("windows", gpu="GTX 1080", vulkan=True, cuda=((61,), (12, 2)))
+        assets, used, note = build("cuda", "windows")
+        self.assertEqual(
+            (assets[0].name, used),
+            ("app-b12649-mix-c7059d6-windows-x64-vulkan.zip", "vulkan"),
+        )
+        self.assertIn("No Unsloth CUDA build matches", note)
+        self.computer("linux", gpu="RTX 4090", vulkan=False, cuda=((89,), None))
+        assets, used, _ = build("cuda", "linux")
+        self.assertEqual((assets[0].name, used), ("app-b12649-mix-c7059d6-linux-x64-cpu.tar.gz", "cpu"))
+
+    def test_amd_gpu_gets_the_vulkan_build(self):
+        self.computer("linux", vendors={"amd"}, vulkan=True)
+        with patch.object(runtime, "runtime", side_effect=ValueError("missing")):
+            plan = setup_engines.unsloth_plan()
+        self.assertEqual(plan["backend"], "vulkan")
+        self.assertEqual(
+            [row["name"] for row in plan["assets"]],
+            ["app-b12649-mix-c7059d6-linux-x64-vulkan.tar.gz"],
+        )
+        self.assertEqual(plan["download_bytes"], 32911246)
+        self.assertEqual((plan["ready"], plan["installed"]), (False, ""))
+
+    def test_unsupported_computer_has_no_unsloth_plan(self):
+        self.computer("macos", arch="x86_64")
+        with patch.object(setup_engines, "rosetta", return_value=False):
+            setup_engines.detect.cache_clear()
+            plan = setup_engines.unsloth_plan()
+        self.assertEqual((plan["assets"], plan["ready"]), ([], False))
+        self.assertIn("Apple Silicon", plan["reason"])
+
+    def test_install_places_the_unsloth_build_beside_the_tested_one(self):
+        self.computer("macos", arch="arm64")
+        asset = self.unsloth(UNSLOTH_MAC)
+        self.enterContext(
+            patch.dict(setup_engines.UNSLOTH, {("macos", "metal"): [asset]})
+        )
+        tested = self.data / "runtime" / LLAMA_TARGET
+        tested.mkdir(parents=True)
+        (tested / "llama-server").write_text("mainline")
+        web = self.serve(Reply(halves(self.body)))
+        events = []
+        result = setup_engines.install(progress=events.append, release="unsloth")
+        self.assertEqual(
+            web.calls[0][0],
+            "https://github.com/unslothai/llama.cpp/releases/download/"
+            f"b12649-mix-c7059d6/{UNSLOTH_MAC}",
+        )
+        folder = self.data / "runtime" / UNSLOTH_TARGET
+        self.assertTrue((folder / "build" / "llama-server").is_file())
+        self.assertEqual(
+            (folder / (UNSLOTH_MAC + ".installed")).read_text(),
+            "sha256:" + asset.sha256,
+        )
+        self.assertEqual((tested / "llama-server").read_text(), "mainline")
+        self.assertEqual(
+            (result["channel"], result["backend"], result["installed"], result["strata"]),
+            ("Unsloth", "metal", [UNSLOTH_MAC], False),
+        )
+        self.assertEqual(events[-1]["message"], "Unsloth's llama.cpp Metal build is ready.")
+        self.assertEqual(setup_engines.unsloth_installed(), UNSLOTH_MAC)
+        if os.name != "nt":
+            # locate() picks the executable name from the host, and this archive is the macOS one.
+            with patch.object(runtime, "system", return_value="macos"):
+                found = runtime.locate(LLAMA_TARGET, "llama-server.exe", "Unsloth")
+            self.assertEqual(found, (folder, folder / "build" / "llama-server"))
+        again = setup_engines.install(release="unsloth")
+        self.assertEqual((again["installed"], again["skipped"]), ([], [UNSLOTH_MAC]))
+
+    def test_install_refuses_unknown_releases_and_unsloth_updates(self):
+        self.computer("macos", arch="arm64")
+        with self.assertRaisesRegex(ValueError, "mainline or unsloth"):
+            setup_engines.install(release="nightly")
+        with self.assertRaisesRegex(ValueError, "without Update"):
+            setup_engines.install(update=True, release="unsloth")
+        self.get.assert_not_called()
+
+    def test_command_line_installs_the_unsloth_build(self):
+        out = io.StringIO()
+        result = dict(backend="metal", notes=[])
+        with patch.object(setup_engines, "install", return_value=result) as install:
+            with contextlib.redirect_stdout(out):
+                setup_engines.main(["--unsloth"])
+        self.assertEqual(install.call_args.args[5], "unsloth")
+        self.assertEqual(install.call_args.args[:3], (False, "auto", None))
+
+
 class PlanTest(EngineCase):
     def test_plan_lists_downloads_and_installed_state(self):
         self.computer("linux", vendors={"amd"}, vulkan=True)
@@ -1619,9 +1827,24 @@ class PlanTest(EngineCase):
         ):
             got = setup_engines.info("auto")
             plan = setup_engines.plan("auto")
-        self.assertEqual(got, plan | {"engines": ["Auto"], "support": support})
+            unsloth = setup_engines.unsloth_plan("auto")
+        self.assertEqual(
+            got,
+            plan | {"engines": ["Auto"], "support": support, "unsloth": unsloth},
+        )
         self.assertEqual(got["backend"], "metal")
         self.assertEqual(got["download_bytes"], 16600069)
+        self.assertEqual(
+            unsloth["assets"],
+            [
+                {
+                    "name": "llama-b12649-mix-c7059d6-bin-macos-arm64.tar.gz",
+                    "size": 13205152,
+                    "installed": False,
+                }
+            ],
+        )
+        self.assertEqual((unsloth["backend"], unsloth["ready"]), ("metal", False))
 
     def test_info_lists_engines_from_the_real_runtime(self):
         missing = str(self.data / "no-preset.json")

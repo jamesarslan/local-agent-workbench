@@ -1,6 +1,7 @@
 import ast
 import atexit
 import hashlib
+import io
 import json
 import os
 import shutil
@@ -806,9 +807,9 @@ class MachinesTest(Base):
                 kind="ollama",
                 label="Ollama 0.40",
                 models=[
-                    {"id": "qwen3:14b", "context": 32768},
-                    {"id": "gemma3", "context": None},
-                    {"id": "huge", "context": None},
+                    {"id": "qwen3:14b", "context": 32768, "loaded": True},
+                    {"id": "gemma3", "context": None, "loaded": None},
+                    {"id": "huge", "context": None, "loaded": None},
                 ],
                 protocols=ALL,
                 needs_key=False,
@@ -888,6 +889,110 @@ class MachinesTest(Base):
             self.assertEqual(machines._label("missing"), "")
         with patch.dict(sys.modules, {"providers": None}):
             self.assertEqual(machines._label("ollama"), "")
+
+    def test_a_workbench_server_there_is_attached_with_its_key_over_ssh(self):
+        secret = "k" * 43
+        locked = dict(port=10532, kind="strata", models=[], protocols=None, needs_key=True)
+        other = dict(port=8095, kind="strata", models=[], protocols=None, needs_key=True)
+        info = {
+            "servers": [
+                {"port": 10532, "model": "local-agent", "context": 32768, "engine": "Strata"},
+                {"port": 8095, "model": "not-asked"},
+                {"port": 10532, "model": "-rf"},
+                "junk",
+            ]
+        }
+        replies = {"python3 - info 10532": info, "python3 - key 10532": {"key": secret}}
+        calls = []
+
+        def execute(host, source, command, timeout=90):
+            calls.append(command)
+            if command != "python3 -":
+                self.assertIn(b"running.json", source)
+            return replies.get(command, [locked, other])
+
+        probe = MagicMock(return_value=dict(ALL))
+        self.use(fake_endpoints(probe_protocols=probe))
+        self.use(patch.object(machines, "execute", side_effect=execute))
+        rows = machines.discover("box")
+        # Only Workbench's own port is asked about; 8095 stays a server that needs a key.
+        self.assertEqual(calls, ["python3 -", "python3 - info 10532"])
+        self.assertEqual(
+            rows[0],
+            dict(
+                port=10532,
+                kind="strata",
+                label="",
+                models=[{"id": "local-agent", "context": 32768}],
+                protocols=None,
+                needs_key=False,
+                base_path="/v1",
+                engine="Strata",
+                workbench=True,
+            ),
+        )
+        self.assertTrue(rows[1]["needs_key"])
+        self.assertNotIn("workbench", rows[1])
+
+        self.http({})
+        self.use(patch.object(machines, "forward", return_value=40333))
+        calls.clear()
+        out = machines.attach("box", 10532)
+        self.assertEqual(calls, ["python3 -", "python3 - info 10532", "python3 - key 10532"])
+        self.assertEqual(probe.call_args.args, ("http://127.0.0.1:40333/v1", secret))
+        stored = connections.store_key.call_args.args
+        self.assertEqual(stored[1], secret)
+        self.assertEqual(stored[0]["remote_model"], "local-agent")
+        self.assertEqual(stored[0]["context_window"], 32768)
+        self.assertEqual(
+            (out["model"], out["context"], out["needs_key"], out["kind"]),
+            ("local-agent", 32768, False, "strata"),
+        )
+        self.assertNotIn(secret, json.dumps(out))
+        self.assertNotIn(secret, json.dumps(account_book.entries()))
+        self.assertEqual(out["protocols"], ALL)
+
+        # Workbench started this engine, so an API its probe left unsure is the documented one.
+        probe.return_value = {"chat": True, "responses": True, "messages": None}
+        self.assertEqual(machines.attach("box", 10532)["protocols"], ALL)
+        probe.return_value = {"chat": True, "responses": False, "messages": None}
+        self.assertEqual(
+            machines.attach("box", 10532)["protocols"],
+            {"chat": True, "responses": False, "messages": True},
+        )
+        probe.return_value = None
+        self.assertEqual(machines.attach("box", 10532)["protocols"], ALL)
+        probe.return_value = dict(ALL)
+
+        # A key the user typed is used as it is, and a reply that is not a key is never stored.
+        connections.store_key.reset_mock()
+        calls.clear()
+        machines.attach("box", 10532, key="typed-key")
+        self.assertEqual(calls, ["python3 -", "python3 - info 10532"])
+        # Other servers keep exactly what their probe said.
+        probe.return_value = {"chat": True, "responses": None, "messages": None}
+        unsure = machines.attach("box", 8095, "m", key="typed-key")["protocols"]
+        self.assertEqual(unsure, {"chat": True, "responses": None, "messages": None})
+        self.assertEqual(connections.store_key.call_args.args[1], "typed-key")
+        for reply in ({"key": "short"}, {"key": "bad key with spaces " * 2}, {}, ["x"]):
+            replies["python3 - key 10532"] = reply
+            self.assertIsNone(machines.workbench_key("box", 10532))
+
+    def test_a_failed_workbench_lookup_leaves_the_server_locked(self):
+        locked = dict(port=10532, kind="strata", models=[], protocols=None, needs_key=True)
+
+        def execute(host, source, command, timeout=90):
+            if command == "python3 -":
+                return [locked]
+            raise ValueError("no python")
+
+        machines._note_system("box", os="posix")
+        self.use(fake_endpoints())
+        self.use(patch.object(machines, "execute", side_effect=execute))
+        rows = machines.discover("box")
+        self.assertEqual((rows[0]["needs_key"], rows[0]["models"]), (True, []))
+        self.assertNotIn("workbench", rows[0])
+        self.assertIsNone(machines.workbench_key("box", 10532))
 
     def test_attach_forwards_chosen_port_and_saves_row(self):
         self.found()
@@ -1052,6 +1157,50 @@ class MachinesTest(Base):
             (row["context_window"], row["context_source"]), (32768, "server")
         )
 
+    def test_attach_asks_the_server_about_a_late_system_message(self):
+        import endpoints
+
+        late = MagicMock(return_value=False)
+        real = endpoints._late
+
+        def asked(*args):
+            with patch.object(endpoints, "late_system", late):
+                return real(*args)
+
+        self.found(_late=asked, _auth=endpoints._auth)
+        self.http({})
+        self.use(patch.object(machines, "forward", return_value=40333))
+        ident = machines.attach("box", 11434, key="sk")["connection_id"]
+        self.assertEqual(
+            late.call_args.args,
+            (
+                "http://127.0.0.1:40333/v1",
+                "qwen3:14b",
+                {"Authorization": "Bearer sk", "x-api-key": "sk"},
+                ALL,
+            ),
+        )
+        row = account_book.entries()[ident]
+        self.assertIs(row["late_system"], False)
+        verdicts = connections.compat("Attached endpoint", row)
+        self.assertIn("rejects the system message", verdicts["Claude Code"]["reason"])
+        self.assertTrue(verdicts["OMP"]["ok"])
+        late.return_value = None
+        machines.attach("box", 11434, key="sk")
+        self.assertIs(account_book.entries()[ident]["late_system"], False)
+        late.side_effect = OSError("gone")
+        machines.attach("box", 11434, key="sk")
+        self.assertIs(account_book.entries()[ident]["late_system"], False)
+        late.side_effect, late.return_value = None, True
+        machines.attach("box", 11434, key="sk")
+        self.assertIs(account_book.entries()[ident]["late_system"], True)
+        late.reset_mock()
+        rows = machines.discover("box")
+        rows[0]["models"][0]["loaded"] = False
+        with patch.object(machines, "discover", return_value=rows):
+            machines.attach("box", 11434, key="sk")
+        late.assert_not_called()
+
     def test_ids_and_reply_shape_match_the_endpoints_module(self):
         import endpoints
 
@@ -1108,7 +1257,7 @@ class MachinesTest(Base):
                     port=11434,
                     kind="ollama",
                     label=LABEL("ollama"),
-                    models=[{"id": "qwen3:14b", "context": 32768}],
+                    models=[{"id": "qwen3:14b", "context": 32768, "loaded": True}],
                     protocols={"chat": True, "responses": True, "messages": None},
                     needs_key=False,
                     base_path="/v1",
@@ -1411,10 +1560,13 @@ class MachinesTest(Base):
         with (
             patch.object(machines, "run", return_value={"system": "Linux"}) as ran,
             patch.object(machines, "disconnect") as closed,
+            patch.object(machines, "detect", return_value="posix") as detected,
         ):
             self.assertEqual(
-                machines.dispatch("machine-probe", {"host": "box"}), {"system": "Linux"}
+                machines.dispatch("machine-probe", {"host": "box"}),
+                {"system": "Linux", "os": "posix"},
             )
+            detected.assert_called_once_with("box")
             ran.assert_called_once_with("box", "probe", 20)
             machines.dispatch("machine-install", {"host": "box"})
             ran.assert_called_with("box", "install", 3600)
@@ -1424,7 +1576,7 @@ class MachinesTest(Base):
         with patch.object(machines, "discover", return_value=[{"port": 1}]) as found:
             self.assertEqual(
                 machines.dispatch("machine-discover", {"host": "box "}),
-                {"host": "box", "endpoints": [{"port": 1}]},
+                {"host": "box", "endpoints": [{"port": 1}], "ports": []},
             )
             found.assert_called_once_with("box")
         with patch.object(machines, "tunnel", return_value={"endpoint": "E"}) as opened:
@@ -1912,6 +2064,46 @@ class RemoteNodeTest(unittest.TestCase):
         self.assertFalse((self.base / "omp-agent").exists())
         self.installed()
         self.assertEqual(self.verb("key"), "secret")
+
+    def test_start_serves_the_catalog_window_and_omp_matches_it(self):
+        self.installed()
+
+        class Reply(io.BytesIO):
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        served = {"data": [{"id": "local-agent", "meta": {"n_ctx": 16384}}]}
+        stat = MagicMock()
+        stat.return_value.read_text.return_value = "1 (llama-server) " + "S " * 30
+        with (
+            self.linux(),
+            patch.object(remote_node.socket, "socket"),
+            patch.object(remote_node.subprocess, "Popen") as spawned,
+            patch.object(remote_node, "Path", stat),
+            patch.object(remote_node, "pid", side_effect=[None] + [4242] * 5),
+            patch.object(
+                remote_node, "urlopen", side_effect=lambda *a, **k: Reply(json.dumps(served).encode())
+            ),
+        ):
+            spawned.return_value.pid = 4242
+            info = remote_node.start()
+            argv = spawned.call_args.args[0]
+            self.assertEqual(argv[argv.index("-c") + 1], "16384")
+            self.assertEqual(remote_node.CONTEXT, 16384)
+            self.assertEqual(info["context"], 16384)
+            served["data"][0]["meta"]["n_ctx"] = 8192
+            self.assertEqual(remote_node.start()["context"], 8192)
+            served["data"][0]["meta"] = ["odd"]
+            self.assertEqual(remote_node.start()["context"], 16384)
+        self.assertEqual(remote_node.probe()["context"], 16384)
+        self.assertIs(self.verb("omp-config"), True)
+        config = json.loads((self.base / "omp-agent/models.yml").read_text())
+        (model,) = config["providers"]["workbench"]["models"]
+        self.assertEqual(model["contextWindow"], remote_node.CONTEXT)
+        self.assertLess(model["maxTokens"], model["contextWindow"])
 
     def test_start_reports_a_busy_port(self):
         self.installed()

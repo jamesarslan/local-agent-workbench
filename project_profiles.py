@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import shutil
 import stat
+import sys
 from urllib.parse import urlsplit
 
 import account_book
@@ -97,9 +98,13 @@ LABELS = {
     "vllm_fraction": "vLLM GPU fraction",
     "connection_name": "Connection name",
     "weight": "Local weights",
+    "default": "Folder default",
 }
+DEFAULT_NAME = "Folder default"
+# Record keys that only say a notice was dismissed; a record with nothing else remembers no choices.
+NOTICE_ONLY = ("path", "updated", "default_notice")
 CHOICES = {
-    "channel": ("Tested", "Updated"),
+    "channel": ("Tested", "Updated", "Unsloth"),
     "kv": ("auto", "fp16", "fp8"),
     "thinking": ("off", "minimal", "low", "medium", "high", "xhigh", "max"),
     "image_route": ("auto", "selected", "pareto", "manual"),
@@ -187,15 +192,33 @@ def profile_file(workspace):
     )
 
 
+def _drop_old_lock(path):
+    """Remove the empty profiles.json.lock that 0.4.0 left beside profiles.json."""
+    old = path.with_name(path.name + ".lock")
+    try:
+        info = os.lstat(old)
+        if stat.S_ISREG(info.st_mode) and info.st_size == 0:
+            os.unlink(old)
+    except OSError:
+        pass
+
+
+def _profile_lock(path):
+    """The lock for one profiles.json. It lives in the data folder, so the project
+    folder never shows a stray lock file."""
+    key = hashlib.sha256(folder_paths.fold(str(path)).encode("utf8")).hexdigest()[:16]
+    return DATA / "locks" / f"profiles-{key}.lock"
+
+
 @contextmanager
 def _editing(path, create=False):
-    lock = folder_paths.inside(
-        path.parent.parent, path.parent.name, path.name + ".lock"
-    )
+    lock = _profile_lock(path)
     try:
+        lock.parent.mkdir(parents=True, exist_ok=True)
         if create:
             path.parent.mkdir(exist_ok=True)
         with _locked(lock):
+            _drop_old_lock(path)
             yield
     except OSError:
         raise ValueError(NO_WRITE) from None
@@ -329,13 +352,102 @@ def validate_profile(item, name=""):
                 f"The profile {_quote(name)} has a value Workbench does not accept for {LABELS[key]}. "
                 f"Save the profile again from Launch, or fix {PROFILES}."
             ) from None
+    if "default" in item and type(item["default"]) is not bool:
+        raise ValueError(
+            f"The profile {_quote(name)} has a value Workbench does not accept for {LABELS['default']}. "
+            f"Use true or false in {PROFILES}, or choose Make default in Project profiles."
+        )
     return out
 
 
-def save_project(s, name):
-    name = name.strip()
+def _default_of(rows):
+    """The one profile marked "default": true, or ""; a clear sentence when the file marks more than one."""
+    for name, item in rows.items():
+        if "default" in item and type(item["default"]) is not bool:
+            validate_profile({"default": item["default"]}, name)
+    marked = [name for name, item in rows.items() if item.get("default") is True]
+    if len(marked) > 1:
+        shown = " and ".join(_quote(name) for name in marked[:2])
+        more = f" and {len(marked) - 2} more" if len(marked) > 2 else ""
+        raise ValueError(
+            f"{PROFILES} marks more than one profile as the folder default: {shown}{more}. "
+            "Choose Make default on the one to keep in Project profiles."
+        )
+    return marked[0] if marked else ""
+
+
+def folder_default(workspace):
+    return _default_of(load_profiles(workspace))
+
+
+def project_list(workspace):
+    """Profile names with the folder default; a damaged default is reported, not raised, so the list still shows."""
+    rows = load_profiles(workspace)
+    try:
+        default, problem = _default_of(rows), ""
+    except ValueError as error:
+        default, problem = "", str(error)
+    return {"names": sorted(rows), "default": default, "problem": problem}
+
+
+def _marked(item, on):
+    rest = {k: v for k, v in item.items() if k != "default"}
+    return {"default": True, **rest} if on else rest
+
+
+def set_default(workspace, name):
+    path = profile_file(workspace)
+    if not path.is_file():
+        raise ValueError("This profile no longer exists. Pick another profile.")
+    with _editing(path):
+        rows = _read_profiles(path)
+        if not isinstance(name, str) or name not in rows:
+            raise ValueError("This profile no longer exists. Pick another profile.")
+        write_json(path, {key: _marked(item, key == name) for key, item in rows.items()})
+    _seen_here(workspace, name)
+    return project_list(workspace)
+
+
+def clear_default(workspace):
+    path = profile_file(workspace)
+    if not path.is_file():
+        return project_list(workspace)
+    with _editing(path):
+        rows = _read_profiles(path)
+        if any("default" in item for item in rows.values()):
+            write_json(path, {key: _marked(item, False) for key, item in rows.items()})
+    return project_list(workspace)
+
+
+def _profile_name(name):
+    name = name.strip() if isinstance(name, str) else ""
     if not name or len(name) > 80 or any(ord(c) < 32 for c in name):
         raise ValueError("Give this profile a name of 1–80 characters.")
+    return name
+
+
+def save_item(workspace, name, item, replace=True, default=False):
+    """Write one checked profile into the folder's profiles.json; returns the file's path."""
+    name = _profile_name(name)
+    item = validate_profile({k: v for k, v in item.items() if k != "default"}, name)
+    path = profile_file(workspace)
+    with _editing(path, create=True):
+        profiles = _read_profiles(path)
+        if not replace and name in profiles:
+            raise ValueError(
+                f"This folder already has a profile named {name}. Choose another name."
+            )
+        # Replacing the folder default keeps it the default; saving as the default unmarks the others.
+        keep = profiles.get(name, {}).get("default") is True
+        if default:
+            profiles = {key: _marked(row, False) for key, row in profiles.items()}
+        profiles[name] = _marked(item, default or keep)
+        write_json(path, profiles)
+    return str(path)
+
+
+def save_project(s, name, default=False):
+    name = _profile_name(name)
     connection = (
         next(
             (
@@ -349,21 +461,16 @@ def save_project(s, name):
         if s.get("connection_id")
         else None
     )
-    path = profile_file(s["workspace"])
     used = launch_settings(s)
-    item = validate_profile(
-        {
-            **{k: used[k] for k in PORTABLE if k in used},
-            **({"connection_name": connection["name"]} if connection else {}),
-            "weight": Path(s["model"]).name,
-        },
-        name,
-    )
-    with _editing(path, create=True):
-        profiles = _read_profiles(path)
-        profiles[name] = item
-        write_json(path, profiles)
-    return str(path)
+    item = {
+        **{k: used[k] for k in PORTABLE if k in used},
+        **({"connection_name": connection["name"]} if connection else {}),
+        "weight": Path(s["model"]).name,
+    }
+    path = save_item(s["workspace"], name, item, default=default)
+    if default:
+        _seen_here(s["workspace"], name)
+    return path
 
 
 def _resolve(s, item, paths):
@@ -427,9 +534,10 @@ def _resolve(s, item, paths):
             )
         else:
             blockers.append(
-                f"Add a {provider} connection named {name} in Connections, then apply this profile."
+                f"Add {_article(provider)} {provider} connection named {name} in Connections, "
+                "then apply this profile."
                 if name
-                else f"Add an {provider} connection in Connections, then apply this profile."
+                else f"Add {_article(provider)} {provider} connection in Connections, then apply this profile."
             )
             needs = {"connection": {"provider": provider, "name": name or ""}}
     elif provider not in ("Managed local", "Native login"):
@@ -447,6 +555,10 @@ def _resolve(s, item, paths):
         except ValueError as error:
             blockers.append(str(error))
     return out, blockers, needs, notes
+
+
+def _article(word):
+    return "an" if word[:1].upper() in "AEIOU" else "a"
 
 
 def _connection_label(rows, ident):
@@ -500,10 +612,12 @@ def _review(s, name, paths):
         )
     shown = {change["field"] for change in changes}
     alias = {"weight": "model", "connection_name": "connection"}
+    # Marking a profile as the folder default changes nothing it applies, so it does not void a review.
+    reviewed = {k: v for k, v in raw.items() if k != "default"}
     preview = {
         "name": name,
         "digest": hashlib.sha256(
-            json.dumps([name, raw], sort_keys=True, ensure_ascii=True).encode()
+            json.dumps([name, reviewed], sort_keys=True, ensure_ascii=True).encode()
         ).hexdigest(),
         "changes": changes,
         "unchanged": sum(alias.get(key, key) not in shown for key in item),
@@ -773,6 +887,8 @@ def folder_view(workspace, strict=True):
         "project_mcp": {},
         "updated": "",
         "consent_granted": "",
+        "saved_default": "",
+        "offer_default": False,
     }
     try:
         key, root, record = _record(workspace)
@@ -782,8 +898,14 @@ def folder_view(workspace, strict=True):
         return view | {
             "path": str(workspace) if isinstance(workspace, (str, os.PathLike)) else ""
         }
-    view |= {"key": key, "path": str(root)}
-    if record is None:
+    saved = _saved_default(root)
+    view |= {
+        "key": key,
+        "path": str(root),
+        "saved_default": saved,
+        "offer_default": offer_default(record, saved),
+    }
+    if not _remembers(record):
         return view
     recipe, stale = _clean_recipe(_recipe_of(record))
     return view | {
@@ -803,6 +925,126 @@ def folder_view(workspace, strict=True):
 def _granted(record):
     consent = record.get("consent")
     return _text(consent.get("granted"), 40) if isinstance(consent, dict) else ""
+
+
+def _remembers(record):
+    return record is not None and any(key not in NOTICE_ONLY for key in record)
+
+
+def _saved_default(root):
+    try:
+        return folder_default(root)
+    except (ValueError, OSError, RecursionError):
+        return ""
+
+
+def offer_default(record, saved):
+    """Launch offers the folder's saved default only on a computer that remembers nothing for the folder.
+
+    It never applies it: the notice opens the same review a profile always gets. Dismissing it is remembered per
+    folder for that default's name, so a different default saved later is offered again.
+    """
+    if not saved or _remembers(record):
+        return False
+    return _text((record or {}).get("default_notice"), 80) != saved
+
+
+def _seen_here(workspace, name):
+    """A default marked on this computer is not offered back to it; another computer still gets the offer."""
+    try:
+        _update_folder(workspace, lambda record: record.update(default_notice=name))
+    except (OSError, ValueError):
+        pass
+
+
+def dismiss_default(workspace):
+    root = _place(workspace)[1]
+    saved = _saved_default(root)
+    if saved:
+        _update_folder(root, lambda record: record.update(default_notice=saved))
+    return folder_view(root)
+
+
+VAULTS = {
+    "darwin": "In the login keychain on this computer.",
+    "win32": "In Windows Credential Manager on this computer.",
+}
+
+
+def places(workspace):
+    """Where a folder's settings are kept: the files that travel with the folder, then what stays on this computer."""
+    import run_log
+
+    root = folder_paths.canonical(workspace)
+
+    def row(ident, label, path, note, travels):
+        return {
+            "id": ident,
+            "label": label,
+            "path": str(path) if path else "",
+            "exists": bool(path) and os.path.exists(path),
+            "note": note,
+            "travels": travels,
+        }
+
+    return [
+        row(
+            "profiles",
+            "Folder profiles and default",
+            root / PROFILES,
+            "Plain JSON that travels with the folder. Safe to commit: it holds no keys.",
+            True,
+        ),
+        row(
+            "project",
+            "Project setup",
+            root / ".agent-workbench" / "project.json",
+            "This folder's MCP servers. Travels with the folder.",
+            True,
+        ),
+        row(
+            "instructions",
+            "Agent instructions",
+            root / "AGENTS.md",
+            "A project file the agents read. Travels with the folder.",
+            True,
+        ),
+        row(
+            "skills",
+            "Skills",
+            root / ".agents" / "skills",
+            "Project files the agents load. Travel with the folder.",
+            True,
+        ),
+        row(
+            "memory",
+            "Last-used choices",
+            DATA / "projects.json",
+            "Stays on this computer. Holds connection ids and local paths.",
+            False,
+        ),
+        row(
+            "connections",
+            "Connections",
+            DATA / "connections.json",
+            "Stays on this computer. Holds no keys.",
+            False,
+        ),
+        row(
+            "runs",
+            "Run summaries",
+            DATA / "runs" / run_log.file_name(root),
+            "Stays on this computer. Holds no keys, but has folder paths, file names and the folder prompt.",
+            False,
+        ),
+        row(
+            "keys",
+            "API keys",
+            "",
+            VAULTS.get(sys.platform, "In the system credential vault on this computer."),
+            False,
+        ),
+    ]
 
 
 def remember(workspace, values):
@@ -1195,6 +1437,10 @@ def dispatch(action, p):
         return forget(p["workspace"])
     if action == "folder-clear-prompt":
         return clear_prompt(p["workspace"])
+    if action == "folder-default-dismiss":
+        return dismiss_default(p["workspace"])
+    if action == "folder-places":
+        return places(p["workspace"])
     if action == "plugin-describe":
         return describe()
     if action == "plugin-remove":

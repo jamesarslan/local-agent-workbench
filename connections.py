@@ -164,6 +164,22 @@ def _checked(harness, argv, values):
     return argv
 
 
+NO_LOGIN_KEYCHAIN = (
+    "The macOS login keychain was not found for this home folder, so keys are kept "
+    "only until Agent Workbench closes. Start Agent Workbench from your own account "
+    "without changing HOME to keep them."
+)
+
+
+def _keychain_missing(module):
+    """macOS shows a "Keychain Not Found" dialog that offers to reset the keychain when the
+    login keychain is missing, for example when HOME points elsewhere; never ask it then."""
+    if sys.platform != "darwin" or not module.endswith(".macOS"):
+        return False
+    folder = Path.home() / "Library" / "Keychains"
+    return not any((folder / n).exists() for n in ("login.keychain-db", "login.keychain"))
+
+
 def vault_status():
     reason = NO_VAULT.get(sys.platform, NO_VAULT["linux"])
     try:
@@ -173,6 +189,8 @@ def vault_status():
     except Exception:
         return {"available": False, "backend": "none", "reason": reason}
     module, name = type(backend).__module__, type(backend).__name__
+    if _keychain_missing(module):
+        return {"available": False, "backend": "macOS", "reason": NO_LOGIN_KEYCHAIN}
     available = not (module.endswith((".fail", ".null")) or "plaintext" in name.lower())
     return {
         "available": available,
@@ -253,6 +271,8 @@ def _lookup(s):
     slot = vault_slot(s)
     if _MEMORY.get(slot):
         return _MEMORY[slot], "memory"
+    if not vault_status()["available"]:
+        return "", "none"
     import keyring
 
     # Windows Credential Manager failures surface as pywintypes.error, not KeyringError.
@@ -313,6 +333,8 @@ def forget_key(s):
     except ValueError:
         return False
     _MEMORY.pop(slot, None)
+    if not vault_status()["available"]:
+        return True
     import keyring
 
     try:
@@ -321,6 +343,9 @@ def forget_key(s):
         return True
     except Exception:
         return not vault_status()["available"]
+
+
+LATE_MESSAGE = {"Claude Code": "system message", "Codex": "developer message"}
 
 
 def _any(names):
@@ -343,6 +368,10 @@ def compat(provider, row=None):
         for h in providers.HARNESSES
         if not h["native_only"] and flags[h["protocol"]] is not False
     ]
+    # A server whose template refuses a late system message fails these two mid-conversation.
+    late = provider == "Attached endpoint" and (row or {}).get("late_system") is False
+    if late:
+        usable = [name for name in usable if name not in LATE_MESSAGE]
     out = {}
     for h in providers.HARNESSES:
         api = providers.PROTOCOL_LABEL[h["protocol"]]
@@ -369,6 +398,14 @@ def compat(provider, row=None):
             reason = (
                 f"{subject} is not confirmed to offer the {api} API, so {h['id']} "
                 "may fail to connect."
+            )
+        if ok and late and h["id"] in LATE_MESSAGE:
+            ok = False
+            others = f"use {_any(usable)}" if usable else "choose another source"
+            reason = (
+                f"This server's chat template rejects the {LATE_MESSAGE[h['id']]} "
+                f"{h['id']} sends mid-conversation. Serve the model with Workbench, "
+                f"which fixes the template, or {others}."
             )
         out[h["id"]] = {"ok": ok, "reason": reason}
     return out
@@ -566,8 +603,9 @@ def _lead(harness, argv, tools):
     return [*argv, *tools]
 
 
-def prepare(s, harness=None, sent=None):
-    """sent, when given, collects the names of the MCP servers the harness receives."""
+def prepare(s, harness=None, sent=None, facts=None):
+    """sent, when given, collects the names of the MCP servers the harness receives.
+    facts, when given, receives the settings the session runs with, its API address and model ID."""
     harness = harness or s.get("harness", "OMP")
     if harness not in HARNESS:
         raise ValueError("Unknown harness")
@@ -601,6 +639,8 @@ def prepare(s, harness=None, sent=None):
             argv += ["--model", choice]
         if harness == "Codex":
             argv += ["--sandbox", "workspace-write"]
+        if facts is not None:
+            facts.update(settings=dict(s), base="", model=choice, prompt=False)
         return _checked(harness, argv, [choice, auth]), env, cwd
     gate = compat(provider, row)[harness]
     if not gate["ok"]:
@@ -619,6 +659,9 @@ def prepare(s, harness=None, sent=None):
     home.mkdir(parents=True, exist_ok=True)
     tools = _tools(s, harness, home, env, sent)
     env["WORKBENCH_SESSION_KEY"] = token or "local"
+    if facts is not None:
+        # Codex is the one agent here that is not handed the folder prompt.
+        facts.update(settings=dict(s), base=base, model=model, prompt=harness != "Codex")
     if harness in ("OMP", "Pi") and provider != "Managed local":
         from visual_routes import route
 
@@ -784,9 +827,11 @@ def prepare(s, harness=None, sent=None):
     raise ValueError("Unknown harness")
 
 
-def ready_session(s):
+def ready_session(s, facts=None):
     sent = []
-    argv, env, cwd = prepare(s, sent=sent)
+    argv, env, cwd = prepare(s, sent=sent, facts=facts)
+    if facts is not None:
+        facts["sent"] = list(sent)
     if s["firecrawl"] and "firecrawl" in sent:
         from cli import web
 
@@ -804,8 +849,8 @@ def ready_session(s):
     return argv, env, cwd
 
 
-def launch(s):
-    argv, env, cwd = ready_session(s)
+def launch(s, facts=None):
+    argv, env, cwd = ready_session(s, facts)
     import secrets
     import time
     from runtime import ROOT

@@ -1980,6 +1980,220 @@ class PlanTest(SetupCase):
         )
 
 
+ROBLOX = {
+    "transport": "stdio",
+    "platforms": {
+        "darwin": {"command": "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP"},
+        "win32": {"command": "cmd.exe", "args": ["/c", "%LOCALAPPDATA%\\Roblox\\mcp.bat"]},
+    },
+    "enabled": True,
+}
+MAC_MCP = "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP"
+SPACED = "C:\\Users\\Ann Lee\\AppData\\Local"
+
+
+class PerSystemTest(SetupCase):
+    """A server whose command differs per system, such as Roblox Studio's built-in server."""
+
+    def on(self, system, **env):
+        """Act as this system; os.environ is restored by SetupCase."""
+        item = patch.object(setup, "_platform", return_value=system)
+        item.start()
+        self.addCleanup(item.stop)
+        os.environ.pop("LOCALAPPDATA", None)
+        os.environ.update(env)
+
+    def test_platforms_pick_this_systems_command(self):
+        with patch.object(setup, "_platform", return_value="darwin"):
+            mac = setup.clean_server("roblox-studio", ROBLOX)
+        self.assertEqual((mac["command"], mac["args"]), (MAC_MCP, []))
+        self.assertEqual(setup.summary(mac), MAC_MCP)
+        with patch.object(setup, "_platform", return_value="win32"):
+            win = setup.clean_server("roblox-studio", ROBLOX)
+        self.assertEqual(
+            (win["command"], win["args"]), ("cmd.exe", ["/c", "%LOCALAPPDATA%\\Roblox\\mcp.bat"])
+        )
+        for system, here in (("linux", "Linux"), ("freebsd14", "this system")):
+            with self.subTest(system=system), patch.object(setup, "_platform", return_value=system):
+                other = setup.clean_server("roblox-studio", ROBLOX)
+                self.assertEqual((other["command"], other["args"]), ("", []))
+                self.assertEqual(setup.summary(other), "Only on macOS and Windows")
+                self.assertEqual(
+                    setup.unavailable(other),
+                    f"roblox-studio is not available on {here}; it runs on macOS and Windows.",
+                )
+        self.assertEqual(setup.unavailable(mac), "")
+        self.assertEqual(setup.unavailable(setup.clean_server("p", PLAYWRIGHT)), "")
+        written = json.loads(setup.project_text({"roblox-studio": win}))["mcp"]["roblox-studio"]
+        self.assertEqual(written, ROBLOX)
+
+    def test_platform_rules(self):
+        bad = {
+            "unknown system": {"macos": {"command": "x"}},
+            "empty": {},
+            "list": ["darwin"],
+            "relative path": {"darwin": {"command": "./StudioMCP"}},
+            "parent folder": {"darwin": {"command": "/Applications/../tmp/x"}},
+            "shell text": {"win32": {"command": "cmd.exe", "args": ["/c", "x & y"]}},
+            "other variable": {"win32": {"command": "cmd.exe", "args": ["/c", "%TEMP%\\x.bat"]}},
+            "extra key": {"darwin": {"command": "x", "env": {}}},
+            "no command": {"darwin": {"args": ["x"]}},
+        }
+        for label, platforms in bad.items():
+            with self.subTest(case=label), self.assertRaisesRegex(ValueError, "roblox-studio"):
+                setup.clean_server("roblox-studio", ROBLOX | {"platforms": platforms})
+        with self.assertRaisesRegex(ValueError, "either a command or platforms"):
+            setup.clean_server("roblox-studio", ROBLOX | {"command": "npx"})
+        with self.assertRaisesRegex(ValueError, "platforms does not belong to an http server"):
+            setup.clean_server("docs", DOCS | {"platforms": ROBLOX["platforms"]})
+        with self.assertRaisesRegex(ValueError, "program name"):
+            setup.clean_server("x", {"transport": "stdio", "command": MAC_MCP})
+        good = {"linux": {"command": "~/bin/tool-mcp", "args": ["--stdio"]}}
+        self.assertEqual(
+            setup.clean_server("x", {"transport": "stdio", "platforms": good})["platforms"], good
+        )
+
+    def test_local_path_expansion(self):
+        env = {"LOCALAPPDATA": SPACED}
+        self.assertEqual(
+            setup.local_path("%LOCALAPPDATA%\\Roblox\\mcp.bat", env),
+            SPACED + "\\Roblox\\mcp.bat",
+        )
+        self.assertEqual(setup.local_path("~/bin/x", {}, home="/home/ann"), "/home/ann/bin/x")
+        self.assertEqual(setup.local_path(MAC_MCP, {}), MAC_MCP)
+        self.assertIsNone(setup.local_path("%LOCALAPPDATA%\\Roblox\\mcp.bat", {}))
+        self.assertIsNone(setup.local_path("%PATH%\\x", {"PATH": "C:\\"}))
+        self.assertIsNone(setup.local_path("relative/x", {}))
+        self.assertIsNone(setup.local_path("%LOCALAPPDATA%\\x", {"LOCALAPPDATA": 'C:\\a"b'}))
+
+    def test_windows_launch_expands_localappdata_with_a_space(self):
+        self.on("win32", LOCALAPPDATA=SPACED)
+        self.project({"roblox-studio": ROBLOX})
+        self.allow()
+        found = setup.launch_mcp(self.s, "Claude Code", self.home)
+        entry = json.loads(Path(found["argv"][1]).read_text(encoding="utf8"))["mcpServers"]
+        target = SPACED + "\\Roblox\\mcp.bat"
+        self.assertEqual(
+            entry["roblox-studio"], {"type": "stdio", "command": "cmd.exe", "args": ["/c", target]}
+        )
+        # How Node and Rust quote it for CreateProcess: one quoted path, which cmd /c keeps whole.
+        import subprocess
+
+        line = subprocess.list2cmdline(["cmd.exe", "/c", target])
+        self.assertEqual(line, 'cmd.exe /c "' + target + '"')
+        self.assertEqual(line.count('"'), 2)
+        import connections
+        import host
+
+        self.assertEqual(connections.batch_unsafe("cmd.exe", ["/c", target], windows=True), "")
+        with patch.object(host, "WINDOWS", True):
+            self.assertEqual(host.safe_argv(["cmd.exe", "/c", target])[0], "cmd.exe")
+        codex = setup.launch_mcp(self.s, "Codex", self.home)
+        self.assertIn('mcp_servers.roblox-studio.command="cmd.exe"', codex["argv"])
+        self.assertIn(
+            "mcp_servers.roblox-studio.args=" + json.dumps(["/c", target]), codex["argv"]
+        )
+        self.assertNotIn("%", " ".join(codex["argv"]))
+        self.assertEqual(
+            setup.omp_entries(self.s, set())["roblox-studio"],
+            {"type": "stdio", "command": "cmd.exe", "args": ["/c", target]},
+        )
+        listed = setup.read_project(self.work)["servers"]["roblox-studio"]
+        self.assertEqual(listed["args"], ["/c", "%LOCALAPPDATA%\\Roblox\\mcp.bat"])
+        self.assertNotIn("Ann Lee", self.text(setup.PROJECT_FILE))
+
+    def test_windows_refuses_what_cmd_would_reread_or_cannot_find(self):
+        self.project({"roblox-studio": ROBLOX})
+        self.allow()
+        self.on("win32", LOCALAPPDATA="C:\\Users\\Ann (Work)\\AppData\\Local")
+        found = setup.launch_mcp(self.s, "Claude Code", self.home)
+        self.assertEqual(found["servers"], [])
+        self.assertIn("cmd.exe", found["skipped"][0]["reason"])
+        os.environ.pop("LOCALAPPDATA")
+        found = setup.launch_mcp(self.s, "Codex", self.home)
+        self.assertEqual(
+            found["skipped"],
+            [
+                {
+                    "name": "roblox-studio",
+                    "reason": "roblox-studio needs a folder variable this computer does not set.",
+                }
+            ],
+        )
+
+    def test_every_agent_receives_the_mac_command(self):
+        self.on("darwin")
+        self.project({"roblox-studio": ROBLOX})
+        self.allow()
+        claude = setup.launch_mcp(self.s, "Claude Code", self.home)
+        servers = json.loads(Path(claude["argv"][1]).read_text(encoding="utf8"))["mcpServers"]
+        self.assertEqual(servers, {"roblox-studio": {"type": "stdio", "command": MAC_MCP}})
+        codex = setup.launch_mcp(self.s, "Codex", self.home)
+        self.assertEqual(
+            codex["argv"], ["-c", f"mcp_servers.roblox-studio.command={json.dumps(MAC_MCP)}"]
+        )
+        pi = setup.launch_mcp(self.s, "Pi", self.home)
+        self.assertEqual(
+            json.loads(Path(pi["files"][0]).read_text(encoding="utf8"))["mcpServers"],
+            {"roblox-studio": {"command": MAC_MCP}},
+        )
+        self.assertEqual(
+            setup.omp_entries(self.s, set()),
+            {"roblox-studio": {"type": "stdio", "command": MAC_MCP}},
+        )
+        for harness in ("Hermes", "opencode"):
+            with self.subTest(harness=harness):
+                view = setup.resolve(self.work, harness, s=self.s)["mcp"]["launch"]
+                row = next(row for row in view if row["name"] == "roblox-studio")
+                self.assertEqual(row["status"], "skipped")
+                if harness == "Hermes":
+                    self.assertEqual(
+                        row["reason"], f"hermes mcp add roblox-studio --command {MAC_MCP}"
+                    )
+        view = setup.resolve(self.work, "Claude Code", s=self.s)["mcp"]["launch"]
+        self.assertEqual(
+            [(row["name"], row["status"], row["summary"]) for row in view],
+            [("roblox-studio", "sent", MAC_MCP)],
+        )
+
+    def test_other_systems_skip_it_and_export_leaves_it_out(self):
+        self.on("linux")
+        self.project({"roblox-studio": ROBLOX, "playwright": PLAYWRIGHT})
+        self.allow()
+        found = setup.launch_mcp(self.s, "Claude Code", self.home)
+        self.assertEqual(found["servers"], ["playwright"])
+        self.assertEqual(
+            found["skipped"],
+            [
+                {
+                    "name": "roblox-studio",
+                    "reason": "roblox-studio is not available on Linux; it runs on macOS and Windows.",
+                }
+            ],
+        )
+        plan = setup.export_plan(self.work, "Claude Code")
+        self.assertEqual(list(json.loads(plan["items"][0]["content"])["mcpServers"]), ["playwright"])
+        status = setup.consent_status(self.work)
+        self.assertIn("roblox-studio (Only on macOS and Windows)", status["items"][0]["detail"])
+
+    def test_export_keeps_the_documented_windows_form(self):
+        self.on("win32", LOCALAPPDATA=SPACED)
+        self.project({"roblox-studio": ROBLOX})
+        plan = setup.export_plan(self.work, "Claude Code")
+        self.assertEqual(
+            json.loads(plan["items"][0]["content"])["mcpServers"]["roblox-studio"],
+            {"type": "stdio", "command": "cmd.exe", "args": ["/c", "%LOCALAPPDATA%\\Roblox\\mcp.bat"]},
+        )
+
+    def test_adding_another_server_keeps_every_system(self):
+        self.on("darwin")
+        self.project({"roblox-studio": ROBLOX})
+        self.apply_all("Codex", {"mcp_set": {"playwright": PLAYWRIGHT}})
+        written = json.loads(self.text(setup.PROJECT_FILE))["mcp"]
+        self.assertEqual(written["roblox-studio"], ROBLOX)
+        self.assertEqual(sorted(written), ["playwright", "roblox-studio"])
+
+
 class DispatchTest(SetupCase):
     def test_dispatch_routes_every_action(self):
         base = {"workspace": str(self.work), "harness": "Codex"}
@@ -2017,6 +2231,7 @@ class DispatchTest(SetupCase):
                     "url": "https://mcp.example.com/mcp",
                     "header_env": {"X-Workspace": "DOCS_MCP_WORKSPACE"},
                     "bearer_env": "DOCS_MCP_TOKEN",
+                    "platforms": {},
                     "enabled": False,
                     "summary": "https://mcp.example.com/mcp",
                     "secrets": {"DOCS_MCP_WORKSPACE": "missing", "DOCS_MCP_TOKEN": "missing"},

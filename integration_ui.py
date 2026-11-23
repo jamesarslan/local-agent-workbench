@@ -33,7 +33,7 @@ def panels(app):
         field.pack(side="left", fill="x", expand=True)
         return field
 
-    entry(conn, "Engine release", "channel", ["Tested", "Updated"])
+    entry(conn, "Engine release", "channel", ["Tested", "Updated", "Unsloth"])
     entry(conn, "Harness", "harness", connections.HARNESS)
     entry(conn, "Provider", "provider", list(connections.PROVIDERS))
     entry(conn, "Attached API URL", "endpoint")

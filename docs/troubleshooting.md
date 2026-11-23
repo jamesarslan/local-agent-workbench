@@ -4,7 +4,7 @@ This guide starts with Doctor, then has one section for each Doctor check with i
 
 ## Start with Doctor
 
-These steps were not run for 0.4.0.
+For 0.5.0, `workbench doctor` was run from installed kits on Windows 11 and Fedora 44. The Doctor page in the desktop window was not run.
 
 Doctor checks this computer and gives one sentence for each problem it finds, saying what to do.
 
@@ -222,7 +222,7 @@ These are the messages you can meet when you launch an agent, with what to do.
 If Claude Code or Codex fails with HTTP 500 "System message must be at the beginning.", the model's chat template rejects the system or developer message these agents send after the first user message.
 
 - With a model Workbench serves, Workbench serves a corrected copy of the template when the GGUF file's own template contains exactly that rejection, as the Qwen files in the catalog do. If you still see the error, the model file has a template Workbench does not recognise; use OMP, Pi or opencode with it, or another model.
-- With a server you attached, such as Ollama or LM Studio, that server's own template handling decides, and Workbench does not change it. Claude Code and Codex completed a task against one model in Ollama 0.40.8 for this release; other models and servers were not run. Use another agent or model, or a server that serves that model with a template that accepts a later system message.
+- With a server you attached, such as Ollama or LM Studio, that server's own template handling decides, and Workbench does not change it. Claude Code and Codex completed a task against one model in Ollama 0.40.8 for 0.4.0; other models and servers were not run. Use another agent or model, or a server that serves that model with a template that accepts a later system message.
 
 ### Listing models fails
 
@@ -291,7 +291,7 @@ sh ~/.local/lib/agent-workbench/install.sh --uninstall
 
 It removes the app folder and the `workbench` command and keeps your data. If you installed with `WORKBENCH_INSTALL_DIR` or `WORKBENCH_BIN_DIR` set, set them to the same folders for the uninstall.
 
-On Windows (these steps were not run for 0.4.0):
+On Windows (run for 0.5.0 on a copy installed into a temporary folder, without the Start menu entry):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Agent Workbench\app\install.ps1" -Uninstall
@@ -330,7 +330,7 @@ Files in your project folders are yours, and no uninstall step touches them: `.a
 
 Open an issue at [github.com/jamesarslan/local-agent-workbench/issues](https://github.com/jamesarslan/local-agent-workbench/issues) and attach:
 
-- the Agent Workbench version (0.4.0) and your system: name, version and processor;
+- the Agent Workbench version (0.5.0) and your system: name, version and processor;
 - the Doctor output (`workbench doctor`, or the rows from **Advanced → Setup**);
 - the steps that lead to the problem, and the message you see.
 

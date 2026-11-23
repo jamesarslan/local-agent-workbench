@@ -358,7 +358,8 @@ def attach(name, s):
                 "-ec",
                 "umask 077; mkdir -p ~/.ssh; cat > ~/.ssh/authorized_keys",
             ],
-            input=identity.with_suffix(".pub").read_bytes(),
+            # sshd reads authorized_keys line by line; a Windows line ending would end up in the key.
+            input=identity.with_suffix(".pub").read_bytes().replace(b"\r\n", b"\n"),
         )
         pub = host_key(container)
         known = work / "known_hosts"

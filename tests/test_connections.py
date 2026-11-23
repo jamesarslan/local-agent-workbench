@@ -493,6 +493,45 @@ class GateTests(Case):
         reason = connections.compat("Attached endpoint", none)["Pi"]["reason"]
         self.assertTrue(reason.endswith("does not offer; choose another source."))
 
+    def test_a_template_that_rejects_a_late_system_message_gates_two_agents(self):
+        row = {"name": "Box", "protocols": dict(ALL), "late_system": False}
+        verdicts = connections.compat("Attached endpoint", row)
+        self.assertEqual(
+            verdicts["Claude Code"],
+            {
+                "ok": False,
+                "reason": "This server's chat template rejects the system message Claude "
+                "Code sends mid-conversation. Serve the model with Workbench, which fixes "
+                "the template, or use OMP, Pi or opencode.",
+            },
+        )
+        self.assertEqual(
+            verdicts["Codex"]["reason"],
+            "This server's chat template rejects the developer message Codex sends "
+            "mid-conversation. Serve the model with Workbench, which fixes the "
+            "template, or use OMP, Pi or opencode.",
+        )
+        self.assertFalse(verdicts["Codex"]["ok"])
+        for name in ("OMP", "Pi", "opencode"):
+            self.assertEqual(verdicts[name], {"ok": True, "reason": ""})
+        # A missing API stays the first reason, and its alternatives skip gated agents.
+        no_messages = dict(row, protocols=dict(ALL, messages=False))
+        verdicts = connections.compat("Attached endpoint", no_messages)
+        self.assertIn("does not offer; choose OMP, Pi or opencode,", verdicts["Claude Code"]["reason"])
+        for late in (True, None, "no", 0):
+            verdicts = connections.compat("Attached endpoint", dict(row, late_system=late))
+            self.assertTrue(verdicts["Claude Code"]["ok"] and verdicts["Codex"]["ok"])
+        for provider in ("OpenRouter", "Native login"):
+            verdicts = connections.compat(provider, dict(row, name="Hosted"))
+            self.assertNotIn("chat template", verdicts["Claude Code"]["reason"])
+
+    def test_launch_refuses_a_gated_agent_with_the_sentence(self):
+        self.attached(protocols=dict(ALL), late_system=False)
+        s = self.settings(provider="Attached endpoint", connection_id="ab" * 8)
+        with patch.object(connections, "command", return_value=["claude"]):
+            with self.assertRaisesRegex(ValueError, "rejects the system message Claude Code"):
+                connections.prepare(s, "Claude Code")
+
     def test_prepare_raises_gate_reason(self):
         s = self.settings(provider="OpenAI", remote_model="gpt-5")
         with (
@@ -907,9 +946,10 @@ class LaunchTests(Case):
             )
             self.assertEqual(argv[1:3], ["--model", "gpt-5"])
         self.tools.return_value = tools(argv=pair)
-        (argv, _, _), _ = self.run_with(
-            lambda: connections.prepare(native, "Codex"), shim=["/bin/codex.cmd"]
-        )
+        with patch.object(connections, "WINDOWS", False):
+            (argv, _, _), _ = self.run_with(
+                lambda: connections.prepare(native, "Codex"), shim=["/bin/codex.cmd"]
+            )
         self.assertEqual(argv[:3], ["/bin/codex.cmd", *pair])
 
     def test_agent_environment_reaches_loopback_without_a_proxy(self):
@@ -1171,7 +1211,10 @@ class VaultTests(Case):
             ),
         ]
         for vault, available, name in cases:
-            with patch("keyring.get_keyring", return_value=vault):
+            # The login keychain may be absent here (CI runs with a scratch HOME); that case has its own test.
+            with patch("keyring.get_keyring", return_value=vault), patch.object(
+                connections, "_keychain_missing", return_value=False
+            ):
                 status = VAULT_STATUS()
             self.assertEqual(
                 (status["available"], status["backend"]), (available, name)
@@ -1787,6 +1830,22 @@ class AccountTests(Case):
         self.assertEqual(capped["context"], 8192)
         self.assertNotIn("context_window", capped)
 
+    def test_the_late_system_answer_belongs_to_its_model(self):
+        row = self.attached(kind="llamacpp", late_system=False)
+        self.assertIs(row["late_system"], False)
+        typed = {
+            k: row[k]
+            for k in ("provider", "connection_id", "name", "endpoint", "remote_model")
+        }
+        self.assertIs(account_book.save(typed)["late_system"], False)
+        # A form cannot clear the answer; only a probe through a trusted caller sets it.
+        self.assertIs(account_book.save(typed | dict(late_system=True))["late_system"], False)
+        other = account_book.save(typed | dict(remote_model="other"))
+        self.assertNotIn("late_system", other)
+        for odd in ("no", 0, None):
+            self.assertNotIn("late_system", self.attached(late_system=odd))
+        self.assertIs(self.attached(late_system=True)["late_system"], True)
+
     def test_echoed_server_context_stays_a_server_value(self):
         row = self.attached(kind="ollama", context_window=4096, context_source="server")
         typed = {
@@ -2152,7 +2211,11 @@ class AuthTests(Case):
                     socket.create_connection(("127.0.0.1", urlsplit(target).port))
                 )
                 direct = build_opener(ProxyHandler({}))
-                with direct.open(target + "?code=fixture", timeout=5) as response:
+                # The server listens on 127.0.0.1 only. Browsers fall back from ::1 at
+                # once, but urllib tries localhost's ::1 first, and Windows takes about
+                # two seconds to give up on a refused connection.
+                ipv4 = target.replace("//localhost:", "//127.0.0.1:", 1)
+                with direct.open(ipv4 + "?code=fixture", timeout=5) as response:
                     response.read()
 
             threading.Thread(target=visit, daemon=True).start()

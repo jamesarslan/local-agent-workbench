@@ -31,18 +31,18 @@ A line that still says `TODO` has no command yet. The installed `workbench-game-
 
 ## Project layout
 
-- Scripts and tests: TODO
-- Scenes or levels, art, audio and other assets: TODO
+- Scripts and tests: TODO. Scenes or levels, art, audio and other assets: TODO
 
 ## Asset rules
 
 - Never hand-edit binary assets or engine metadata files (`.meta`, `.import`, `.uid`). Move, rename or delete an asset together with its metadata file.
 - Change scene, prefab and level files in the editor or with an editor tool. The engine skill says which small text edits are safe.
 - Every asset made outside this project has a row in `ASSETS.md`: file, author, source and licence. No known licence, no import.
+- Performance budget: frame rate and target device: TODO. Limits per asset (triangles, texture size): TODO. Ask when a value is still TODO; do not invent a budget.
 
-## Performance budget
+## Roblox Studio
 
-- Frame rate and target device: TODO. Limits per asset (triangles, texture size): TODO. Ask when a value is still TODO; do not invent a budget.
+- With the Roblox Studio MCP tools: call `list_roblox_studios` first and pass its `studio_id` to every other tool, read a script before `multi_edit` changes it, and never `save_place` or publish unless asked. In a Rojo project (`*.project.json`) the files on disk are the source: edit them and let Rojo sync them into Studio.
 
 ## Boundaries
 

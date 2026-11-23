@@ -26,12 +26,20 @@
   let level = "list";
   let listError = null;
   let loaded = false;
+  let systems = {};
 
   const hostsOf = () => Object.keys(AW.state.machines || {});
   const labelOf = (host) => ((AW.state.machines || {})[host] || "").trim() || host;
   const forwardsOf = (host) => (AW.state.forwards || []).filter((row) => row && row.host === host);
   const accountOf = (id) => (AW.state.accounts || []).find((row) => row && row.connection_id === id) || null;
   const plural = (n, one, many) => n + " " + (n === 1 ? one : many);
+  // What the last connection check learned: Windows machines have no tmux and run PowerShell.
+  const isWindows = (host) => Boolean(systems[host] && systems[host].os === "windows");
+  function osLabel(host) {
+    if (isWindows(host)) return "Windows";
+    const p = cache.has(host) ? cache.get(host).probe : null;
+    return p && p.system === "Linux" ? "Linux" : p && p.system === "Darwin" ? "macOS" : "";
+  }
   const jobKey = (action, host) => action + ":" + host;
   const running = (action, host) => (AW.jobs ? AW.jobs.find(jobKey(action, host)) : null);
 
@@ -101,8 +109,9 @@
           c.probe = value && typeof value === "object" ? value : {};
           c.probeAt = Date.now();
           c.firewall = typeof c.probe.firewall === "string" ? c.probe.firewall : "";
+          if (c.probe.os === "windows" || c.probe.os === "posix") systems[host] = { ...(systems[host] || {}), os: c.probe.os, shell: c.probe.shell };
           if (!c.servers && !c.finding) findServers(host);
-          if (!c.sessions && !c.reading) readSessions(host);
+          if (!c.sessions && !c.reading && !isWindows(host)) readSessions(host);
         },
         (thrown) => {
           c.probeError = AW.asError(thrown);
@@ -117,13 +126,16 @@
     return c.probing;
   }
 
-  function findServers(host) {
+  function findServers(host, ports) {
     const c = entry(host);
     if (c.finding) return c.finding;
     c.serversError = null;
-    c.finding = AW.request("machine-discover", { host })
+    c.finding = AW.request("machine-discover", typeof ports === "string" ? { host, ports } : { host })
       .then(
-        (value) => (c.servers = value && Array.isArray(value.endpoints) ? value.endpoints : []),
+        (value) => {
+          c.servers = value && Array.isArray(value.endpoints) ? value.endpoints : [];
+          if (value && Array.isArray(value.ports)) c.ports = value.ports.join(", ");
+        },
         (thrown) => (c.serversError = AW.asError(thrown)),
       )
       .finally(() => {
@@ -201,7 +213,7 @@
     for (const host of hosts) {
       const node = listApi.get(host);
       const status = statusOf(host);
-      node._update({ mark: status.mark, title: labelOf(host), meta: host + " · " + status.word });
+      node._update({ mark: status.mark, title: labelOf(host), meta: [host, osLabel(host), status.word].filter(Boolean).join(" · ") });
       const main = node.querySelector(".row-main");
       if (host === selected && adding === null) {
         node.dataset.selected = "true";
@@ -278,8 +290,9 @@
         state = "ok";
         const ram = AW.fmt.gib(p.ram_gib);
         text = ["Connected", [p.system, p.arch].filter(Boolean).join(" "), ram && ram + " RAM"].filter(Boolean).join(" · ");
-        const gpu = p.unified ? "Shared CPU and GPU memory" : p.gpu_vendor ? AW.fmt.gib(p.gpu_gib) + " GPU memory" : "GPU memory unknown";
-        more = [gpu, "checked " + AW.fmt.ago(c.probeAt), p.installed ? "Managed runtime installed" : ""].filter(Boolean).join(" · ");
+        const gpu = p.unified ? "Shared CPU and GPU memory" : p.gpu_vendor ? [p.gpu_name, AW.fmt.gib(p.gpu_gib) + " GPU memory"].filter(Boolean).join(", ") : "GPU memory unknown";
+        const shell = p.os === "windows" ? (p.shell === "pwsh" ? "PowerShell 7" : "Windows PowerShell") + (p.python ? ", Python " + p.python : ", no Python") : "";
+        more = [gpu, shell, "checked " + AW.fmt.ago(c.probeAt), p.installed ? "Managed runtime installed" : ""].filter(Boolean).join(" · ");
       }
       ui.setMark(mark, state);
       if (word.textContent !== text) word.textContent = text;
@@ -358,8 +371,26 @@
   }
 
   function serversBlock(host, d) {
-    const again = ui.button("Look again", { small: true, onClick: () => findServers(host) });
+    // An empty field clears saved ports only once they are known, so a quick click never forgets them.
+    const typed = () => (entry(host).ports === undefined && !ports.value.trim() ? undefined : ports.value);
+    const again = ui.button("Look again", { small: true, onClick: () => findServers(host, typed()) });
     const b = block("Servers running there", { actions: [again], id: blockId("servers") });
+    const portsId = blockId("ports");
+    const ports = el("input", { type: "text", class: "mono", id: portsId, value: entry(host).ports || "", attrs: { autocomplete: "off", spellcheck: "false", inputmode: "numeric", placeholder: "9000", "aria-describedby": portsId + "-hint" } });
+    const portsField = {
+      el: el(
+        "div",
+        { class: "machines-ports" },
+        el("label", { for: portsId, text: "Other ports" }),
+        ports,
+        el("span", { class: "hint", id: portsId + "-hint", text: "Beyond the usual ones; separate with commas, then Look again." }),
+      ),
+    };
+    ports.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      findServers(host, typed());
+    });
     const skeleton = ui.skeleton(2, "servers on " + labelOf(host));
     const idle = el("p", { class: "machines-quiet", text: "Workbench looks for model servers on this machine's own loopback after the connection check." });
     const rows = el("div", { class: "machines-rows" });
@@ -396,9 +427,10 @@
       update: fill,
       empty: () => el("p", { class: "machines-quiet", text: "No model server answered on " + labelOf(host) + "." }),
     });
-    b.body.append(skeleton, idle, rows);
+    b.body.append(skeleton, idle, rows, portsField.el);
     d.paints.push(() => {
       const c = entry(host);
+      if (document.activeElement !== ports && typeof c.ports === "string" && ports.value !== c.ports) ports.value = c.ports;
       label(again, c.finding ? "Looking…" : "Look again");
       lock(again, Boolean(c.finding));
       skeleton.hidden = !(c.finding && !c.servers);
@@ -406,7 +438,7 @@
       rows.hidden = !c.servers;
       rows.classList.toggle("stale", Boolean(c.finding && c.servers));
       if (c.servers) list.set(c.servers);
-      b.errors.set(c.finding ? null : c.serversError, { retry: () => findServers(host) });
+      b.errors.set(c.finding ? null : c.serversError, { retry: () => findServers(host, typed()) });
     });
     return b.el;
   }
@@ -505,14 +537,42 @@
     const buttons = el("div", { class: "actions" }, install, start, stop);
     const tasks = el("div", { class: "machines-tasks" });
     const live = new Map();
-    b.body.append(el("div", { class: "machines-split-line" }, state, buttons), tasks);
+    // Windows: the model file may already be on the machine; Workbench reuses it only when its SHA-256 matches.
+    const reuse = el("input", { type: "text", class: "mono", attrs: { autocomplete: "off", spellcheck: "false", autocapitalize: "off", placeholder: "C:\\Users\\me\\models\\model.gguf" } });
+    const reuseField = ui.field("Model file already on " + labelOf(host), reuse, { hint: "Optional. Used only if its SHA-256 matches; otherwise Workbench downloads the file." });
+    const look = ui.button("Look for it", { small: true, onClick: findFiles });
+    const files = el("div", { class: "machines-rows" });
+    const reuseBox = el("div", { class: "machines-reuse", hidden: true }, reuseField.el, el("div", { class: "actions" }, look), files);
+    b.body.append(el("div", { class: "machines-split-line" }, state, buttons), reuseBox, tasks);
     d.cleanups.push(() => live.forEach((task) => task.destroy()));
+
+    async function findFiles() {
+      b.errors.set(null);
+      let value;
+      try {
+        value = await ui.pending(look, "Looking…", AW.request("machine-files", { host }));
+      } catch (thrown) {
+        b.errors.set(AW.asError(thrown));
+        return;
+      }
+      const paths = value && Array.isArray(value.files) ? value.files.filter((item) => typeof item === "string") : [];
+      files.replaceChildren(
+        ...(paths.length
+          ? paths.map((path) => ui.row({ title: path, actions: [ui.button("Use this file", { small: true, onClick: () => { reuse.value = path; reuse.focus(); } })] }).el)
+          : [el("p", { class: "machines-quiet", text: "No file of that size in models, Downloads, LM Studio or the Hugging Face cache. Type its path above, or let Workbench download it." })]),
+      );
+    }
 
     async function managed(action, origin) {
       const name = labelOf(host);
+      const source = isWindows(host) ? reuse.value.trim() : "";
       if (action === "machine-install") {
+        const plan = (entry(host).probe || {}).plan;
+        const model = plan ? plan.label + " (" + AW.fmt.bytes(plan.bytes) + ")" : "the model";
         const yes = await ui.confirm({
-          text: "Install the Workbench-managed runtime and model on " + name + "? It downloads the runtime and model files on that machine and can take up to an hour.",
+          text: isWindows(host)
+            ? "Install the managed model on " + name + "? Workbench downloads llama.cpp for CUDA (about 650 MB) and " + (source ? "checks " + source + " as " : "") + model + " into %LOCALAPPDATA%\\agent-workbench-node."
+            : "Install the Workbench-managed runtime and model on " + name + "? It downloads the runtime and model files on that machine and can take up to an hour.",
           ok: "Install",
         });
         if (!yes) return;
@@ -524,7 +584,7 @@
       b.errors.set(null);
       const key = jobKey(action, host);
       const job =
-        action === "machine-install" ? AW.jobs.run("machine-install", { host }, { title: "Installing the managed model on " + name, origin, key })
+        action === "machine-install" ? AW.jobs.run("machine-install", source ? { host, source } : { host }, { title: "Installing the managed model on " + name, origin, key })
         : action === "machine-stop" ? AW.jobs.run("machine-stop", { host }, { title: "Stopping the model on " + name, origin, key })
         : AW.jobs.run("machine-connect", { host }, { title: "Connecting to " + name, origin, key });
       d.paint();
@@ -549,21 +609,24 @@
       const tunnel = forwardsOf(host).find((row) => row.managed && row.alive);
       let text;
       let show = { install: false, start: false, stop: false };
+      const model = p && typeof p.model === "string" && p.model ? p.model + " · " : "";
       if (!p) text = c.probing ? "Checking whether this machine can run it…" : "Check the connection to see whether " + labelOf(host) + " can run the Workbench-managed model.";
       else if (p.managed === false) text = p.reason || "This machine cannot run the Workbench-managed model.";
       else if (!p.installed) {
-        text = "Not installed.";
+        const plan = p.os === "windows" && p.plan ? " It uses " + p.plan.label + ", " + AW.fmt.bytes(p.plan.bytes) + ", with llama.cpp for CUDA." : "";
+        text = "Not installed." + plan;
         show.install = true;
       } else if (p.serving) {
-        text = "Serving on port " + p.port + (tunnel ? " · connected through a tunnel" : " · not connected to this computer");
+        text = model + "Serving on port " + p.port + (tunnel ? " · connected through a tunnel" : " · not connected to this computer");
         show = { install: false, start: !tunnel, stop: true };
       } else if (p.running) {
-        text = "Loading the model on port " + p.port + ".";
+        text = model + "Loading the model on port " + p.port + ".";
         show = { install: false, start: true, stop: true };
       } else {
-        text = "Installed · stopped.";
+        text = model + "Installed · stopped.";
         show.start = true;
       }
+      reuseBox.hidden = !(p && p.os === "windows" && p.managed !== false && !p.installed);
       if (state.textContent !== text) state.textContent = text;
       state.classList.toggle("muted", !p || p.managed === false);
       install.hidden = !show.install;
@@ -581,6 +644,7 @@
     const b = block("Remote sessions", { actions: [refresh], id: blockId("sessions") });
     const skeleton = ui.skeleton(2, "remote sessions on " + labelOf(host));
     const idle = el("p", { class: "machines-quiet", text: "Remote sessions are listed after the connection check." });
+    const noTmux = el("p", { class: "machines-quiet", hidden: true, text: "Windows has no tmux, so sessions on " + labelOf(host) + " end when their tab or window closes. There is nothing to reattach here." });
     const rows = el("div", { class: "machines-rows" });
     let checking = "";
     const WORDS = { attached: "Attached", detached: "Detached" };
@@ -610,7 +674,7 @@
       update: fill,
       empty: () => el("p", { class: "machines-quiet", text: "No remote sessions on " + labelOf(host) + "." }),
     });
-    b.body.append(skeleton, idle, rows);
+    b.body.append(skeleton, idle, noTmux, rows);
 
     async function endSession(row) {
       const title = row.title || row.name;
@@ -631,10 +695,13 @@
 
     d.paints.push(() => {
       const c = entry(host);
+      const win = isWindows(host);
+      noTmux.hidden = !win;
+      refresh.hidden = win;
       label(refresh, c.reading && !checking ? "Refreshing…" : "Refresh");
       lock(refresh, Boolean(c.reading));
-      skeleton.hidden = !(c.reading && !c.sessions);
-      idle.hidden = Boolean(c.reading || c.sessions || c.sessionsError);
+      skeleton.hidden = win || !(c.reading && !c.sessions);
+      idle.hidden = win || Boolean(c.reading || c.sessions || c.sessionsError);
       rows.hidden = !c.sessions;
       rows.classList.toggle("stale", Boolean(c.reading && c.sessions));
       if (c.sessions) list.set(c.sessions);
@@ -661,12 +728,12 @@
     const fields = el(
       "div",
       { class: "machines-session-fields" },
-      ui.field("Folder", folder, { hint: "A folder on " + labelOf(host) + ". Leave it empty to start in your home folder." }).el,
+      ui.field("Folder", folder, { hint: "A folder on " + labelOf(host) + ". Leave it empty to start in your home folder; ~ means that folder." }).el,
       ui.field("Agent", agent).el,
       ui.field("Mode", mode).el,
     );
     const hint = el("p", { class: "hint machines-hint", hidden: true });
-    const dock = ui.button("Open in terminal dock · tmux", {
+    const dock = ui.button("Open in terminal dock", {
       small: true,
       kind: "primary",
       async onClick() {
@@ -714,13 +781,17 @@
       const notes = [];
       if (managed) notes.push("The managed model is used with OMP, and Workbench starts it on " + labelOf(host) + " first.");
       const p = entry(host).probe;
-      const noTmux = Boolean(p && p.tmux === false);
+      const win = isWindows(host);
+      const noTmux = Boolean(p && p.tmux === false && !win);
+      if (win) notes.push("The session runs in " + (systems[host].shell === "pwsh" ? "PowerShell 7" : "Windows PowerShell") + " and ends when its tab or window closes; Windows has no tmux to keep it running.");
       if (noTmux) notes.push("tmux is not installed on " + labelOf(host) + ", so the terminal dock cannot keep a session there. Install tmux there, or open an SSH terminal.");
       const noFolder = !AW.form.get().workspace;
       if (noFolder) notes.push("The terminal dock keeps sessions per project. Choose a project folder first, or open an SSH terminal.");
       hint.hidden = !notes.length;
       const text = notes.join(" ");
       if (hint.textContent !== text) hint.textContent = text;
+      label(dock, win ? "Open in terminal dock" : "Open in terminal dock · tmux");
+      folder.placeholder = win ? "~\\project" : "~/project";
       lock(dock, noTmux || noFolder);
       if (noTmux || noFolder) dock.setAttribute("aria-describedby", hint.id || (hint.id = blockId("hint")));
       else dock.removeAttribute("aria-describedby");
@@ -739,6 +810,7 @@
     const live = new Map();
     d.cleanups.push(() => live.forEach((task) => task.destroy()));
     const note = el("p", { class: "machines-line", hidden: true });
+    const windowsKeys = el("p", { class: "hint", hidden: true, text: "On Windows the key goes into .ssh\\authorized_keys in your user folder, or into C:\\ProgramData\\ssh\\administrators_authorized_keys for an administrator account." });
     const pair = ui.button("Pair through SSH", {
       small: true,
       async onClick() {
@@ -834,12 +906,14 @@
         note,
         commandWrap,
         el("p", { class: "hint", text: "Or run the pairing command on " + name + " to add the Workbench key yourself." }),
+        windowsKeys,
         el("div", { class: "actions machines-danger-zone" }, revoke, remove, forget),
         tasks,
         errors.el,
       ),
     );
     d.paints.push(() => {
+      windowsKeys.hidden = !isWindows(host);
       const busy = ["machine-pair", "machine-remove"].map((action) => running(action, host)).filter(Boolean);
       syncTasks(tasks, live, busy);
       if (busy.length) node.open = true;
@@ -869,7 +943,8 @@
     }
     cache.delete(host);
     const key = result && typeof result.public_key === "string" ? result.public_key : "";
-    showForgotten(name, key, failure);
+    showForgotten(name, key, failure, isWindows(host));
+    delete systems[host];
     const next = hostsOf()[0] || "";
     selected = "";
     if (next && !narrow.matches) open(next, false);
@@ -885,7 +960,7 @@
     if (target) target.focus();
   }
 
-  function showForgotten(name, key, failure) {
+  function showForgotten(name, key, failure, win) {
     if (!parts) return;
     parts.notices.replaceChildren();
     if (failure) ui.showError(parts.notices, failure);
@@ -893,7 +968,7 @@
     const text = el(
       "div",
       null,
-      el("p", { text: "Workbench forgot " + name + ". Its key line stays in ~/.ssh/authorized_keys on that machine until you remove it there:" }),
+      el("p", { text: "Workbench forgot " + name + ". Its key line stays in " + (win ? "the authorized_keys file" : "~/.ssh/authorized_keys") + " on that machine until you remove it there:" }),
       el("pre", { class: "mono machines-command", tabindex: 0, text: key, attrs: { "aria-label": "Public key of " + name } }),
     );
     parts.notices.append(ui.notice("info", text, { actions: [copyButton(key, "the key line")], dismissible: true }));
@@ -983,6 +1058,9 @@
     paintList();
     const [list] = await Promise.allSettled([
       AW.store.refresh("machines", { force: !loaded }),
+      AW.request("machine-systems").then((value) => {
+        for (const [host, row] of Object.entries(value && typeof value === "object" ? value : {})) if (row && !systems[host]) systems[host] = row;
+      }),
       AW.store.refresh("forwards", { force: true }),
       (AW.state.accounts || []).length ? Promise.resolve() : AW.store.refresh("accounts"),
     ]);

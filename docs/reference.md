@@ -1,6 +1,6 @@
 # Reference
 
-This page lists every command-line verb and flag, every environment variable Agent Workbench reads, the engines, the ports, how to repeat the measurements, and the upstream projects.
+This page lists every command-line verb and flag, every environment variable Agent Workbench reads, the engines, the files you can read and commit, the ports, how to repeat the measurements, and the upstream projects.
 
 ## Command line
 
@@ -82,7 +82,7 @@ The **Engine** setting in **Advanced → Model library**:
 | Engine | Systems | What Setup installs | Release channels |
 | --- | --- | --- | --- |
 | Auto | All | Nothing of its own. It picks Strata for a `.strata` file, Flash preset for a Flash Next file, and llama.cpp otherwise | As for the engine it picks |
-| llama.cpp | Windows x64, Linux x64, macOS on Apple Silicon | `llama-server` build b12633 for CUDA, Vulkan, Metal or CPU | Tested (pinned SHA-256) or Updated (the newest release, checked against the digest GitHub reports) |
+| llama.cpp | Windows x64, Linux x64, macOS on Apple Silicon | `llama-server` build b12633 for CUDA, Vulkan, Metal or CPU | Tested (pinned SHA-256), Updated (the newest release, checked against the digest GitHub reports) or Unsloth (Unsloth's build b12649-mix-c7059d6, pinned SHA-256) |
 | Strata | Windows and Linux with an NVIDIA GPU | `strata-inkling` 0.1.65, from its release archive and source at a pinned commit; needs Git | Tested or Updated |
 | vLLM | Linux, or Windows through WSL, with an NVIDIA GPU | vLLM 0.34.0 in its own Python environment (**vLLM** in **Advanced → Setup**). Its version is pinned; its files and dependencies are not digest-checked | Version pin |
 | Flash preset | Windows and Linux | Nothing. It starts an existing Strata Flash Next launch preset from the reference workstation (`WORKBENCH_FLASH_CONFIG`) | — |
@@ -98,6 +98,17 @@ Workbench replaces `{model}` with the model file, `{context}` with the context s
 
 The **Matched Qwen LoRA** toggle loads the LoRA adapter for Pi that comes with the Qwen3.8-27B UD-Q4_K_XL catalog entry. It runs on llama.cpp; there is no separate engine for it. For 32 GB NVIDIA cards the catalog lists the 128K profile with the adapter as the second choice, for long inputs and for Pi ([Model sources](model-sources.md#recommended-models)).
 
+## Files you can read and commit
+
+Workbench keeps these files in plain JSON. You can read them without Workbench, and none of them holds a key. Paths marked "data folder" are inside the data folder ([Security and your data](security-and-data.md#where-workbench-keeps-data)).
+
+| File | Where | What it holds |
+| --- | --- | --- |
+| `.agent-workbench/profiles.json` | The project folder | Named profiles: an object from each profile name to its settings ([Project setup](project-setup.md#what-is-remembered)). Since 0.5.0, one profile can carry `"default": true`, which makes it the folder default ([Settings that travel with the folder](project-setup.md#settings-that-travel-with-the-folder)). Safe to commit |
+| `.agent-workbench/project.json` | The project folder | The project's MCP servers, with variable names instead of values ([MCP servers](project-setup.md#mcp-servers)). Safe to commit |
+| `runs/<folder hash>.json` | The data folder | Since 0.5.0: the run records of one project folder, newest first, up to 100 ([Run summaries](sessions.md#run-summaries)). It stays on this computer |
+| `projects.json` | The data folder | The last choices for each folder and your consent answers. It stays on this computer |
+
 ## Ports
 
 | Port | What | Where |
@@ -108,7 +119,7 @@ The **Matched Qwen LoRA** toggle loads the LoRA adapter for Pi that comes with t
 | 10542 | The Workbench-managed model on an SSH machine | That machine's `127.0.0.1`, reached through a tunnel |
 | A free port | The local end of each SSH tunnel | `127.0.0.1` |
 | A free port | The SSH port of each Docker sandbox container | `127.0.0.1` |
-| 11434, 1234, 9931, 8080, 8000, 1337, 5001, 5000, 13305, 30000, 10240, 9292 | Ports the scan looks at for model servers | `127.0.0.1`, or a paired machine's own loopback |
+| 11434, 1234, 9931, 8080, 8081, 8000, 1337, 5001, 5000, 13305, 30000, 10240, 9292, 8095 | Ports the scan looks at for model servers; on a paired machine also 10532, the model port of a Workbench there | `127.0.0.1`, or a paired machine's own loopback |
 | 41343, 52993, 16141, 39414, 22931 | LM Studio's control ports, checked to tell you when its server is off | `127.0.0.1` |
 
 ## Reproducing the measurements

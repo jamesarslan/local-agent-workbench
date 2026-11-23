@@ -1,5 +1,5 @@
 // Run with Node 22+ and a sandbox-capable desktop (or xvfb-run on Linux).
-const { spawn } = require("node:child_process");
+const { spawn, execFileSync } = require("node:child_process");
 const fs = require("node:fs"),
   os = require("node:os"),
   path = require("node:path"),
@@ -19,8 +19,18 @@ const folder = path.join(base, "Sample project"),
   data = path.join(base, "data"),
   user = path.join(base, "chromium"),
   fresh = path.join(base, "fresh-data"),
-  freshUser = path.join(base, "fresh-chromium");
+  freshUser = path.join(base, "fresh-chromium"),
+  cloned = path.join(base, "Cloned project"),
+  declined = path.join(base, "Declined project");
 for (const dir of [folder, other, data, fresh]) fs.mkdirSync(dir);
+// Two folders that arrive with a saved folder default, as a clone from another computer would.
+for (const dir of [cloned, declined]) {
+  fs.mkdirSync(path.join(dir, ".agent-workbench"), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, ".agent-workbench", "profiles.json"),
+    JSON.stringify({ "Folder default": { default: true, harness: "OMP", search: false, context: 8192 } }),
+  );
+}
 fs.writeFileSync(
   path.join(data, "settings.json"),
   JSON.stringify({
@@ -71,6 +81,9 @@ function launch(dataDir, userDir, port) {
       "--remote-debugging-address=127.0.0.1",
       "--remote-debugging-port=0",
       "--user-data-dir=" + userDir,
+      // HOME is a scratch folder here: keep Chromium away from the real keychain, which
+      // macOS would otherwise offer to reset because it finds no login keychain there.
+      ...(mac ? ["--use-mock-keychain"] : []),
       path.join(root, "desktop"),
     ],
     {
@@ -116,8 +129,16 @@ async function until(fn, label) {
 // One DevTools connection to the page of an Electron started with `userDir`; onClose runs when the socket closes unexpectedly.
 async function connect(userDir, onClose) {
   const portFile = path.join(userDir, "DevToolsActivePort");
-  await until(() => fs.existsSync(portFile), "Electron startup");
-  const port = fs.readFileSync(portFile, "utf8").split("\n")[0];
+  // Chromium may still hold the file open while it writes it (EBUSY on Windows), or have written it only partly.
+  let port = "";
+  await until(() => {
+    try {
+      port = fs.readFileSync(portFile, "utf8").split("\n")[0].trim();
+    } catch {
+      return false;
+    }
+    return /^\d+$/.test(port);
+  }, "Electron startup");
   let tabs = [];
   await until(async () => {
     tabs = (
@@ -302,7 +323,82 @@ async function test() {
     "document.getElementById('term-info').textContent === 'This terminal was closed because the Workbench service restarted.'",
   );
 
-  // (4) A second start with an empty data folder opens the setup guide; leaving it shows Launch with Launch blocked.
+  // (4) A folder with a saved default on a computer that remembers nothing for it: Launch offers a review, never applies
+  // on its own; applying goes through the confirm dialog, and a dismissal is remembered for the folder.
+  const notice = (word) =>
+    "[...document.querySelectorAll('#launch-notices .notice')].find(n => n.textContent.includes(" + JSON.stringify(word) + "))";
+  await js("AW.project.select(" + JSON.stringify(cloned) + ")");
+  await wait(notice("This folder has saved settings: Folder default."));
+  const before = await js("request('folder-get',{workspace:" + JSON.stringify(cloned) + "})");
+  assert.equal(before.known, false);
+  assert.equal(before.offer_default, true);
+  await js(notice("This folder has saved settings") + ".querySelector('button').click()");
+  await wait("document.getElementById('profile-dialog').open && [...document.querySelectorAll('#profile-dialog-body button')].some(b => b.textContent.trim() === 'Apply profile')");
+  await js("[...document.querySelectorAll('#profile-dialog-body button')].find(b => b.textContent.trim() === 'Apply profile').click()");
+  await wait("!document.getElementById('profile-dialog').open");
+  await wait("request('folder-get',{workspace:" + JSON.stringify(cloned) + "}).then(f => f.known && !f.offer_default && f.profile === 'Folder default')");
+  await wait("!" + notice("This folder has saved settings"));
+  const places = await js("request('folder-places',{workspace:" + JSON.stringify(cloned) + "})");
+  assert.deepEqual(places.map((row) => row.id), ["profiles", "project", "instructions", "skills", "memory", "connections", "runs", "keys"]);
+  await js("AW.project.select(" + JSON.stringify(declined) + ")");
+  await wait(notice("This folder has saved settings: Folder default."));
+  await js(notice("This folder has saved settings") + ".querySelector('.notice-actions button:last-child').click()");
+  await wait("request('folder-get',{workspace:" + JSON.stringify(declined) + "}).then(f => !f.known && !f.offer_default && f.saved_default === 'Folder default')");
+  await js("AW.project.select(" + JSON.stringify(folder) + ")");
+  await wait("!" + notice("This folder has saved settings"));
+
+  // (5) A run summary: a launch recorded the way the bridge records one (no agent is started), opened from Recent runs,
+  // shown without the address's user name, password or query string, and saved as a profile beside the folder default.
+  fs.writeFileSync(path.join(cloned, "AGENTS.md"), "# Rules\n\nRun the tests.\n");
+  const recorded = execFileSync(
+    python,
+    [
+      "-c",
+      [
+        "import sys, runtime, run_log",
+        "s = runtime.DEFAULTS | dict(workspace=sys.argv[1], harness='OMP', provider='OpenRouter', remote_model='vendor/model', context=65536, prompt='Keep it short.')",
+        "facts = dict(settings=s, base='https://smoke-user:smoke-pass@openrouter.ai/api/v1?key=smoke-query', model='vendor/model', sent=['search'], prompt=True)",
+        "print(run_log.note(facts, 'OMP', 'embedded', '1.2.3'))",
+      ].join("\n"),
+      cloned,
+    ],
+    { cwd: root, env: { ...parentEnv, HOME: base, USERPROFILE: base, WORKBENCH_DATA: data }, encoding: "utf8" },
+  ).trim();
+  assert.match(recorded, /^[0-9a-f]{16}$/);
+  await js("AW.project.select(" + JSON.stringify(cloned) + ")");
+  await js("AW.router.go('project', { tab: 'runs' })");
+  const summaryButton = "[...document.querySelectorAll('#run-list button')].find(b => b.textContent.trim() === 'Summary…')";
+  await wait(summaryButton);
+  await js(summaryButton + ".click()");
+  const shown = "document.querySelector('#run-dialog-body .run-summary')";
+  await wait("document.getElementById('run-dialog').open && " + shown);
+  const markdown = await js(shown + ".textContent");
+  for (const line of ["- Agent: OMP 1.2.3", "- Address: https://openrouter.ai", "- AGENTS.md · ", "Keep it short."])
+    assert.ok(markdown.includes(line), "The run summary has no line " + line);
+  for (const secret of ["smoke-user", "smoke-pass", "smoke-query"]) assert.ok(!markdown.includes(secret), "The run summary shows " + secret);
+  await js("document.querySelector('#run-dialog-body input[type=text]').value = 'Smoke rerun'");
+  await js("[...document.querySelectorAll('#run-dialog-body button')].find(b => b.textContent.trim() === 'Save as profile').click()");
+  await wait(
+    "request('project-list',{workspace:" + JSON.stringify(cloned) + ",detail:true}).then(l => l.names.includes('Smoke rerun') && l.default === 'Folder default')",
+  );
+  await js("[...document.querySelectorAll('#run-dialog-body button')].find(b => b.textContent.trim() === 'Close').click()");
+  await wait("!document.getElementById('run-dialog').open && document.activeElement && document.activeElement.textContent.trim() === 'Summary…'");
+  await js("AW.router.go('launch')");
+
+  // Save as folder default writes the default without asking the first time, and asks before replacing it.
+  await js("AW.project.select(" + JSON.stringify(other) + ")");
+  await wait("form().workspace.endsWith('Second project') && document.getElementById('save-folder-default').getAttribute('aria-disabled') !== 'true'");
+  await js("window.confirm = (text) => { window.smokeConfirm = text; return false; }");
+  await click("save-folder-default");
+  await wait("request('project-list',{workspace:" + JSON.stringify(other) + ",detail:true}).then(l => l.default === 'Folder default')");
+  assert.equal(await js("window.smokeConfirm || ''"), "");
+  await wait("!document.getElementById('save-folder-default').dataset.pending");
+  await click("save-folder-default");
+  await wait("(window.smokeConfirm || '').startsWith('Replace the folder default Folder default')");
+  await js("window.confirm = () => true");
+  await js("AW.project.select(" + JSON.stringify(folder) + ")");
+
+  // (6) A second start with an empty data folder opens the setup guide; leaving it shows Launch with Launch blocked.
   second = launch(fresh, freshUser, "10579");
   const secondGone = new Promise((_, rej) => {
     second.once("error", (e) => rej(Error("The second Electron did not start: " + e.message)));
@@ -347,7 +443,7 @@ async function test() {
   }
   passed = true;
   console.log(
-    "Passed: theme, per-project tool choices, OMP transcript watcher, interactive PTY, project switch and close, refused action, service restart, first run",
+    "Passed: theme, per-project tool choices, OMP transcript watcher, interactive PTY, project switch and close, refused action, service restart, folder default review, run summary, first run",
   );
 }
 Promise.race([test(), aborted])

@@ -1,0 +1,749 @@
+{
+ "what": "Workbench's own Strata engine installed and started on a Windows machine through setup_engines.py and runtime.start, then found, attached and used from a Mac through the SSH machines flow",
+ "date": "2026-11-23",
+ "system": "Windows 11, RTX 5090 32 GB, 61 GB RAM",
+ "client": "macOS on an Apple M3 Max; the agents and benchmark.py ran on the Mac against the SSH forward",
+ "engine": {
+  "server": "Niko1221/Strata v0.2.19 at c6f6427d9de9016fd92d13e29740f65625261df7, fetched by setup_engines.py",
+  "engine": "strata-inkling 0.1.65, windows-x86_64 CUDA 13 archive pinned by SHA-256 in setup_engines.py",
+  "data_folder": "a throwaway WORKBENCH_DATA, removed afterwards; the machine's own Strata installs were not used"
+ },
+ "model": {
+  "files": [
+   "Inkling-2-Mini-SQ-20.strata",
+   "Inkling-2-Mini-Vision.strata",
+   "tokenizer.json",
+   "chat_template.jinja"
+  ],
+  "sha256": "all four matched model_catalog.json (inkling-2-mini-sq-20) before use",
+  "placed": "hard links in models/strata-engine--Inkling-2-Mini-Strata, where the catalog download puts them"
+ },
+ "start": {
+  "via": "runtime.start from a Python process over SSH that held the session open; the server stops with that process",
+  "settings": {
+   "context": 32768,
+   "kv": "auto",
+   "draft": true,
+   "vision": true,
+   "source": "catalog pick cuda-32-inkling-sq20"
+  },
+  "ready_seconds": 5.9,
+  "engine_log": "trunk 3.67 GB; experts 3072 in VRAM, 0 in host memory"
+ },
+ "mac_flow": {
+  "discover": [
+   {
+    "port": 10532,
+    "kind": "strata",
+    "label": "Strata",
+    "models": [
+     {
+      "id": "local-agent",
+      "context": 32768
+     }
+    ],
+    "protocols": null,
+    "needs_key": false,
+    "base_path": "/v1",
+    "engine": "Strata",
+    "workbench": true
+   }
+  ],
+  "discover_seconds": 6.0,
+  "attach": {
+   "seconds": 9.7,
+   "kind": "strata",
+   "model": "local-agent",
+   "protocols": {
+    "chat": true,
+    "responses": true,
+    "messages": true
+   },
+   "context": 32768,
+   "needs_key": false
+  },
+  "key": "read over SSH from the key file of the data folder whose running.json names the listening process, stored in an in-memory keyring, never printed",
+  "key_in_vault": true,
+  "agents_offered": {
+   "OMP": true,
+   "Pi": true,
+   "Claude Code": true,
+   "Codex": true,
+   "Hermes": false,
+   "opencode": true
+  },
+  "task": "Create a file named hello.txt in the current folder containing exactly the text: workbench ok (empty temporary folder on the Mac, one run each)",
+  "agents": {
+   "OMP": {
+    "exit": 0,
+    "seconds": 57.1,
+    "file_created": true,
+    "file_text": "workbench ok"
+   },
+   "Claude Code": {
+    "exit": 0,
+    "seconds": 18.1,
+    "file_created": true,
+    "file_text": "workbench ok",
+    "note": "Its final message said the file already existed and read it back; the file was new in an empty folder"
+   },
+   "Codex": {
+    "exit": 0,
+    "seconds": 5.1,
+    "file_created": true,
+    "file_text": "workbench ok",
+    "note": "Codex warned that it had no metadata for the model ID local-agent"
+   }
+  },
+  "detached": true
+ },
+ "runs": [
+  {
+   "condition": "32,768 context, KV auto, DSpark, vision: the catalog settings for a 32 GB card",
+   "device_memory_used_mib": {
+    "desktop_before": 1104,
+    "after_load": 23711,
+    "after_agents_and_benchmark": 24833
+   },
+   "benchmark": {
+    "condition": "ctx32k",
+    "model": "local-agent",
+    "parallel": 1,
+    "median_decode_tps": 171.5,
+    "median_ttft_s": null,
+    "checks_passed": 2,
+    "checks_total": 5,
+    "speed": [
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 1.2323,
+      "prefill_tps": 1323.9,
+      "decode_tps": 166.7,
+      "decode_source": "engine",
+      "prompt_tokens": 56,
+      "completion_tokens": 192,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "code-1-1",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 1.0688,
+      "prefill_tps": 1217.8,
+      "decode_tps": 190.7,
+      "decode_source": "engine",
+      "prompt_tokens": 52,
+      "completion_tokens": 192,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "code-1-2",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 1.1666,
+      "prefill_tps": 1238.1,
+      "decode_tps": 173.7,
+      "decode_source": "engine",
+      "prompt_tokens": 52,
+      "completion_tokens": 192,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "code-1-3",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 1.1964,
+      "prefill_tps": 1311.5,
+      "decode_tps": 169.3,
+      "decode_source": "engine",
+      "prompt_tokens": 56,
+      "completion_tokens": 192,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "code-2-1",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 1.0662,
+      "prefill_tps": 1209.3,
+      "decode_tps": 191.0,
+      "decode_source": "engine",
+      "prompt_tokens": 52,
+      "completion_tokens": 192,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "code-2-2",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 1.2625,
+      "prefill_tps": 1232.2,
+      "decode_tps": 163.0,
+      "decode_source": "engine",
+      "prompt_tokens": 52,
+      "completion_tokens": 192,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "code-2-3",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+     }
+    ],
+    "prefill": [
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 0.7084,
+      "prefill_tps": 6893.0,
+      "decode_tps": 166.4,
+      "decode_source": "engine",
+      "prompt_tokens": 3421,
+      "completion_tokens": 32,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "prompt-4k",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 2.4364,
+      "prefill_tps": 6400.1,
+      "decode_tps": 147.5,
+      "decode_source": "engine",
+      "prompt_tokens": 13773,
+      "completion_tokens": 32,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "prompt-16k",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+     }
+    ],
+    "checks": [
+     {
+      "text": "3269",
+      "tool_calls": [],
+      "ttft_s": 0.3056,
+      "wall_s": 0.306,
+      "prefill_tps": 810.1,
+      "decode_tps": 264.1,
+      "decode_source": "engine",
+      "prompt_tokens": 29,
+      "completion_tokens": 66,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "arithmetic",
+      "text_sha256": "2b3acf19e8b26365c1737c877fa4268f327313404addfa42d430efd6a52b27ce",
+      "passed": true
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 0.5397,
+      "prefill_tps": 1204.8,
+      "decode_tps": 200.8,
+      "decode_source": "engine",
+      "prompt_tokens": 50,
+      "completion_tokens": 96,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "logic",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed": false
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 0.5287,
+      "prefill_tps": 1217.8,
+      "decode_tps": 205.8,
+      "decode_source": "engine",
+      "prompt_tokens": 52,
+      "completion_tokens": 96,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "coding",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed": false
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 0.4979,
+      "prefill_tps": 1046.5,
+      "decode_tps": 222.0,
+      "decode_source": "engine",
+      "prompt_tokens": 45,
+      "completion_tokens": 96,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "extraction",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed": false
+     },
+     {
+      "text": "",
+      "tool_calls": [
+       {
+        "name": "lookup_fixture",
+        "arguments": "{\"id\": \"fixture-52\"}"
+       }
+      ],
+      "ttft_s": 0.3121,
+      "wall_s": 0.3124,
+      "prefill_tps": 2454.7,
+      "decode_tps": 245.6,
+      "decode_source": "engine",
+      "prompt_tokens": 122,
+      "completion_tokens": 59,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "tool-call",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed": true
+     }
+    ],
+    "incomplete": [],
+    "meta": {
+     "started_at": "2026-11-23T17:54:40Z",
+     "context": 32768,
+     "rate_source": "engine",
+     "client_platform": "Darwin arm64"
+    }
+   }
+  },
+  {
+   "condition": "1,048,576 context requested, FP8 KV, DSpark, vision",
+   "engine_log": "Auto-sizing max_ctx 1048576 -> 712192 for parallel=1 (11.80 GiB free VRAM); experts 3072 in VRAM, 0 in host memory",
+   "server_reported_context": 1048576,
+   "note": "The server's /health and /v1/models kept reporting 1048576 although the engine holds 712192 tokens. The empty Anthropic Messages probe ran a full reply and outlasted the 5 s probe wait, so attach saw that API as unconfirmed",
+   "attach_protocols": {
+    "chat": true,
+    "responses": true,
+    "messages": null
+   },
+   "device_memory_used_mib": {
+    "after_load": 31986
+   },
+   "benchmark": {
+    "condition": "ctx1m-fp8-vram",
+    "model": "local-agent",
+    "parallel": 1,
+    "median_decode_tps": 55.7,
+    "median_ttft_s": null,
+    "checks_passed": 2,
+    "checks_total": 5,
+    "speed": [
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 4.0085,
+      "prefill_tps": 1120.0,
+      "decode_tps": 48.7,
+      "decode_source": "engine",
+      "prompt_tokens": 56,
+      "completion_tokens": 192,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "code-1-1",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 2.8052,
+      "prefill_tps": 1044.2,
+      "decode_tps": 70.3,
+      "decode_source": "engine",
+      "prompt_tokens": 52,
+      "completion_tokens": 192,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "code-1-2",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 3.6719,
+      "prefill_tps": 1072.2,
+      "decode_tps": 54.0,
+      "decode_source": "engine",
+      "prompt_tokens": 52,
+      "completion_tokens": 192,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "code-1-3",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 3.8518,
+      "prefill_tps": 1129.0,
+      "decode_tps": 50.8,
+      "decode_source": "engine",
+      "prompt_tokens": 56,
+      "completion_tokens": 192,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "code-2-1",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 3.2508,
+      "prefill_tps": 1042.1,
+      "decode_tps": 60.4,
+      "decode_source": "engine",
+      "prompt_tokens": 52,
+      "completion_tokens": 192,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "code-2-2",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 3.4116,
+      "prefill_tps": 1065.6,
+      "decode_tps": 57.4,
+      "decode_source": "engine",
+      "prompt_tokens": 52,
+      "completion_tokens": 192,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "code-2-3",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+     }
+    ],
+    "prefill": [
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 1.5754,
+      "prefill_tps": 4321.6,
+      "decode_tps": 42.0,
+      "decode_source": "engine",
+      "prompt_tokens": 3421,
+      "completion_tokens": 32,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "prompt-4k",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 4.8606,
+      "prefill_tps": 3718.2,
+      "decode_tps": 28.5,
+      "decode_source": "engine",
+      "prompt_tokens": 13773,
+      "completion_tokens": 32,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "prompt-16k",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+     }
+    ],
+    "checks": [
+     {
+      "text": "3269",
+      "tool_calls": [],
+      "ttft_s": 0.7653,
+      "wall_s": 0.7656,
+      "prefill_tps": 723.2,
+      "decode_tps": 94.3,
+      "decode_source": "engine",
+      "prompt_tokens": 29,
+      "completion_tokens": 66,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "arithmetic",
+      "text_sha256": "2b3acf19e8b26365c1737c877fa4268f327313404addfa42d430efd6a52b27ce",
+      "passed": true
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 1.4997,
+      "prefill_tps": 1033.1,
+      "decode_tps": 71.6,
+      "decode_source": "engine",
+      "prompt_tokens": 50,
+      "completion_tokens": 96,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "logic",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed": false
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 1.4216,
+      "prefill_tps": 1048.4,
+      "decode_tps": 71.4,
+      "decode_source": "engine",
+      "prompt_tokens": 52,
+      "completion_tokens": 96,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "coding",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed": false
+     },
+     {
+      "text": "",
+      "tool_calls": [],
+      "ttft_s": null,
+      "wall_s": 1.2727,
+      "prefill_tps": 920.2,
+      "decode_tps": 79.8,
+      "decode_source": "engine",
+      "prompt_tokens": 45,
+      "completion_tokens": 96,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "extraction",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed": false
+     },
+     {
+      "text": "",
+      "tool_calls": [
+       {
+        "name": "lookup_fixture",
+        "arguments": "{\"id\": \"fixture-52\"}"
+       }
+      ],
+      "ttft_s": 0.8625,
+      "wall_s": 0.8627,
+      "prefill_tps": 1897.4,
+      "decode_tps": 85.6,
+      "decode_source": "engine",
+      "prompt_tokens": 122,
+      "completion_tokens": 59,
+      "draft_offered": null,
+      "draft_accepted": null,
+      "name": "tool-call",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed": true
+     }
+    ],
+    "incomplete": [],
+    "meta": {
+     "started_at": "2026-11-23T17:57:19Z",
+     "context": 1048576,
+     "rate_source": "engine",
+     "client_platform": "Darwin arm64"
+    }
+   }
+  },
+  {
+   "condition": "1,048,576 context, FP8 KV, plus --vram-experts-gb 10.4 --ram-experts-gb 5.28 (Strata's own placement flags for discrete GPUs)",
+   "result": "The engine started with the flags and ignored them for this card: 3072 experts in VRAM, 0 in host memory, the same auto-sized 712192 context. Not benchmarked."
+  },
+  {
+   "condition": "32,768 context, KV auto, plus --vram-reserve-mib 14000 to push experts into host RAM",
+   "engine_log": "experts: 2946 VRAM (13.90 GiB), 126 host",
+   "device_memory_used_mib": {
+    "after_load": 17664
+   },
+   "result": "The warm-up answered; every later request failed with CUDA error 1 (invalid argument) at ep_dual_gpu.cu:1744, and after three fatal GPU errors in 10 minutes the server stopped restarting the engine. No rate was measured.",
+   "benchmark": {
+    "condition": "ctx32k-ram-spill",
+    "model": "local-agent",
+    "parallel": 1,
+    "median_ttft_s": null,
+    "checks_passed": 0,
+    "checks_total": 5,
+    "speed": [
+     {
+      "name": "code-1-1",
+      "outcome": "failed",
+      "reason": "The server reported an error in the response stream."
+     },
+     {
+      "name": "code-1-2",
+      "outcome": "failed",
+      "reason": "The server reported an error in the response stream."
+     },
+     {
+      "name": "code-1-3",
+      "outcome": "failed",
+      "reason": "The server reported an error in the response stream."
+     },
+     {
+      "name": "code-2-1",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503."
+     },
+     {
+      "name": "code-2-2",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503."
+     },
+     {
+      "name": "code-2-3",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503."
+     }
+    ],
+    "prefill": [
+     {
+      "name": "prompt-4k",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503."
+     },
+     {
+      "name": "prompt-16k",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503."
+     }
+    ],
+    "checks": [
+     {
+      "name": "arithmetic",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503.",
+      "passed": false
+     },
+     {
+      "name": "logic",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503.",
+      "passed": false
+     },
+     {
+      "name": "coding",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503.",
+      "passed": false
+     },
+     {
+      "name": "extraction",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503.",
+      "passed": false
+     },
+     {
+      "name": "tool-call",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503.",
+      "passed": false
+     }
+    ],
+    "incomplete": [
+     {
+      "name": "code-1-1",
+      "outcome": "failed",
+      "reason": "The server reported an error in the response stream."
+     },
+     {
+      "name": "code-1-2",
+      "outcome": "failed",
+      "reason": "The server reported an error in the response stream."
+     },
+     {
+      "name": "code-1-3",
+      "outcome": "failed",
+      "reason": "The server reported an error in the response stream."
+     },
+     {
+      "name": "code-2-1",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503."
+     },
+     {
+      "name": "code-2-2",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503."
+     },
+     {
+      "name": "code-2-3",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503."
+     },
+     {
+      "name": "prompt-4k",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503."
+     },
+     {
+      "name": "prompt-16k",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503."
+     },
+     {
+      "name": "arithmetic",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503."
+     },
+     {
+      "name": "logic",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503."
+     },
+     {
+      "name": "coding",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503."
+     },
+     {
+      "name": "extraction",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503."
+     },
+     {
+      "name": "tool-call",
+      "outcome": "failed",
+      "reason": "The server answered HTTP 503."
+     }
+    ],
+    "meta": {
+     "started_at": "2026-11-23T17:59:59Z",
+     "context": 32768,
+     "rate_source": null,
+     "client_platform": "Darwin arm64"
+    }
+   }
+  }
+ ],
+ "offload": "The README.txt of the Strata Terminal 0.1.61 installed on this machine documents no offload or RAM option. Strata's own setup writes --vram-experts-gb and --ram-experts-gb for a discrete GPU; engine 0.1.65 kept every SQ-20 expert in VRAM on this 32 GB card despite them and shortened the context instead, and the one forced host placement crashed on the first request after the warm-up. No faster or larger-context RAM mode was found with this engine.",
+ "rates": "Rates are the engine's own timings (predicted_per_second, prompt_per_second) from the streamed answers, read by benchmark.py through the SSH forward"
+}

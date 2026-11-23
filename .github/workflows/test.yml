@@ -39,6 +39,8 @@ jobs:
         with:
           node-version: "22"
       - run: npm ci --prefix desktop
+      # Newer npm releases skip dependency install scripts, so fetch Electron's binary explicitly.
+      - run: node desktop/node_modules/electron/install.js
       - name: Run the desktop unit tests
         shell: bash
         run: node --test tests/*.test.cjs

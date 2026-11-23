@@ -17,6 +17,8 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import Mock, patch
 
+import psutil
+
 import account_book
 import catalog
 import connections
@@ -36,6 +38,7 @@ SHELL_ONLY = {
     "job-cancel",
     "bridge-log-open",
     "folder-pick",
+    "folder-reveal",
     "server-copy-key",
     "account-key-page",
 }
@@ -573,6 +576,15 @@ class RoutingTest(BridgeCase):
         )
         self.assertEqual(seen, [(True, None, None, "P", "C")])
 
+    def test_engine_install_passes_the_release(self):
+        import setup_engines
+
+        install = self.use(setup_engines, "install", return_value={"installed": []})
+        bridge.dispatch("engine-install", {"release": "unsloth"}, "P", "C")
+        install.assert_called_once_with(
+            False, None, None, progress="P", cancel="C", release="unsloth"
+        )
+
     def test_area_actions_get_progress_only_when_they_take_it(self):
         fake = {
             "studio": types.SimpleNamespace(
@@ -833,7 +845,7 @@ class LaunchTest(BridgeCase):
     def test_launch_remembers_folder_and_keeps_saved_toggles(self):
         self.neighbours(provider="OpenRouter", search=True, plugins="art")
         launched = []
-        launch = self.use(connections, "launch", side_effect=lambda s: launched.append(dict(s)))
+        launch = self.use(connections, "launch", side_effect=lambda s, **_: launched.append(dict(s)))
         write = self.use(runtime, "write_json")
         remember = self.use(bridge, "remember")
         self.which.return_value = "/bin/omp"
@@ -959,6 +971,36 @@ class LaunchTest(BridgeCase):
         self.assertEqual(write.call_args_list[1].args[1]["preset"], "")
         legacy.assert_not_called()
 
+    def test_folder_default_actions(self):
+        self.neighbours(provider="OpenRouter")
+        write = self.use(runtime, "write_json")
+        saved = self.use(projects, "save_project", return_value="/x/profiles.json")
+        bridge.dispatch("project-save", self.form(name="Folder default", default=True))
+        self.assertEqual(saved.call_args.args[1], "Folder default")
+        self.assertIs(saved.call_args.kwargs["default"], True)
+        bridge.dispatch("project-save", self.form(name="Research", default="yes"))
+        self.assertIs(saved.call_args.kwargs["default"], False)
+        write.assert_not_called()
+        names = self.use(projects, "project_names", return_value=["a"])
+        detail = self.use(projects, "project_list", return_value={"names": ["a"], "default": "a"})
+        here = {"workspace": str(self.folder)}
+        self.assertEqual(bridge.dispatch("project-list", here), ["a"])
+        self.assertEqual(
+            bridge.dispatch("project-list", here | {"detail": True}),
+            {"names": ["a"], "default": "a"},
+        )
+        self.assertEqual((names.call_count, detail.call_count), (1, 1))
+        chosen = self.use(projects, "set_default", return_value={"default": "a"})
+        cleared = self.use(projects, "clear_default", return_value={"default": ""})
+        self.assertEqual(bridge.dispatch("project-default-set", here | {"name": "a"}), {"default": "a"})
+        self.assertEqual(chosen.call_args.args, (str(self.folder), "a"))
+        self.assertEqual(bridge.dispatch("project-default-clear", here), {"default": ""})
+        self.assertEqual(cleared.call_args.args, (str(self.folder),))
+        for name in ("project-default-set", "project-default-clear"):
+            self.assertEqual(bridge.owner(name), "desktop_bridge")
+        for name in ("folder-default-dismiss", "folder-places"):
+            self.assertEqual(bridge.owner(name), "project_profiles")
+
     def test_project_apply_needs_a_reviewed_digest(self):
         self.neighbours(provider="OpenRouter")
         write = self.use(runtime, "write_json")
@@ -1009,6 +1051,15 @@ def bridge_env(base):
         "USERPROFILE": str(base),
         "PYTHONUTF8": "1",
     }
+
+
+def interpreter(proc):
+    """The pid that runs Python for proc. A venv's python.exe on Windows is a launcher
+    that runs the base interpreter as its only child and takes it down when killed."""
+    if os.name != "nt":
+        return proc.pid
+    children = psutil.Process(proc.pid).children()
+    return children[0].pid if len(children) == 1 else proc.pid
 
 
 class Process:
@@ -1104,7 +1155,7 @@ class ProcessTest(unittest.TestCase):
         ready = bridge_process.read()
         self.assertEqual(ready["event"], "bridge-ready")
         self.assertEqual(ready["data"]["protocol"], 2)
-        self.assertEqual(ready["data"]["pid"], bridge_process.proc.pid)
+        self.assertEqual(ready["data"]["pid"], interpreter(bridge_process.proc))
         bridge_process.ask(1, "nope")
         self.assertEqual(
             bridge_process.read(), {"id": 1, "error": {"message": "Unknown desktop action."}}
@@ -1126,6 +1177,18 @@ class ProcessTest(unittest.TestCase):
         self.assertEqual(log.count("desktop_bridge: ignored a malformed request line"), 2)
         self.assertNotIn("garbage", log)
         self.assertIn("KeyError: 'workspace'", log)
+
+    def test_killing_the_started_process_ends_the_bridge(self):
+        # The desktop app stops a stuck bridge with proc.kill() on the process it started.
+        bridge_process = Process(self, self.base)
+        pid = bridge_process.read()["data"]["pid"]
+        self.assertEqual(pid, interpreter(bridge_process.proc))
+        bridge_process.proc.kill()
+        bridge_process.proc.wait(5)
+        limit = time.monotonic() + 5
+        while psutil.pid_exists(pid) and time.monotonic() < limit:
+            time.sleep(0.05)
+        self.assertFalse(psutil.pid_exists(pid))
 
     @unittest.skipUnless(
         os.environ.get("WORKBENCH_SLOW_TESTS"),

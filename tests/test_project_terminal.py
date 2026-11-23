@@ -323,6 +323,7 @@ class DispatchTests(Case):
             labels=lambda: {"me@box": "GPU box"},
             remote_command=MagicMock(return_value="exec omp"),
             ssh=lambda host: ["ssh"],
+            windows=lambda host: False,
         )
         return types.SimpleNamespace(**(fields | changes))
 
@@ -370,10 +371,10 @@ class DispatchTests(Case):
         self.assertEqual(
             self.call("term-list"),
             [
-                dict(id="shell", title="Shell", ended=False, watch=False, kind="embedded", harness=""),
-                dict(id="agent", title="OMP", ended=True, watch=False, kind="embedded", harness="OMP"),
-                dict(id="far", title="Box", ended=False, watch=False, kind="remote", harness="Pi"),
-                dict(id="watch", title="Watch · Saved", ended=False, watch=True, kind="watch", harness=""),
+                dict(id="shell", title="Shell", ended=False, watch=False, kind="embedded", harness="", run=""),
+                dict(id="agent", title="OMP", ended=True, watch=False, kind="embedded", harness="OMP", run=""),
+                dict(id="far", title="Box", ended=False, watch=False, kind="remote", harness="Pi", run=""),
+                dict(id="watch", title="Watch · Saved", ended=False, watch=True, kind="watch", harness="", run=""),
             ],
         )
 
@@ -829,7 +830,7 @@ class PtyTests(Case):
         self.idle(session)
         self.assertEqual(
             self.call("term-list"),
-            [dict(id=ident, title=Path(self.folder).name + " · Shell", ended=False, watch=False, kind="embedded", harness="")],
+            [dict(id=ident, title=Path(self.folder).name + " · Shell", ended=False, watch=False, kind="embedded", harness="", run="")],
         )
         self.assertEqual(
             pt.active(),

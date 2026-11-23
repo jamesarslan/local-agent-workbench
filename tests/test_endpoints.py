@@ -53,8 +53,11 @@ EXTRA = (
     "host",
     "remote_port",
     "probed",
+    "late_system",
 )
 ALL = {"chat": True, "responses": True, "messages": True}
+LATE = (500, {}, {"error": {"code": 500, "message": "System message must be at the beginning.", "type": "server_error"}})
+DONE = (200, {}, {"choices": [{"message": {"role": "assistant", "content": "OK"}}]})
 
 
 class LoopbackServer(ThreadingHTTPServer):
@@ -366,6 +369,7 @@ class Case(unittest.TestCase):
             ("connections", self.links),
             ("account_book", self.book),
             ("PROBE_TIMEOUT", 2.0),
+            ("LATE_TIMEOUT", 2.0),
         ):
             patcher = patch.object(endpoints, name, value)
             patcher.start()
@@ -786,6 +790,49 @@ class SweepTests(Case):
         self.assertEqual(raw["endpoints"][0]["base"], base(open_generic))
         self.assertFalse(
             any(h[2].get("Authorization") or h[2].get("x-api-key") for h in hits)
+        )
+
+    def test_a_locked_strata_server_is_kept_and_read_with_its_key(self):
+        # As Strata serve answers: /health is open and names the service; /v1/* needs the key.
+        def models(headers, body):
+            if headers.get("Authorization") == "Bearer right":
+                return 200, {}, listing("local-agent", context_length=32768)
+            return 401, {}, {"error": {"type": "authentication_error"}}
+
+        health = {"status": "ok", "model": "local-agent", "service": "strata"}
+        strata, hits = serve(
+            self,
+            api(
+                None,
+                routes={
+                    ("GET", "/v1/models"): models,
+                    ("GET", "/health"): (200, {}, health),
+                },
+            ),
+            server="BaseHTTP/0.6 Python/3.12.10",
+        )
+        raw = endpoints._sweep(
+            [strata], [], providers.KINDS, providers.IDENTITY, endpoints._http, 1.0
+        )
+        self.assertEqual(
+            [(r["port"], r["kind"], r["auth"]) for r in raw["endpoints"]],
+            [(strata, "strata", "required")],
+        )
+        self.assertFalse(any(h[2].get("Authorization") for h in hits))
+        found = endpoints._probe_base(
+            base(strata),
+            providers.KINDS,
+            providers.IDENTITY,
+            endpoints._http,
+            {"Authorization": "Bearer right"},
+            1.0,
+        )
+        self.assertEqual(found["auth"], "accepted")
+        self.assertEqual(
+            found["models"], [{"id": "local-agent", "context": 32768, "loaded": None}]
+        )
+        self.assertEqual(
+            found["protocols"], {"chat": True, "responses": True, "messages": True}
         )
 
     def test_lmstudio_hint_from_control_port(self):
@@ -1559,6 +1606,123 @@ class RefreshTests(Case):
         self.assertEqual(hits[-1][2].get("Authorization"), "Bearer right")
 
 
+def templated(chat, responses=BAD, models=None):
+    """A llama.cpp-like server whose chat template answers a late system turn with chat/responses."""
+
+    def route(answer):
+        def reply(headers, body):
+            doc = json.loads(body or b"{}")
+            return answer if doc.get("messages") or doc.get("input") else BAD
+
+        return reply
+
+    return api(
+        models or listing("Qwen3.5-9B", owned_by="llamacpp"),
+        routes={
+            ("POST", "/v1/chat/completions"): route(chat),
+            ("POST", "/v1/responses"): route(responses),
+        },
+    )
+
+
+def late_bodies(hits, path):
+    return [
+        json.loads(body)
+        for method, where, _, body in hits
+        if method == "POST" and where == path and b"model" in body
+    ]
+
+
+class LateSystemTests(Case):
+    def test_a_template_that_rejects_a_late_system_message(self):
+        port, hits = serve(self, templated(LATE))
+        late = endpoints.late_system(base(port), "Qwen3.5-9B", {}, {"chat": True})
+        self.assertIs(late, False)
+        (sent,) = late_bodies(hits, "/v1/chat/completions")
+        self.assertEqual(
+            [m["role"] for m in sent["messages"]],
+            ["user", "assistant", "system", "user"],
+        )
+        self.assertEqual((sent["model"], sent["max_tokens"]), ("Qwen3.5-9B", 1))
+        self.assertIs(sent["stream"], False)
+        self.assertEqual(late_bodies(hits, "/v1/responses"), [])
+
+    def test_chat_and_responses_both_have_to_accept(self):
+        port, hits = serve(self, templated(DONE, DONE))
+        self.assertIs(endpoints.late_system(base(port), "m", {}, ALL), True)
+        (sent,) = late_bodies(hits, "/v1/responses")
+        self.assertEqual(
+            [(m["type"], m["role"]) for m in sent["input"]],
+            [("message", r) for r in ("user", "assistant", "developer", "user")],
+        )
+        self.assertEqual(sent["max_output_tokens"], 16)
+        port, hits = serve(self, templated(DONE, LATE))
+        self.assertIs(endpoints.late_system(base(port), "m", {}, ALL), False)
+        port, hits = serve(self, templated(DONE, LATE))
+        flags = {"chat": True, "responses": None, "messages": True}
+        self.assertIs(endpoints.late_system(base(port), "m", {}, flags), True)
+        self.assertEqual(late_bodies(hits, "/v1/responses"), [])
+
+    def test_unrelated_failures_leave_the_answer_open(self):
+        oom = (500, {}, {"error": {"message": "failed to allocate the KV cache"}})
+        for answer in (oom, BAD, MISSING, (401, {}, {"error": "no key"})):
+            port, _ = serve(self, templated(answer))
+            self.assertIsNone(endpoints.late_system(base(port), "m", {}, ALL))
+        self.assertIsNone(endpoints.late_system(base(closed_port()), "m", {}, ALL))
+        port, hits = serve(self, templated(LATE, LATE))
+        flags = {"chat": False, "responses": None, "messages": True}
+        self.assertIsNone(endpoints.late_system(base(port), "m", {}, flags))
+        self.assertEqual(hits, [])
+
+    def test_the_key_is_sent_with_the_probe(self):
+        port, hits = serve(self, templated(DONE))
+        endpoints.late_system(base(port), "m", endpoints._auth("sk-x"), {"chat": True})
+        headers = hits[-1][2]
+        self.assertEqual(headers["Authorization"], "Bearer sk-x")
+        self.assertEqual(headers["Content-Type"], "application/json")
+
+    def test_attach_and_check_store_the_answer(self):
+        routes = templated(LATE, LATE)
+        port, _ = serve(self, routes, server="llama.cpp")
+        row = endpoints.attach(f"127.0.0.1:{port}")["connection"]
+        self.assertIs(row["late_system"], False)
+        routes.update(templated(DONE, DONE))
+        saved = endpoints.refresh(row["connection_id"])["connection"]
+        self.assertIs(saved["late_system"], True)
+        oom = (500, {}, {"error": {"message": "failed to allocate"}})
+        routes.update(templated(oom, oom))
+        kept = endpoints.refresh(row["connection_id"])["connection"]
+        self.assertIs(kept["late_system"], True)
+
+    def test_an_unloaded_model_is_not_loaded_to_ask(self):
+        routes = ollama({"qwen3:8b": 32768})
+        routes.update(
+            {
+                ("POST", "/v1/chat/completions"): LATE,
+                ("POST", "/v1/responses"): LATE,
+            }
+        )
+        port, hits = serve(self, routes)
+        row = endpoints.attach(f"127.0.0.1:{port}", model="llama3.2")["connection"]
+        self.assertNotIn("late_system", row)
+        self.assertEqual(late_bodies(hits, "/v1/chat/completions"), [])
+        row = endpoints.attach(f"127.0.0.1:{port}", model="qwen3:8b")["connection"]
+        self.assertIs(row["late_system"], False)
+
+    def test_describe_hands_the_answer_to_compat(self):
+        record = dict(
+            base="http://127.0.0.1:8081/v1",
+            kind="llamacpp",
+            auth="none",
+            models=[],
+            protocols=dict(ALL),
+            late_system=False,
+        )
+        with patch.object(self.links, "compat", Mock(return_value={})) as compat:
+            endpoints.describe(record)
+        self.assertIs(compat.call_args.args[1]["late_system"], False)
+
+
 class RemoteTests(Case):
     def test_remote_script_is_self_contained(self):
         script = endpoints.remote_probe_script()
@@ -1566,7 +1730,9 @@ class RemoteTests(Case):
         self.assertNotIn("requests", script)
         self.assertNotIn("providers", script)
         self.assertNotIn("removesuffix", script)
-        self.assertIn(json.dumps(providers.SWEEP_PORTS), script)
+        self.assertIn(
+            json.dumps([*providers.SWEEP_PORTS, providers.WORKBENCH_PORT]), script
+        )
         port, _ = serve(self, ollama({"qwen3:8b": 32768}))
         script = endpoints.remote_probe_script(ports=[port], control=[])
         self.assertIn("[[%d], [], {" % port, script)

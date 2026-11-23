@@ -1,6 +1,6 @@
 # Project setup
 
-This guide covers what an agent reads from your project folder (instruction files, skills and MCP servers), how Agent Workbench shows and writes those files, the consent step for folders that start programs, the starter kits, and what Workbench remembers for each folder.
+This guide covers what an agent reads from your project folder (instruction files, skills and MCP servers), how Agent Workbench shows and writes those files, the consent step for folders that start programs, the starter kits, what Workbench remembers for each folder, and which settings travel with it.
 
 <picture>
 <source media="(prefers-color-scheme: dark)" srcset="images/project-setup-dark.png">
@@ -92,6 +92,21 @@ A project list looks like this:
 
 A server is either `stdio` (a program on this computer, with `command`, `args`, fixed non-secret `env` values and `env_from` names) or `http` (an `https://` address, or `http://` on this computer, with `header_env` and `bearer_env` names). The file never holds a secret: an `env` entry whose name looks like a key or token is refused, and you name the variable under `env_from` instead. Workbench checks every field of this file before it uses it, because the file comes from the folder and could have been written by anyone.
 
+A `stdio` server that each system installs in its own place lists a command per system under `platforms` instead of `command` and `args`, with the keys `darwin`, `linux` and `win32`. There the command may be a full path, and a path may start with `~/`, `%LOCALAPPDATA%`, `%APPDATA%` or `%USERPROFILE%`. The file keeps those as written, so it names no user folder; Workbench expands them on this computer when it starts a session. On a system the entry does not list, the server is skipped and the panel says why. On Windows, a server started through `cmd.exe` is skipped when the expanded path holds a character `cmd.exe` would read again, such as `&` or `(`. The Game development kit writes Roblox Studio's server this way:
+
+```json
+"roblox-studio": {
+  "transport": "stdio",
+  "platforms": {
+    "darwin": {"command": "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP"},
+    "win32": {"command": "cmd.exe", "args": ["/c", "%LOCALAPPDATA%\\Roblox\\mcp.bat"]}
+  },
+  "enabled": true
+}
+```
+
+For such a server, **Export to the agent's project file…** writes the command for the system you export on, with `%LOCALAPPDATA%` and the like left as written.
+
 ### Values for variables
 
 A project server that names a variable needs its value at launch. Workbench takes it from your environment when the variable is set there. Otherwise choose **Add value…** next to the variable: the value goes to your system's credential vault under the service `Agent Workbench` and is handed to the server's process when a session starts. **Forget value** deletes it. Without a vault, Workbench does not save the value; set the variable in your environment before you start Workbench.
@@ -121,7 +136,7 @@ The **MCP tools** tab also lists the agent's own MCP files in the folder and how
 
 ## Consent
 
-These steps were not run for 0.4.0.
+These steps were not run for 0.5.0.
 
 A project folder can carry configuration that makes an agent start programs: MCP server lists, hooks and settings. Before the first launch in a folder that has such files for the chosen agent, Workbench asks you to review them. It never runs them unasked.
 
@@ -158,9 +173,9 @@ Updates show a diff. Untick any file you do not want, then choose **Write files*
 
 ## Starter kits
 
-These steps were not run for 0.4.0.
+These steps were not run for 0.5.0 in the desktop window. Through the same code on a Mac, the Game development kit was suggested for a Rojo project and applied with Roblox Studio's MCP server.
 
-A starter kit gives a folder three things in one step: an `AGENTS.md` written for that kind of project, up to five skills, and a short list of MCP servers to choose from. All kit text was written for Agent Workbench and is under the MIT licence.
+A starter kit gives a folder three things in one step: an `AGENTS.md` written for that kind of project, up to six skills, and a short list of MCP servers to choose from. All kit text was written for Agent Workbench and is under the MIT licence.
 
 | Kit | For | Skills |
 | --- | --- | --- |
@@ -170,12 +185,12 @@ A starter kit gives a folder three things in one step: an `AGENTS.md` written fo
 | 3D scenes and assets | Blender | `workbench-scripting-for-blender`, `workbench-scene-inspect`, `workbench-3d-export`, `workbench-headless-render`, `workbench-asset-provenance` |
 | Research and writing | Markdown, LaTeX, Quarto, Typst | `workbench-source-research`, `workbench-citations`, `workbench-outline-draft-revise`, `workbench-fact-check`, `workbench-document-convert` |
 | DevOps and infrastructure | Terraform, OpenTofu, Docker, Kubernetes | `workbench-iac-plan-review`, `workbench-container-build`, `workbench-ci-failure-triage`, `workbench-cluster-inspect`, `workbench-secrets-hygiene` |
-| Game development | Godot, Unity, Unreal Engine | `workbench-game-project-for-godot`, `workbench-game-project-for-unity` or `workbench-game-project-for-unreal` (the one that matches the folder), `workbench-gameplay-debug`, `workbench-game-assets` |
+| Game development | Godot, Unity, Unreal Engine, Roblox | `workbench-game-project-for-godot`, `workbench-game-project-for-unity`, `workbench-game-project-for-unreal` or `workbench-game-project-for-roblox` (the one that matches the folder), `workbench-gameplay-debug`, `workbench-game-assets` |
 | Blank | Any folder | None. A short `AGENTS.md` with the headings every agent reads, and no tools |
 
 ### How a kit is suggested
 
-Workbench reads the names of the files in the folder and two levels below it, without opening them except `package.json`, and matches them against each kit's rules, for example `Cargo.toml` or `go.mod` for General software, a React or Vue dependency for Web front end, `pyproject.toml` or a notebook for Python and data, a `.blend` file for 3D scenes and assets, a folder that is mostly Markdown or LaTeX with no build file for Research and writing, Terraform or Helm files for DevOps and infrastructure, and a Godot, Unity or Unreal project for Game development. The suggestion names the files that led to it. In a large folder, only part is read, and the suggestion says so.
+Workbench reads the names of the files in the folder and two levels below it, without opening them except `package.json`, and matches them against each kit's rules, for example `Cargo.toml` or `go.mod` for General software, a React or Vue dependency for Web front end, `pyproject.toml` or a notebook for Python and data, a `.blend` file for 3D scenes and assets, a folder that is mostly Markdown or LaTeX with no build file for Research and writing, Terraform or Helm files for DevOps and infrastructure, and a Godot, Unity, Unreal or Roblox project for Game development. A Roblox project is a Rojo `default.project.json`, a `.rbxl` or `.rbxlx` place file, or at least two of `*.project.json`, `.luau` scripts, `aftman.toml`, `rokit.toml`, `wally.toml`, `selene.toml` and `sourcemap.json`. The suggestion names the files that led to it. In a large folder, only part is read, and the suggestion says so.
 
 ### Applying a kit
 
@@ -190,7 +205,7 @@ A kit's built-in tools (web search, page crawling, Blender) are switched on for 
 
 ### Kit MCP servers
 
-Kit servers are not bundled with Workbench. Each is fetched from its publisher (with `npx`, `uvx` or `docker`) the first time an agent starts it, or is a hosted service. Every server below is listed from its package registry; none was started for this release. A server whose launch tool is missing is marked in the preview.
+Kit servers are not bundled with Workbench. Each is fetched from its publisher (with `npx`, `uvx` or `docker`) the first time an agent starts it, is a hosted service, or is part of an application you install yourself. Every server below except Roblox Studio MCP is listed from its package registry; none of those was started for this release. Roblox Studio MCP ships inside Roblox Studio: it was started from a Roblox Studio install and listed its tools. A server whose launch tool or application is missing is marked in the preview.
 
 | Kit | Server | Publisher | Licence | Version | How it runs | Contacts | Before you switch it on |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -216,6 +231,7 @@ Kit servers are not bundled with Workbench. Each is fetched from its publisher (
 | Game development | [Godot MCP](https://github.com/Coding-Solo/godot-mcp) | Coding-Solo (community) | MIT | 0.1.1 | `npx` | Nothing documented; it drives your local Godot editor | Community project. Starts the editor and runs project code. Off by default: this npm build predates a security fix made upstream in April 2026 |
 | Game development | [Unreal MCP](https://dev.epicgames.com/documentation/unreal-engine/unreal-mcp-in-unreal-editor) | Epic Games | Unreal Engine licence | ships with the editor (5.9 docs) | `http://127.0.0.1:8000/mcp`; preselected with a `*.uproject` file | This computer only: the editor at `127.0.0.1:8000` | Experimental engine feature with no authentication; keep it on this computer |
 | Game development | [MCP for Unity](https://github.com/CoplayDev/unity-mcp) | CoplayDev (community) | MIT | 10.3.0 | `uvx`; preselected in a Unity project | A local bridge to the Unity Editor; usage telemetry is switched off | Community project, not affiliated with Unity. Edits scripts and assets in the editor |
+| Game development | [Roblox Studio MCP](https://create.roblox.com/docs/studio/mcp) | Roblox | [Roblox Terms of Use](https://www.roblox.com/info/terms) | ships with Studio | Roblox Studio's `StudioMCP` program on macOS, `cmd.exe /c %LOCALAPPDATA%\Roblox\mcp.bat` on Windows; listed but off on Linux. Preselected when Roblox Studio is installed and the folder is not a Godot, Unity or Unreal project | This computer: the open Roblox Studio. Some tools call Roblox services (asset generation, Open Cloud) | MCP clients can read and modify content in your open Roblox places; connect only clients you trust. Runs Luau code in Studio. First turn on "Enable Studio as MCP server" in Studio's Assistant, under Manage MCP Servers |
 
 Kits that offer built-in tools instead of, or as well as, servers: General software offers web search; 3D scenes and assets switches on the Blender tool; Research and writing switches on web search and page crawling; Game development offers the Blender tool.
 
@@ -230,6 +246,50 @@ On this computer, in `projects.json` in the data folder, it remembers the last c
 In the folder, `.agent-workbench/profiles.json` holds named profiles that travel with it, for example when you commit the file to Git. **Save profile** stores the current choices under a name. A profile carries settings, not secrets or machine details: the agent, the kind of model source, the model ID, the engine settings, the tool switches, a prompt, the name of the connection (not its address or key) and the name of the model file (not its path).
 
 Applying a profile is never silent. **Review and apply…** opens **Apply profile**, which lists every setting it would change, from what to what, and shows a profile's prompt in full; you tick "I have read the prompt above." before **Apply profile** works. A profile's prompt applies to that folder only and is never written into your global settings. **Clear prompt…** removes it again.
+
+## Settings that travel with the folder
+
+New in 0.5.0. Named profiles and **Save profile** were already in 0.4.0; the folder default, the offer on another computer and the panel below are new.
+
+A folder's setup is kept in plain files. What moves with the project is in the project folder: `.agent-workbench/profiles.json` with the named profiles, `.agent-workbench/project.json` with the project's MCP servers, and the instruction files and skills the agents read. Workbench writes no keys, tokens, addresses or machine paths into these files, so you can commit them with the project. What stays behind is listed in [Where this folder's settings live](#where-this-folders-settings-live).
+
+One profile can be the folder default, which is what another computer offers first:
+
+- On **Launch**, **Save as folder default** writes the current choices to `.agent-workbench/profiles.json` as the folder default: the agent, the kind of model source, the connection's name, the model, the engine settings, the tool switches and a folder prompt, if there is one. The profile is named "Folder default"; when the folder already has a default, Workbench asks before it replaces that profile with the current choices. The choices are also remembered on this computer, as with **Save for this folder**.
+- On **Project setup** → **Project profiles**, tick **Make it the folder default** before **Save profile**, or use **Make default** on a saved profile. The default shows the **Folder default** label, and **Clear default** takes the mark away. Only one profile is the default; the file stores it as `"default": true` on that profile.
+- Commit `.agent-workbench/` with the project, and open the folder on another computer. When that computer has no setup remembered for the folder, **Launch** shows "This folder has saved settings: Folder default." (with the default's name) and a **Review and apply…** button. It never applies the profile on its own: **Apply profile** lists every setting it would change, and nothing changes until you confirm. When you close the notice, Workbench does not show it again for that default on this computer.
+
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="images/folder-default-dark.png">
+<img src="images/folder-default.png" alt="The Launch view on a computer that has no setup for the storefront folder yet: a notice that says This folder has saved settings: Folder default, with the buttons Review and apply… and Dismiss above the project and model fields.">
+</picture>
+
+A profile names things instead of storing them, so Workbench matches them on the computer you are on:
+
+- A connection is matched by its name. When this computer has no connection with that name, **Apply profile** says which one to add, for example "Add an OpenAI connection named work.", with **Open Connections**. The key is entered again on each computer; it never travels.
+- A local model is matched by the file name of its weights. When no model file with that name is in your model library, **Apply profile** names the file, so you can download it or add it.
+
+A run can also become a profile: **Save as profile** in a run summary ([Run summaries](sessions.md#run-summaries)).
+
+### Where this folder's settings live
+
+**Where this folder's settings live**, on the **Project profiles** tab, lists for the open folder what travels with it and what stays on this computer, with the path of each file and **Show in folder**:
+
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="images/settings-places-dark.png">
+<img src="images/settings-places.png" alt="The Where this folder's settings live panel: under Travels with the folder, the profiles file, the project file, AGENTS.md and the skills folder; under Stays on this computer, the last choices, the connections, the run summaries file and the API keys in the login keychain, each file with a Show in folder button.">
+</picture>
+
+| Where | What | Travels with the folder |
+| --- | --- | --- |
+| `.agent-workbench/profiles.json` in the project | Named profiles and which one is the folder default | Yes, safe to commit |
+| `.agent-workbench/project.json` in the project | The project's MCP servers, without secrets | Yes |
+| `AGENTS.md` and the other instruction files in the project | What the agents read | Yes |
+| `.agents/skills` in the project | The project's skills | Yes |
+| `projects.json` in the data folder | The last choices for this folder, including connection ids and local paths, and your consent answer | No |
+| `connections.json` in the data folder | Connections: name, provider, address and model, no keys | No |
+| `runs/` in the data folder | Run records for the run summaries | No |
+| The system credential vault | API keys and values for MCP server variables | No, never written to a file |
 
 ## Built-in tools
 

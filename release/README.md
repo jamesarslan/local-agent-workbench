@@ -2,18 +2,18 @@
 
 ## Install with one command
 
-These commands fetch release v0.4.0, so they work once that release is published.
+These commands fetch release v0.5.0, so they work once that release is published.
 
 macOS on Apple Silicon and Linux on x86-64:
 
 ```sh
-curl -fsSL https://github.com/jamesarslan/local-agent-workbench/releases/download/v0.4.0/install.sh | sh
+curl -fsSL https://github.com/jamesarslan/local-agent-workbench/releases/download/v0.5.0/install.sh | sh
 ```
 
 Windows 11 x64, in PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://github.com/jamesarslan/local-agent-workbench/releases/download/v0.4.0/install.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/jamesarslan/local-agent-workbench/releases/download/v0.5.0/install.ps1 | iex"
 ```
 
 To read the script before you run it, download it, open it, then run `sh install.sh` or `powershell -ExecutionPolicy Bypass -File install.ps1`.
