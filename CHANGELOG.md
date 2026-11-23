@@ -29,14 +29,14 @@ All notable changes to Agent Workbench are listed here. Versions follow semantic
 
 ### Known issues
 
-- macOS is a preview. These macOS checks have not passed yet: a CI job, an install from a published release, a browser download with the Gatekeeper dialog, the first start of the desktop runtime, an agent in a native terminal window, and Doctor.
-- Hosted CI has not run for this release. The Python and Node suites were run by hand on macOS, Windows 11 and Fedora 44 at the release commit, and the kit installs on Windows 11 and Fedora 44; no macOS kit was built for 0.5.0.
+- macOS is a preview. These macOS checks have not passed yet: an install from a published release, a browser download with the Gatekeeper dialog, the first start of the desktop runtime, an agent in a native terminal window, and Doctor.
+- Hosted CI ran after the 0.5.0 commit, at 96fe980, which changes only tests and line endings since then: all 13 jobs of [the run](https://github.com/jamesarslan/local-agent-workbench/actions/runs/45246056684) passed on the Ubuntu, Windows and macOS runners, among them the suite with Python 3.12, 3.13 and 3.14, the desktop smoke test and a kit built and installed on each system. The kit jobs install from a folder with `--from` (`-From` on Windows); installing from a published release has not been run. The macOS kit was built and installed only there. The Python and Node suites were also run by hand on macOS, Windows 11 and Fedora 44 at the release commit, and the kits installed on Windows 11 and Fedora 44.
 - The kits are not code-signed or notarised. The release workflow is set up to record build attestations but has not run, so 0.5.0 may ship without them.
 - Pairing a machine through SSH and revoking its key were not run against the Windows and Fedora machines, which already accepted this computer's key; the PowerShell scripts for them are covered by unit tests only.
 - Workbench corrects the chat template only for models it serves. Against an attached server whose template refuses a late system message, Claude Code and Codex are blocked with the reason; OMP, Pi and opencode stay available.
 - opencode was not run against an SSH machine, and Pi and Hermes were not run.
 - The setup guide has not been run end to end to a working agent, and attaching Ollama or LM Studio has not been run from the desktop window.
-- The desktop window was not opened from the 0.5.0 kits on Windows or Linux; the kits were installed and their suites run from the command line.
+- The desktop window was not opened from the 0.5.0 kits on a desktop computer; the kits were installed and their suites run from the command line. Only the Linux CI job opened it from an installed kit, for the desktop smoke test on a virtual display.
 
 What was run for this release: see [Tested configurations](README.md#tested-configurations).
 

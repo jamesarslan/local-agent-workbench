@@ -39,7 +39,7 @@ node --test tests/bridge-client.test.cjs tests/ui-static.test.cjs tests/ui-readi
 
 The desktop smoke test starts the real Electron app. Install Electron with `npm ci --prefix desktop` followed by `node desktop/node_modules/electron/install.js` (newer npm releases skip Electron's own download step), point `WORKBENCH_PYTHON` at the project's Python and run `node tests/desktop-smoke.cjs`. On a Linux machine without a display, prefix it with `xvfb-run -a`.
 
-`.github/workflows/test.yml` defines these jobs: `test` on `windows-latest`, `ubuntu-latest` and `macos-latest` with Python 3.12 (unit tests, Node tests and the desktop smoke test); `lock` on the same three systems with Python 3.13 and 3.14; `kit`, which builds the kit for each system and installs it with `install.sh` or `install.ps1`; and `lint` for the shell scripts, the workflow files and the PowerShell scripts. These workflows have not run on GitHub for 0.5.0, so run the commands above on your own machine before you open a pull request.
+`.github/workflows/test.yml` defines these jobs: `test` on `windows-latest`, `ubuntu-latest` and `macos-latest` with Python 3.12 (unit tests, Node tests and the desktop smoke test); `lock` on the same three systems with Python 3.13 and 3.14; `kit`, which builds the kit for each system and installs it with `install.sh` or `install.ps1`; and `lint` for the shell scripts, the workflow files and the PowerShell scripts. For 0.5.0 they passed on GitHub at 96fe980 ([run](https://github.com/jamesarslan/local-agent-workbench/actions/runs/45246056684)). Run the commands above on your own machine before you open a pull request as well.
 
 ## Rules for code
 

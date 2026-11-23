@@ -883,10 +883,10 @@ alt="The Where this folder's settings live panel: under Travels with the folder,
 <h2 id="tested-h">Tested on real machines</h2>
 <p class="intro">For 0.5.0 the release commit ran on three computers: a Mac with an M3 Max, a Windows 11 workstation with an RTX 5090 and a Fedora 44 machine with a Radeon RX 9070 XT. Every figure below comes from a file in the repository, linked under each chart.</p>
 <ul class="tiles">
-<li><b>0</b><span>failed tests on macOS, Windows 11 and Fedora 44</span></li>
+<li><b>0</b><span>failed tests on macOS, Windows 11 and Fedora 44, and in 12 CI test jobs</span></li>
 <li><b>1,373</b><span>Python tests on each system from a fresh checkout, and on Windows and Fedora again through the installed kit</span></li>
-<li><b>94 of 94</b><span>Node tests passed on all three systems</span></li>
-<li><b>10 of 10</b><span>desktop smoke cases passed in the Electron window on macOS</span></li>
+<li><b>94 of 94</b><span>Node tests passed on all three systems and three CI runners</span></li>
+<li><b>10 of 10</b><span>desktop smoke cases passed in the Electron window on macOS and on the Ubuntu, Windows and macOS CI runners</span></li>
 </ul>
 <div class="charts">
 <figure class="chart">
@@ -901,7 +901,7 @@ alt="The Where this folder's settings live panel: under Travels with the folder,
 <g transform="translate(0 216)"><text x="0" y="14">Fedora 44 · installed kit</text><text class="c-num" x="100%" y="14" text-anchor="end">15 skipped</text><rect class="c-pass" y="22" width="98.91%" height="22" rx="4"/><rect class="c-skip" x="98.91%" y="22" width="1.09%" height="22"/><text class="c-in" x="8" y="38">1,358 passed</text></g>
 </svg>
 <div class="vh"><table><caption>Python tests at the 0.5.0 commit</caption><thead><tr><th scope="col">Run</th><th scope="col">Tests</th><th scope="col">Passed</th><th scope="col">Skipped</th><th scope="col">Failed</th></tr></thead><tbody><tr><th scope="row">macOS, checkout</th><td>1,373</td><td>1,369</td><td>4</td><td>0</td></tr><tr><th scope="row">Windows 11, checkout</th><td>1,373</td><td>1,259</td><td>114</td><td>0</td></tr><tr><th scope="row">Windows 11, installed kit</th><td>1,373</td><td>1,254</td><td>119</td><td>0</td></tr><tr><th scope="row">Fedora 44, checkout</th><td>1,373</td><td>1,363</td><td>10</td><td>0</td></tr><tr><th scope="row">Fedora 44, installed kit</th><td>1,373</td><td>1,358</td><td>15</td><td>0</td></tr></tbody></table></div>
-<figcaption>Each system ran <code>python -m unittest discover -s tests</code> in a fresh clone of the release commit; Windows and Fedora then installed a kit built from it with the install script and ran the suite again through the installed <code>workbench</code> command. Skipped tests belong to another system, need Windows symlink rights or a Git checkout, or are marked slow. Hosted CI did not run. <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/verification.json">Record</a></figcaption>
+<figcaption>Each system ran <code>python -m unittest discover -s tests</code> in a fresh clone of the release commit; Windows and Fedora then installed a kit built from it with the install script and ran the suite again through the installed <code>workbench</code> command. Skipped tests belong to another system, need Windows symlink rights or a Git checkout, or are marked slow. <a href="https://github.com/jamesarslan/local-agent-workbench/actions/runs/45246056684">GitHub Actions</a> at 96fe980 (0.5.0 plus test fixes) ran it in 12 jobs on Ubuntu, Windows and macOS runners, with Python 3.12, 3.13 and 3.14 and through each installed kit: none failed. <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/verification.json">Record</a></figcaption>
 </figure>
 <figure class="chart">
 <h3>Memory each model used</h3>
@@ -964,12 +964,14 @@ which holds the evidence and notes for each check. A check that is not listed fo
 <tr><th scope="row">Fedora 44 Workstation, x86_64 with an AMD Radeon RX 9070 series GPU, reached over SSH</th><td data-label="Passed"><ul class="checks"><li>Unit tests</li><li>Install with the install script</li><li>Local model start and stop</li><li>Doctor</li></ul></td><td data-label="Partly working or failed"><ul class="checks"><li>First start (Python packages and desktop runtime)</li></ul></td></tr>
 <tr><th scope="row">Fedora 44 Workstation, x86_64 with AMD Radeon 880M graphics (Wayland desktop)</th><td data-label="Passed"><ul class="checks"><li>Unit tests</li><li>First start (Python packages and desktop runtime)</li><li>Session with a hosted provider</li><li>Terminal dock: open, type, close</li><li>Doctor</li></ul></td><td data-label="Partly working or failed"><ul class="checks"><li>Install with the install script</li></ul></td></tr>
 <tr><th scope="row">Windows 11 x64 workstation with an NVIDIA GeForce RTX 5090</th><td data-label="Passed"><ul class="checks"><li>Unit tests</li><li>Install with the install script</li><li>Local model start and stop</li><li>OMP session answered</li><li>Terminal dock: open, type, close</li><li>Starter kit applied</li><li>Doctor</li></ul></td><td data-label="Partly working or failed"><ul class="checks"><li>First start (Python packages and desktop runtime)</li><li>Web search and page crawling</li></ul></td></tr>
+<tr><th scope="row">GitHub Actions ubuntu-latest</th><td data-label="Passed"><ul class="checks"><li>Unit tests</li><li>Desktop smoke test</li><li>Continuous integration job on this system</li><li>Install with the install script</li><li>First start (Python packages and desktop runtime)</li></ul></td><td data-label="Partly working or failed">None</td></tr>
+<tr><th scope="row">GitHub Actions windows-latest</th><td data-label="Passed"><ul class="checks"><li>Unit tests</li><li>Desktop smoke test</li><li>Continuous integration job on this system</li><li>Install with the install script</li></ul></td><td data-label="Partly working or failed">None</td></tr>
+<tr><th scope="row">GitHub Actions macos-latest (preview)</th><td data-label="Passed"><ul class="checks"><li>Unit tests</li><li>Desktop smoke test</li><li>Continuous integration job on this system</li><li>Install with the install script</li></ul></td><td data-label="Partly working or failed">None</td></tr>
 </tbody>
 </table>
 </div>
 <p class="small more">
-Pi, Hermes and hosted CI were not run. macOS stays a preview until its CI job, an install from a published release,
-a browser download, the first start of the desktop runtime, an agent window and Doctor pass on Apple Silicon. The
+Pi and Hermes were not run. macOS stays a preview until a browser download, the first start of the desktop runtime, an agent window and Doctor pass on Apple Silicon. The
 <a href="https://github.com/jamesarslan/local-agent-workbench#tested-configurations">tested-configurations table</a>
 in the README lists the same.
 </p>
