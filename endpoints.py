@@ -613,6 +613,13 @@ def probe_protocols(base, key=""):
     return _protocols(base, "", _fetch, _auth(key), PROBE_TIMEOUT)
 
 
+def remote_ports(extra=()):
+    """The ports a machine's sweep looks at: the usual ones, a Workbench's own model port there, and extra."""
+    return list(
+        dict.fromkeys([*providers.SWEEP_PORTS, providers.WORKBENCH_PORT, *extra])
+    )
+
+
 def remote_probe_table(ports=None, control=None):
     """What the remote sweep needs: ports, LM Studio control ports, server kinds, identity checks."""
     slim = {
@@ -620,7 +627,7 @@ def remote_probe_table(ports=None, control=None):
         for k, v in providers.KINDS.items()
     }
     return [
-        providers.SWEEP_PORTS if ports is None else ports,
+        remote_ports() if ports is None else ports,
         providers.LMSTUDIO_CONTROL_PORTS if control is None else control,
         slim,
         providers.IDENTITY,

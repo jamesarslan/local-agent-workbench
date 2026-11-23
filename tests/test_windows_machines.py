@@ -171,8 +171,32 @@ class QuotingTest(unittest.TestCase):
     def test_sources_sent_to_windows_are_ascii(self):
         for name in ("remote_probe.ps1", "remote_node_win.py", "chat_templates.py"):
             (ROOT / name).read_bytes().decode("ascii")
-        for script in (remote_win.JSON, remote_win.FIND_PYTHON, remote_win.CHECK):
+        for script in (
+            remote_win.JSON,
+            remote_win.FIND_PYTHON,
+            remote_win.CHECK,
+            remote_win.WORKBENCH,
+        ):
             script.encode("ascii")
+
+    def test_workbench_server_query_names_its_mode_and_ports(self):
+        script = decode_feed(remote_win.workbench("info", [10532, 8081]))
+        head = script.splitlines()[:3]
+        self.assertEqual(
+            [unquote(line.split(" = ", 1)[1]) for line in head],
+            ["info", "10532,8081", "local-agent"],
+        )
+        self.assertIn("function ToJson", script)
+        self.assertIn("function Find-Server", script)
+        # The key is read only next to a running.json whose process owns the listening port.
+        self.assertIn("$owners.ContainsKey([int]$rec.pid)", script)
+        self.assertIn("[int]$rec.port -eq $port", script)
+        self.assertTrue(decode_feed(remote_win.workbench("key", [10532])).startswith("$Mode = 'key'"))
+        for bad in ("delete", ""):
+            with self.assertRaises(ValueError):
+                remote_win.workbench(bad, [10532])
+        with self.assertRaises(ValueError):
+            remote_win.workbench("info", ["10532; rm"])
 
     def test_python_and_powershell_sweeps_share_one_table(self):
         python = endpoints.remote_probe_script([1, 2], [3])
@@ -271,6 +295,29 @@ class WindowsMachineTest(Base):
         self.assertEqual(execute.call_args.args[2], remote_win.POWERSHELL)
         self.assertIn("function Sweep", decode_feed(execute.call_args.args[1]))
 
+    def test_a_workbench_server_on_windows_is_asked_through_powershell(self):
+        self.windows_box()
+        secret = "w" * 43
+        locked = dict(port=10532, kind="strata", models=[], protocols=None, needs_key=True)
+        sent = []
+
+        def execute(host, data, command, timeout=90):
+            self.assertEqual(command, remote_win.POWERSHELL)
+            script = decode_feed(data)
+            sent.append(script.splitlines()[0])
+            if "function Sweep" in script:
+                return {"endpoints": [locked]}
+            if script.startswith("$Mode = 'info'"):
+                return {"servers": [{"port": 10532, "model": "local-agent", "context": 65536, "engine": "Strata"}]}
+            return {"key": secret}
+
+        self.use(patch.object(machines, "execute", side_effect=execute))
+        rows = machines.discover("me@win")
+        self.assertEqual(rows[0]["models"], [{"id": "local-agent", "context": 65536}])
+        self.assertFalse(rows[0]["needs_key"])
+        self.assertEqual(machines.workbench_key("me@win", 10532), secret)
+        self.assertEqual(sent[1:], ["$Mode = 'info'", "$Mode = 'key'"])
+
     def test_extra_ports_are_checked_saved_and_swept(self):
         import providers
 
@@ -284,13 +331,15 @@ class WindowsMachineTest(Base):
         found = machines.dispatch("machine-discover", {"host": "me@lin", "ports": "8081"})
         self.assertEqual(found["ports"], [8081])
         script = execute.call_args.args[1].decode()
-        self.assertIn(json.dumps([*providers.SWEEP_PORTS, 8081]), script)
+        self.assertIn(
+            json.dumps([*providers.SWEEP_PORTS, providers.WORKBENCH_PORT, 8081]), script
+        )
         self.windows_box()
         machines.set_ports("me@win", [8081])
         machines.discover("me@win")
         probe = decode_feed(execute.call_args.args[1])
         table = json.loads(unquote(probe.split("$Table = ", 1)[1].splitlines()[0]))
-        self.assertEqual(table[0], [*providers.SWEEP_PORTS, 8081])
+        self.assertEqual(table[0], [*providers.SWEEP_PORTS, providers.WORKBENCH_PORT, 8081])
 
     def test_an_unchecked_windows_machine_is_detected_when_posix_fails(self):
         machines.save("Win", "me@win")

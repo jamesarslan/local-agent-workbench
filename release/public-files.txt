@@ -221,6 +221,7 @@ remote_node.py
 remote_node_win.py
 remote_probe.ps1
 remote_win.py
+remote_workbench.py
 requirements.lock
 requirements.txt
 results/amd-vulkan-iq3.json
@@ -263,6 +264,7 @@ results/sq20-long-fp8.json
 results/sq20-off.json
 results/sq20-single-1024.json
 results/sq20.json
+results/strata-rtx5090-windows.json
 results/tool-load.json
 results/web-plugin-cost.json
 results/weights.json
@@ -342,6 +344,7 @@ tests/test_project_terminal.py
 tests/test_providers.py
 tests/test_recommend.py
 tests/test_release.py
+tests/test_remote_workbench.py
 tests/test_run_log.py
 tests/test_runtime.py
 tests/test_session_window.py
