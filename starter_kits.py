@@ -10,7 +10,6 @@ from pathlib import Path
 import re
 import shutil
 import stat
-import sys
 import unicodedata
 
 import paths
@@ -57,12 +56,12 @@ SERVER_NEEDS = (
     "network",
     "warning",
 )
-SERVER_KEYS = (*SERVER_NEEDS, *LAUNCH_KEYS, "requires", "when", "platforms")
+SERVER_KEYS = (*SERVER_NEEDS, *LAUNCH_KEYS, "requires", "when", "installed", "runs_code")
 BUILTIN_NEEDS = ("builtin", "label", "default", "network", "warning")
 BUILTIN_KEYS = (*BUILTIN_NEEDS, "when", "requires")
 CHECKED = ("registry", "launched")
 TOOLS = {"node": "npx", "uv": "uvx", "docker": "docker"}
-PLATFORMS = ("darwin", "linux", "win32")
+PLATFORMS = tuple(project_setup.PLATFORMS)
 RULES = ("file", "dir", "glob", "package_dep", "mostly", "all", "any", "none")
 RULE_EXTRAS = {"package_dep": ("min_major",), "mostly": ("share", "min_files")}
 FRONT_KEYS = ("name", "description", "license", "compatibility", "metadata")
@@ -107,7 +106,7 @@ MAX_PACKAGE = 1 << 20
 MAX_KIT_FILE = 32 * 1024
 MAX_RULES = 24
 MAX_NESTING = 3
-MAX_SKILLS = 5
+MAX_SKILLS = 6
 MAX_SERVERS = 12
 MAX_SKILL_FILES = 8
 MAX_BODY_LINES = 500
@@ -130,7 +129,7 @@ def _windows():
 
 
 def _platform():
-    return sys.platform
+    return project_setup._platform()
 
 
 def _plain(value, limit):
@@ -254,8 +253,35 @@ def _check_rule(rule, depth=1):
             _check_rule(inner, depth + 1)
 
 
+def _per_system(entry):
+    """True when platforms gives a command per system rather than only listing systems."""
+    return isinstance(entry.get("platforms"), dict)
+
+
 def _launch(entry):
-    return {key: entry[key] for key in LAUNCH_KEYS if key in entry}
+    return {
+        key: entry[key]
+        for key in LAUNCH_KEYS
+        if key in entry and (key != "platforms" or _per_system(entry))
+    }
+
+
+def _check_installed(entry, what):
+    installed = entry["installed"]
+    _need(
+        isinstance(installed, dict)
+        and "app" in installed
+        and len(installed) > 1
+        and all(key == "app" or key in PLATFORMS for key in installed),
+        f"{what}: installed needs app and a path for darwin, linux or win32",
+    )
+    _line(installed["app"], 40, f"{what}: installed app")
+    for system in PLATFORMS:
+        _need(
+            system not in installed or project_setup.is_local_path(installed[system]),
+            f"{what}: installed {system} must be a full path such as "
+            "/Applications/… or %LOCALAPPDATA%\\…",
+        )
 
 
 def _check_entry(entry):
@@ -292,11 +318,18 @@ def _check_entry(entry):
         )
         platforms = entry.get("platforms", list(PLATFORMS))
         _need(
-            isinstance(platforms, list)
+            _per_system(entry)
+            or isinstance(platforms, list)
             and platforms
             and all(isinstance(item, str) and item in PLATFORMS for item in platforms)
             and len(set(platforms)) == len(platforms),
             f"{what}: platforms must list some of " + ", ".join(PLATFORMS),
+        )
+        if "installed" in entry:
+            _check_installed(entry, what)
+        _need(
+            type(entry.get("runs_code", False)) is bool,
+            f"{what}: runs_code must be true or false",
         )
     _line(entry["label"], 60, f"{what}: label")
     _line(entry["network"], 200, f"{what}: network")
@@ -550,7 +583,41 @@ def _catalog(root):
 
 
 def _visible(entry):
-    return _platform() in entry.get("platforms", PLATFORMS)
+    """A per-system entry is listed everywhere, and says where it does not run."""
+    return _per_system(entry) or _platform() in entry.get("platforms", PLATFORMS)
+
+
+def _available(entry):
+    return not _per_system(entry) or _platform() in entry["platforms"]
+
+
+def _on_disk(path):
+    return os.path.isfile(path)
+
+
+def _installed(entry):
+    """False when the entry names the program it needs and that program is not on this computer."""
+    if "installed" not in entry:
+        return True
+    where = entry["installed"].get(_platform())
+    path = project_setup.local_path(where) if where else None
+    return path is not None and _on_disk(path)
+
+
+def _note(entry):
+    if not _available(entry):
+        systems = " and ".join(
+            name for key, name in project_setup.PLATFORMS.items() if key in entry["platforms"]
+        )
+        here = project_setup.PLATFORMS.get(_platform(), "this system")
+        return f"Not available on {here}; it runs on {systems}."
+    if not _installed(entry):
+        return f"Install {entry['installed']['app']} to use this."
+    return ""
+
+
+def _preset(entry, scan):
+    return entry["default"] and _holds(entry, scan) and _available(entry) and _installed(entry)
 
 
 def _receives(server):
@@ -565,6 +632,8 @@ def _row(entry):
         "default": entry["default"],
         "network": entry["network"],
         "warning": entry["warning"],
+        "note": _note(entry),
+        "runs_code": entry.get("runs_code", False),
     }
     if "builtin" in entry:
         return row | {
@@ -824,7 +893,7 @@ def _prepare(workspace, kit_id, servers, skills):
     ids = _chosen(
         servers,
         [_ident(entry) for entry in shown],
-        [_ident(entry) for entry in shown if entry["default"] and _holds(entry, scan)],
+        [_ident(entry) for entry in shown if _preset(entry, scan)],
     )
     if not _windows():
         ids.discard("builtin:desktop")
