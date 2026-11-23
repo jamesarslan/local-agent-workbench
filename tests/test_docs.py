@@ -83,6 +83,8 @@ HEADINGS = [
     ("h3", "The right API for each agent"),
     ("h3", "Doctor"),
     ("h3", "Measure your own setup"),
+    ("h3", "Inkling 2 Mini with Unsloth's build"),
+    ("h3", "Roblox Studio in the Game development kit"),
     ("h3", "Claude Code and Codex on local Qwen models"),
     ("h2", "Starter kits"),
     ("h3", "General software"),

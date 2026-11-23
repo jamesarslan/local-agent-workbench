@@ -590,7 +590,7 @@ Expand-Archive agent-workbench-windows-x64.zip -DestinationPath .</code></pre>
                 <li>See which instruction files (<code>AGENTS.md</code>, <code>CLAUDE.md</code> and others), skills and MCP servers each agent will read in the folder, with a warning where one file shadows another.</li>
                 <li>Before the first launch in a folder whose own files define MCP servers, hooks or other programs, Workbench asks for consent, and asks again when those files change.</li>
                 <li>Every write is a plan first: create, update or skip, with a diff. Only what you confirm is written.</li>
-                <li>Eight MIT starter kits give a folder an <code>AGENTS.md</code>, up to five skills and optional MCP servers.</li>
+                <li>Eight MIT starter kits give a folder an <code>AGENTS.md</code>, up to six skills and optional MCP servers.</li>
               </ul>
             </div>
             <figure class="shot">
@@ -651,6 +651,26 @@ Expand-Archive agent-workbench-windows-x64.zip -DestinationPath .</code></pre>
               </p>
             </li>
             <li class="wide">
+              <h3>Inkling 2 Mini with Unsloth's build</h3>
+              <p>
+                New in the next release. Set <b class="ui">Engine release</b> to <b class="ui">Unsloth</b> and Workbench
+                installs <a href="https://github.com/unslothai/llama.cpp">Unsloth's llama.cpp build</a> beside the
+                default one and adds Unsloth's DSpark drafter for
+                <a href="https://huggingface.co/unsloth/Inkling-2-Mini-GGUF">Inkling 2 Mini</a>. Each platform's build
+                and the drafter are pinned by SHA-256. It is opt-in: the tested mainline build stays the default.
+              </p>
+            </li>
+            <li class="wide">
+              <h3>Roblox Studio in the Game development kit</h3>
+              <p>
+                New in the next release. When Roblox Studio is installed, the kit turns on
+                <a href="https://create.roblox.com/docs/studio/mcp">Studio's built-in MCP server</a> with the command
+                Roblox documents for macOS and Windows, and adds a Roblox skill: list the open Studio first, read
+                before editing, and never save or publish a place unless you ask. Turn on Enable Studio as MCP server
+                in Studio's Assistant first.
+              </p>
+            </li>
+            <li class="wide">
               <h3>Claude Code and Codex on local Qwen models</h3>
               <p>
                 Claude Code sends a system message after the first user turn, and Codex sends developer messages.
@@ -668,7 +688,7 @@ Expand-Archive agent-workbench-windows-x64.zip -DestinationPath .</code></pre>
           <p class="kicker">Templates</p>
           <h2 id="kits-h">Starter kits</h2>
           <p class="intro">
-            A kit is a starting point for one kind of project: an <code>AGENTS.md</code> template, up to five skills
+            A kit is a starting point for one kind of project: an <code>AGENTS.md</code> template, up to six skills
             and a few optional MCP servers. Workbench suggests one from the files in your folder and shows every file
             it would create. Files you already have are left alone.
           </p>
@@ -679,7 +699,7 @@ Expand-Archive agent-workbench-windows-x64.zip -DestinationPath .</code></pre>
             <li><h3>3D scenes and assets</h3><p>Inspect before changing, script small repeatable steps and export with checked scale and axes.</p><p class="tags"><span>Blender</span></p></li>
             <li><h3>Research and writing</h3><p>Find and cite real sources, draft in passes and check every claim.</p><p class="tags"><span>Markdown</span><span>LaTeX</span><span>Quarto</span><span>Typst</span></p></li>
             <li><h3>DevOps and infrastructure</h3><p>Plan and read before anything changes, keep secrets out of output and never apply unasked.</p><p class="tags"><span>Terraform</span><span>OpenTofu</span><span>Docker</span><span>Kubernetes</span></p></li>
-            <li><h3>Game development</h3><p>Follow the engine's layout, leave serialised assets to the editor and test from the command line.</p><p class="tags"><span>Godot</span><span>Unity</span><span>Unreal Engine</span></p></li>
+            <li><h3>Game development</h3><p>Follow the engine's layout, leave serialised assets to the editor and test from the command line.</p><p class="tags"><span>Godot</span><span>Unity</span><span>Unreal Engine</span><span>Roblox</span></p></li>
             <li><h3>Blank</h3><p>A short <code>AGENTS.md</code> with the headings every agent reads. No skills and no tools.</p><p class="tags"><span>Any project</span></p></li>
           </ul>
           <p class="small more">
