@@ -1,5 +1,5 @@
 // Run with Node 22+ and a sandbox-capable desktop (or xvfb-run on Linux).
-const { spawn } = require("node:child_process");
+const { spawn, execFileSync } = require("node:child_process");
 const fs = require("node:fs"),
   os = require("node:os"),
   path = require("node:path"),
@@ -328,7 +328,7 @@ async function test() {
   await wait("request('folder-get',{workspace:" + JSON.stringify(cloned) + "}).then(f => f.known && !f.offer_default && f.profile === 'Folder default')");
   await wait("!" + notice("This folder has saved settings"));
   const places = await js("request('folder-places',{workspace:" + JSON.stringify(cloned) + "})");
-  assert.deepEqual(places.map((row) => row.id), ["profiles", "project", "instructions", "skills", "memory", "connections", "keys"]);
+  assert.deepEqual(places.map((row) => row.id), ["profiles", "project", "instructions", "skills", "memory", "connections", "runs", "keys"]);
   await js("AW.project.select(" + JSON.stringify(declined) + ")");
   await wait(notice("This folder has saved settings: Folder default."));
   await js(notice("This folder has saved settings") + ".querySelector('.notice-actions button:last-child').click()");
@@ -336,7 +336,58 @@ async function test() {
   await js("AW.project.select(" + JSON.stringify(folder) + ")");
   await wait("!" + notice("This folder has saved settings"));
 
-  // (5) A second start with an empty data folder opens the setup guide; leaving it shows Launch with Launch blocked.
+  // (5) A run summary: a launch recorded the way the bridge records one (no agent is started), opened from Recent runs,
+  // shown without the address's user name, password or query string, and saved as a profile beside the folder default.
+  fs.writeFileSync(path.join(cloned, "AGENTS.md"), "# Rules\n\nRun the tests.\n");
+  const recorded = execFileSync(
+    python,
+    [
+      "-c",
+      [
+        "import sys, runtime, run_log",
+        "s = runtime.DEFAULTS | dict(workspace=sys.argv[1], harness='OMP', provider='OpenRouter', remote_model='vendor/model', context=65536, prompt='Keep it short.')",
+        "facts = dict(settings=s, base='https://smoke-user:smoke-pass@openrouter.ai/api/v1?key=smoke-query', model='vendor/model', sent=['search'], prompt=True)",
+        "print(run_log.note(facts, 'OMP', 'embedded', '1.2.3'))",
+      ].join("\n"),
+      cloned,
+    ],
+    { cwd: root, env: { ...parentEnv, HOME: base, USERPROFILE: base, WORKBENCH_DATA: data }, encoding: "utf8" },
+  ).trim();
+  assert.match(recorded, /^[0-9a-f]{16}$/);
+  await js("AW.project.select(" + JSON.stringify(cloned) + ")");
+  await js("AW.router.go('project', { tab: 'runs' })");
+  const summaryButton = "[...document.querySelectorAll('#run-list button')].find(b => b.textContent.trim() === 'Summary…')";
+  await wait(summaryButton);
+  await js(summaryButton + ".click()");
+  const shown = "document.querySelector('#run-dialog-body .run-summary')";
+  await wait("document.getElementById('run-dialog').open && " + shown);
+  const markdown = await js(shown + ".textContent");
+  for (const line of ["- Agent: OMP 1.2.3", "- Address: https://openrouter.ai", "- AGENTS.md · ", "Keep it short."])
+    assert.ok(markdown.includes(line), "The run summary has no line " + line);
+  for (const secret of ["smoke-user", "smoke-pass", "smoke-query"]) assert.ok(!markdown.includes(secret), "The run summary shows " + secret);
+  await js("document.querySelector('#run-dialog-body input[type=text]').value = 'Smoke rerun'");
+  await js("[...document.querySelectorAll('#run-dialog-body button')].find(b => b.textContent.trim() === 'Save as profile').click()");
+  await wait(
+    "request('project-list',{workspace:" + JSON.stringify(cloned) + ",detail:true}).then(l => l.names.includes('Smoke rerun') && l.default === 'Folder default')",
+  );
+  await js("[...document.querySelectorAll('#run-dialog-body button')].find(b => b.textContent.trim() === 'Close').click()");
+  await wait("!document.getElementById('run-dialog').open && document.activeElement && document.activeElement.textContent.trim() === 'Summary…'");
+  await js("AW.router.go('launch')");
+
+  // Save as folder default writes the default without asking the first time, and asks before replacing it.
+  await js("AW.project.select(" + JSON.stringify(other) + ")");
+  await wait("form().workspace.endsWith('Second project') && document.getElementById('save-folder-default').getAttribute('aria-disabled') !== 'true'");
+  await js("window.confirm = (text) => { window.smokeConfirm = text; return false; }");
+  await click("save-folder-default");
+  await wait("request('project-list',{workspace:" + JSON.stringify(other) + ",detail:true}).then(l => l.default === 'Folder default')");
+  assert.equal(await js("window.smokeConfirm || ''"), "");
+  await wait("!document.getElementById('save-folder-default').dataset.pending");
+  await click("save-folder-default");
+  await wait("(window.smokeConfirm || '').startsWith('Replace the folder default Folder default')");
+  await js("window.confirm = () => true");
+  await js("AW.project.select(" + JSON.stringify(folder) + ")");
+
+  // (6) A second start with an empty data folder opens the setup guide; leaving it shows Launch with Launch blocked.
   second = launch(fresh, freshUser, "10579");
   const secondGone = new Promise((_, rej) => {
     second.once("error", (e) => rej(Error("The second Electron did not start: " + e.message)));
@@ -381,7 +432,7 @@ async function test() {
   }
   passed = true;
   console.log(
-    "Passed: theme, per-project tool choices, OMP transcript watcher, interactive PTY, project switch and close, refused action, service restart, folder default review, first run",
+    "Passed: theme, per-project tool choices, OMP transcript watcher, interactive PTY, project switch and close, refused action, service restart, folder default review, run summary, first run",
   );
 }
 Promise.race([test(), aborted])

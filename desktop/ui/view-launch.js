@@ -571,20 +571,44 @@
   }
 
   // Writes the current choices to .agent-workbench/profiles.json as the folder default, and remembers them here too.
+  let checkingDefault = false;
   async function onSaveDefault(event) {
     const button = event.currentTarget;
     const form = AW.form.get();
-    if (button.dataset.pending || button.getAttribute("aria-disabled") === "true" || !form.workspace) return;
-    const folder = AW.state.folder || {};
-    const replacing = typeof folder.saved_default === "string" && folder.saved_default;
-    const name = replacing || "Folder default";
-    if (replacing) {
-      const yes = await AW.ui.confirm({ text: "Replace the folder default " + name + " in .agent-workbench/profiles.json with the current choices?", ok: "Replace" });
+    if (checkingDefault || button.dataset.pending || button.getAttribute("aria-disabled") === "true" || !form.workspace) return;
+    checkingDefault = true;
+    try {
+      await saveDefault(button, form);
+    } finally {
+      checkingDefault = false;
+    }
+  }
+
+  async function saveDefault(button, form) {
+    AW.ui.clearError(parts.errors);
+    // Read the file now, not the folder state from earlier: a profile of the same name is never replaced unasked.
+    let listed;
+    try {
+      listed = await AW.request("project-list", { workspace: form.workspace, detail: true });
+    } catch (thrown) {
+      AW.ui.showError(parts.errors, thrown, { retry: () => parts.folderSave.click() });
+      return;
+    }
+    const names = listed && Array.isArray(listed.names) ? listed.names : [];
+    const current = listed && typeof listed.default === "string" ? listed.default : "";
+    const name = current || "Folder default";
+    const problem = Boolean(listed && listed.problem);
+    if (current || problem || names.includes(name)) {
+      const text = current
+        ? "Replace the folder default " + name + " in .agent-workbench/profiles.json with the current choices?"
+        : names.includes(name)
+          ? "Replace the profile " + name + " in .agent-workbench/profiles.json with the current choices and make it the folder default?"
+          : "More than one profile in .agent-workbench/profiles.json is marked as the folder default. Save the current choices as " + name + " and make it the only default?";
+      const yes = await AW.ui.confirm({ text, ok: "Replace" });
       if (!yes) return;
     }
-    AW.ui.clearError(parts.errors);
     const saving = AW.form.save().then(() => AW.request("project-save", { ...form, name, default: true }));
-    AW.ui
+    return AW.ui
       .pending(button, "Saving…", saving)
       .then(
         () => {
