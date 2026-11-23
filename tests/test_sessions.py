@@ -111,6 +111,7 @@ class Fixture(unittest.TestCase):
             target=lambda value: value,
             labels=lambda: {HOST: "GPU box"},
             ssh=lambda host: ["ssh", "-o", "BatchMode=yes"],
+            windows=lambda host: False,
             NO_SSH="OpenSSH was not found on this computer; install the OpenSSH client, then retry.",
         )
         return types.SimpleNamespace(**fields | more)

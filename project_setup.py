@@ -702,8 +702,17 @@ def project_servers(workspace):
     return _project_servers(paths.canonical(workspace))
 
 
+def _usable_vault():
+    # A missing macOS login keychain would make the system offer to reset it; ask nothing then.
+    import connections
+
+    return connections.vault_status()["available"]
+
+
 def _vault(name):
     try:
+        if not _usable_vault():
+            return ""
         import keyring
 
         return keyring.get_password(VAULT, "mcp-env:" + name) or ""
@@ -736,6 +745,8 @@ def store_secret(name, value):
     try:
         import keyring
 
+        if not _usable_vault():
+            raise RuntimeError("no usable vault")
         if "plaintext" in type(keyring.get_keyring()).__name__.lower():
             raise RuntimeError("plaintext vault")
         keyring.set_password(VAULT, "mcp-env:" + name, value)
@@ -750,6 +761,8 @@ def store_secret(name, value):
 def forget_secret(name):
     _secret_name(name)
     try:
+        if not _usable_vault():
+            return False
         import keyring
 
         if keyring.get_password(VAULT, "mcp-env:" + name) is None:

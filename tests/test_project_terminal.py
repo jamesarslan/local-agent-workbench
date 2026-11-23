@@ -323,6 +323,7 @@ class DispatchTests(Case):
             labels=lambda: {"me@box": "GPU box"},
             remote_command=MagicMock(return_value="exec omp"),
             ssh=lambda host: ["ssh"],
+            windows=lambda host: False,
         )
         return types.SimpleNamespace(**(fields | changes))
 

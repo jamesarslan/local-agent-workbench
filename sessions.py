@@ -576,6 +576,8 @@ def terminal_row(t):
         started=t["started"],
         state="attached" if away else "running",
     )
+    if away and t.get("lasting") is False:
+        row["lasting"] = False
     return row | dict(host=t["host"], name=t["name"]) if away else row
 
 
@@ -717,7 +719,29 @@ def over_ssh(host, command):
     return host, done
 
 
+def _windows(host):
+    """A Windows machine has no tmux: its sessions are the dock's own terminals, nothing runs detached."""
+    import machines
+
+    host = machines.target(str(host).strip())
+    try:
+        return host if machines.windows(host) else ""
+    except (OSError, ValueError):
+        return ""
+
+
 def remote(host):
+    if _windows(host):
+        host = _windows(host)
+        return [
+            remote_row(
+                t["name"],
+                dict(host=host, harness=t["harness"], workspace=t["workspace"], started=int(t["started"])),
+                "attached",
+            )
+            for t in docked()
+            if t["kind"] == "remote" and t["host"] == host and t.get("lasting") is False
+        ]
     host, done = over_ssh(host, LIST)
     known = {n: r for n, r in remote_rows().items() if r.get("host") == host}
     rows, live = [], set()
@@ -739,6 +763,13 @@ def remote(host):
 def end_remote(host, name):
     if not isinstance(name, str) or not TMUX_NAME.fullmatch(name):
         raise ValueError("Choose a remote session from the list.")
+    if _windows(host):
+        import project_terminal
+
+        for t in docked():
+            if t["kind"] == "remote" and t["host"] == _windows(host) and t["name"] == name:
+                project_terminal.dispatch("term-close", {"workspace": t["workspace"], "id": t["id"]})
+        return True
     over_ssh(host, KILL + name)
     forget_remote([name])
     return True

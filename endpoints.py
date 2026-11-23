@@ -613,19 +613,22 @@ def probe_protocols(base, key=""):
     return _protocols(base, "", _fetch, _auth(key), PROBE_TIMEOUT)
 
 
-def remote_probe_script(ports=None, control=None):
+def remote_probe_table(ports=None, control=None):
+    """What the remote sweep needs: ports, LM Studio control ports, server kinds, identity checks."""
     slim = {
         k: {f: v[f] for f in ("context_source", "anthropic_prefix", "identity")}
         for k, v in providers.KINDS.items()
     }
-    table = json.dumps(
-        [
-            providers.SWEEP_PORTS if ports is None else ports,
-            providers.LMSTUDIO_CONTROL_PORTS if control is None else control,
-            slim,
-            providers.IDENTITY,
-        ]
-    )
+    return [
+        providers.SWEEP_PORTS if ports is None else ports,
+        providers.LMSTUDIO_CONTROL_PORTS if control is None else control,
+        slim,
+        providers.IDENTITY,
+    ]
+
+
+def remote_probe_script(ports=None, control=None):
+    table = json.dumps(remote_probe_table(ports, control))
     return (
         "import http.client, json, socket, time\n"
         "from concurrent.futures import ThreadPoolExecutor\n\n"

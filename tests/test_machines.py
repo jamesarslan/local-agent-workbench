@@ -1411,10 +1411,13 @@ class MachinesTest(Base):
         with (
             patch.object(machines, "run", return_value={"system": "Linux"}) as ran,
             patch.object(machines, "disconnect") as closed,
+            patch.object(machines, "detect", return_value="posix") as detected,
         ):
             self.assertEqual(
-                machines.dispatch("machine-probe", {"host": "box"}), {"system": "Linux"}
+                machines.dispatch("machine-probe", {"host": "box"}),
+                {"system": "Linux", "os": "posix"},
             )
+            detected.assert_called_once_with("box")
             ran.assert_called_once_with("box", "probe", 20)
             machines.dispatch("machine-install", {"host": "box"})
             ran.assert_called_with("box", "install", 3600)
@@ -1424,7 +1427,7 @@ class MachinesTest(Base):
         with patch.object(machines, "discover", return_value=[{"port": 1}]) as found:
             self.assertEqual(
                 machines.dispatch("machine-discover", {"host": "box "}),
-                {"host": "box", "endpoints": [{"port": 1}]},
+                {"host": "box", "endpoints": [{"port": 1}], "ports": []},
             )
             found.assert_called_once_with("box")
         with patch.object(machines, "tunnel", return_value={"endpoint": "E"}) as opened:
