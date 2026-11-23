@@ -595,6 +595,9 @@ class RecordTests(unittest.TestCase):
         self.assertEqual(data["tag"], "v" + data["version"], msg="docs/site.json tag must be v plus the version.")
         self.assertRegex(data["repo"], r"^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$", msg="docs/site.json repo must be owner/name.")
         self.assertTrue(data["site"].startswith("https://") and data["site"].endswith("/"), msg="docs/site.json site must be an https address ending in /.")
+
+    @unittest.skipUnless((ROOT / ".git").exists(), "release kits leave out docs/.nojekyll; only the repository's docs/ is served by GitHub Pages")
+    def test_pages_marker(self):
         self.assertTrue((DOCS / ".nojekyll").is_file(), msg="docs/.nojekyll is missing; GitHub Pages would run Jekyll over the guides.")
 
     def test_verification_record(self):

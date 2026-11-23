@@ -124,6 +124,8 @@ class RuntimeCase(unittest.TestCase):
         self.enterContext(patch.dict(os.environ))
         for name in ("WORKBENCH_RUNTIME", "WORKBENCH_FLASH_CONFIG", "LD_LIBRARY_PATH"):
             os.environ.pop(name, None)
+        # Without this the default preset path is read from the real computer.
+        os.environ["WORKBENCH_FLASH_CONFIG"] = str(self.data / "no-flash-preset.json")
 
     def settings(self, **changes):
         return (
@@ -908,9 +910,11 @@ class ProbeTests(RuntimeCase):
             self.assertFalse(runtime.listening(rec))
             self.assertTrue(runtime.listening(rec | dict(engine="Custom")))
             self.assertTrue(runtime.listening(dict(pid=1)))
-            self.assertFalse(
-                runtime.listening(rec | dict(engine="vLLM", wsl_run="abc"))
-            )
+            # Only a Windows host trusts a WSL listener it cannot see; elsewhere the record proves nothing.
+            with patch.object(runtime, "system", return_value="linux"):
+                self.assertFalse(
+                    runtime.listening(rec | dict(engine="vLLM", wsl_run="abc"))
+                )
             with patch.object(runtime, "system", return_value="windows"):
                 self.assertTrue(
                     runtime.listening(rec | dict(engine="vLLM", wsl_run="abc"))
@@ -1133,16 +1137,19 @@ class LifecycleTests(RuntimeCase):
 
     def test_cancel_token_ends_a_loading_model(self):
         token = threading.Event()
-        timer = threading.Timer(0.15, token.set)
-        timer.start()
-        self.addCleanup(timer.cancel)
+
+        def progress(event):
+            # Cancel once loading is under way; a fixed delay can fire before the
+            # child has started on a slow or busy computer.
+            self.events.append(event)
+            if event["phase"] == "loading":
+                token.set()
+
         with (
             self.refused(),
             self.assertRaisesRegex(runtime.Cancelled, "start was cancelled"),
         ):
-            runtime.start(
-                self.custom(sys.executable, "-c", SLEEP), self.events.append, token
-            )
+            runtime.start(self.custom(sys.executable, "-c", SLEEP), progress, token)
         self.assertFalse(psutil.pid_exists(self.pid()))
         self.assertFalse((self.data / "running.json").exists())
         self.assertIn("loading", [e["phase"] for e in self.events])

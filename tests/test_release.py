@@ -1,3 +1,4 @@
+import atexit
 import concurrent.futures
 import hashlib
 import importlib.util
@@ -18,7 +19,9 @@ import zipfile
 
 import yaml
 
-os.environ.setdefault("WORKBENCH_DATA", tempfile.mkdtemp(prefix="awb-test-"))
+if "WORKBENCH_DATA" not in os.environ:
+    os.environ["WORKBENCH_DATA"] = tempfile.mkdtemp(prefix="awb-test-")
+    atexit.register(shutil.rmtree, os.environ["WORKBENCH_DATA"], ignore_errors=True)
 
 import catalog
 import desktop_app
