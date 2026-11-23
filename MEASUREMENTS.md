@@ -8,6 +8,8 @@ Hardware: a separate Linux machine with a Radeon RX 9070 XT, 15.9 GiB available 
 
 Inkling 2 Mini Mainline IQ3_XXS ran at 8,192 context. The 256-output-token code probe decoded at **44.6 tokens/s** and sampled **12.15 GiB** of device-wide VRAM use. The shorter exact-answer probe decoded at 35.3 tokens/s. A real remote OMP session returned the expected word and a Windows client reached the model through the SSH forward. These figures include reasoning tokens. This run measures the 16 GB GPU case. The record has no generating script in this repository. Its 256-token probe is stored as four summary fields without per-request timings, and no report from the benchmark suite used for the RTX 5090 table exists for this machine. [Recorded timings](results/amd-vulkan-iq3.json)
 
+On November 23, 2026 the same file ran on the same machine at 16,384 context, the window the managed node now uses, with the default f16 cache. Device-wide VRAM use read 13.26 GiB after loading and 13.34 GiB after an OMP session from a Mac had written a file through the SSH forward. That session's first request was 13,426 tokens, and its largest context reached 15,319 tokens. These readings come from the card's sysfs counter and the server log; no result file stores them.
+
 ## Terminal-Bench 2.1
 
 These two runs drive OMP against a hosted model inside Harbor task containers. Agent Workbench is not in the loop.

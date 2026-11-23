@@ -281,7 +281,7 @@ Attaching opens an SSH tunnel from a free port on this computer's `127.0.0.1` to
 
 On a Linux x86_64 machine, **Workbench-managed model** offers **Install…**. Workbench then installs, under `~/.local/share/agent-workbench-node` on the machine, the Vulkan build of llama.cpp b12633, the Inkling 2 Mini UD-IQ3_XXS model and, unless OMP is already installed there, the OMP binary, each checked against a SHA-256 pinned in Workbench. The machine downloads them itself from github.com and huggingface.co. Workbench waits up to an hour for this.
 
-**Start and connect** starts the model on the machine's port 10542, bound to its loopback address with its own key, and opens the tunnel. **Stop…** stops it. The Inkling licence note applies to this model too.
+**Start and connect** starts the model on the machine's port 10542 with a 16K-token window, the catalog's choice for a 16 GB Vulkan card, bound to its loopback address with its own key, and opens the tunnel. **Stop…** stops it. The Inkling licence note applies to this model too.
 
 ### Remove a machine
 

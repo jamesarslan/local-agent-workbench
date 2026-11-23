@@ -1,6 +1,7 @@
 import ast
 import atexit
 import hashlib
+import io
 import json
 import os
 import shutil
@@ -1915,6 +1916,46 @@ class RemoteNodeTest(unittest.TestCase):
         self.assertFalse((self.base / "omp-agent").exists())
         self.installed()
         self.assertEqual(self.verb("key"), "secret")
+
+    def test_start_serves_the_catalog_window_and_omp_matches_it(self):
+        self.installed()
+
+        class Reply(io.BytesIO):
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        served = {"data": [{"id": "local-agent", "meta": {"n_ctx": 16384}}]}
+        stat = MagicMock()
+        stat.return_value.read_text.return_value = "1 (llama-server) " + "S " * 30
+        with (
+            self.linux(),
+            patch.object(remote_node.socket, "socket"),
+            patch.object(remote_node.subprocess, "Popen") as spawned,
+            patch.object(remote_node, "Path", stat),
+            patch.object(remote_node, "pid", side_effect=[None] + [4242] * 5),
+            patch.object(
+                remote_node, "urlopen", side_effect=lambda *a, **k: Reply(json.dumps(served).encode())
+            ),
+        ):
+            spawned.return_value.pid = 4242
+            info = remote_node.start()
+            argv = spawned.call_args.args[0]
+            self.assertEqual(argv[argv.index("-c") + 1], "16384")
+            self.assertEqual(remote_node.CONTEXT, 16384)
+            self.assertEqual(info["context"], 16384)
+            served["data"][0]["meta"]["n_ctx"] = 8192
+            self.assertEqual(remote_node.start()["context"], 8192)
+            served["data"][0]["meta"] = ["odd"]
+            self.assertEqual(remote_node.start()["context"], 16384)
+        self.assertEqual(remote_node.probe()["context"], 16384)
+        self.assertIs(self.verb("omp-config"), True)
+        config = json.loads((self.base / "omp-agent/models.yml").read_text())
+        (model,) = config["providers"]["workbench"]["models"]
+        self.assertEqual(model["contextWindow"], remote_node.CONTEXT)
+        self.assertLess(model["maxTokens"], model["contextWindow"])
 
     def test_start_reports_a_busy_port(self):
         self.installed()
