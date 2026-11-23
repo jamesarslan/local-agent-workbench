@@ -907,9 +907,10 @@ class LaunchTests(Case):
             )
             self.assertEqual(argv[1:3], ["--model", "gpt-5"])
         self.tools.return_value = tools(argv=pair)
-        (argv, _, _), _ = self.run_with(
-            lambda: connections.prepare(native, "Codex"), shim=["/bin/codex.cmd"]
-        )
+        with patch.object(connections, "WINDOWS", False):
+            (argv, _, _), _ = self.run_with(
+                lambda: connections.prepare(native, "Codex"), shim=["/bin/codex.cmd"]
+            )
         self.assertEqual(argv[:3], ["/bin/codex.cmd", *pair])
 
     def test_agent_environment_reaches_loopback_without_a_proxy(self):
@@ -2152,7 +2153,11 @@ class AuthTests(Case):
                     socket.create_connection(("127.0.0.1", urlsplit(target).port))
                 )
                 direct = build_opener(ProxyHandler({}))
-                with direct.open(target + "?code=fixture", timeout=5) as response:
+                # The server listens on 127.0.0.1 only. Browsers fall back from ::1 at
+                # once, but urllib tries localhost's ::1 first, and Windows takes about
+                # two seconds to give up on a refused connection.
+                ipv4 = target.replace("//localhost:", "//127.0.0.1:", 1)
+                with direct.open(ipv4 + "?code=fixture", timeout=5) as response:
                     response.read()
 
             threading.Thread(target=visit, daemon=True).start()
