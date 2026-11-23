@@ -1,0 +1,221 @@
+/* Advanced view: the section list beside the section body, and the classes of its sections (prefixed adv-). */
+.adv-layout {
+  display: grid;
+  grid-template-columns: 176px minmax(0, 1fr);
+  gap: var(--space-8);
+  align-items: start;
+}
+.adv-nav {
+  position: sticky;
+  top: 0;
+}
+.adv-list {
+  gap: var(--space-1);
+}
+.adv-tab {
+  width: 100%;
+  text-align: left;
+}
+.adv-main {
+  min-width: 0;
+}
+.adv-pick {
+  display: none;
+}
+.adv-body {
+  min-width: 0;
+}
+.adv-body > .empty {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-xl);
+}
+.adv-body > .notice {
+  margin-bottom: var(--space-5);
+}
+.adv-body .panel-body > * + * {
+  margin-top: var(--space-5);
+}
+.adv-body .panel-body > .toggle + *,
+.adv-body .panel-body > .field + .toggle {
+  margin-top: var(--space-3);
+}
+.adv-text {
+  max-width: 64ch;
+}
+input.adv-short {
+  max-width: 360px;
+}
+.adv-path {
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+.adv-target {
+  font-size: var(--text-md);
+  overflow-wrap: anywhere;
+}
+.adv-caption {
+  margin: 0;
+}
+.adv-caption:empty,
+.adv-status:empty,
+.adv-errors:empty {
+  display: none;
+}
+.adv-errors {
+  display: grid;
+  gap: var(--space-4);
+}
+.adv-body .actions > .hint {
+  margin: 0;
+}
+.adv-save .adv-status {
+  margin: 0;
+}
+.adv-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-4) var(--space-5);
+}
+.adv-inline > .field {
+  flex: 0 1 360px;
+  margin: 0;
+}
+.adv-inline > .btn {
+  margin-top: calc(var(--text-base) * 1.5 + var(--space-3));
+}
+
+/* Hugging Face */
+.adv-results {
+  display: grid;
+  gap: var(--space-4);
+}
+.adv-hub-list .rows {
+  margin: 0 calc(-1 * var(--space-4));
+}
+.adv-hub-list .row-title {
+  font-size: var(--text-md);
+}
+.adv-downloads:empty {
+  display: none;
+}
+
+/* Trace */
+.adv-log {
+  display: grid;
+  max-height: 360px;
+  min-height: 120px;
+  overflow: auto;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  font: var(--text-sm) / 1.55 var(--font-mono);
+}
+.adv-log > .empty {
+  padding: var(--space-6);
+  font-family: var(--font-ui);
+  font-size: var(--text-md);
+}
+.adv-log-row {
+  display: grid;
+  grid-template-columns: 64px 112px minmax(0, 1fr);
+  gap: var(--space-5);
+  padding: var(--space-1) 0;
+  border-top: 1px solid var(--border);
+}
+.adv-log-row:first-child {
+  border-top: 0;
+}
+.adv-log-time {
+  color: var(--text-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.adv-log-event {
+  color: var(--text-muted);
+}
+.adv-log-row[data-event="tool_execution_start"] .adv-log-event,
+.adv-log-row[data-event="message_end"] .adv-log-event {
+  color: var(--text);
+  font-weight: var(--weight-medium);
+}
+.adv-log-row[data-event="exit"] .adv-log-event,
+.adv-log-row[data-event="target"] .adv-log-event {
+  color: var(--accent-soft-text);
+}
+.adv-log-detail {
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Benchmarks */
+.adv-report {
+  display: grid;
+  gap: var(--space-5);
+}
+.adv-block {
+  display: grid;
+  gap: var(--space-3);
+}
+.adv-missed,
+.adv-runs {
+  display: grid;
+  gap: var(--space-2);
+  font-size: var(--text-md);
+}
+.adv-runs li,
+.adv-missed li {
+  padding-left: var(--space-5);
+  border-left: 2px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.adv-details summary {
+  color: var(--link);
+  font-size: var(--text-md);
+}
+.adv-pre {
+  max-height: 320px;
+  margin-top: var(--space-4);
+  padding: var(--space-5);
+  overflow: auto;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+.adv-table td:not(:first-child),
+.adv-table th:not(:first-child) {
+  text-align: right;
+}
+.adv-table td:first-child {
+  overflow-wrap: anywhere;
+}
+.adv-total {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+}
+
+@media (max-width: 899px) {
+  .adv-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .adv-nav {
+    display: none;
+  }
+  .adv-pick {
+    display: block;
+    max-width: var(--side-w);
+    margin-bottom: var(--space-6);
+  }
+}
+@media (max-width: 600px) {
+  .adv-log-row {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+  .adv-log-detail {
+    grid-column: 1 / -1;
+  }
+}

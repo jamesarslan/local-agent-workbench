@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "id": "3d",
+  "label": "3D scenes and assets",
+  "summary": "For 3D scene and asset work: inspect before changing, script small repeatable steps and export with checked scale and axes.",
+  "works_with": "Blender",
+  "version": "0.4.0",
+  "priority": 60,
+  "detect": {
+    "strong": [{"glob": "*.blend"}],
+    "weak": [
+      {"glob": "*.blend1"},
+      {"glob": "*.fbx"},
+      {"glob": "*.glb"},
+      {"glob": "*.gltf"},
+      {"glob": "*.usd"},
+      {"glob": "*.usdz"},
+      {"glob": "*.obj"},
+      {"glob": "*.stl"},
+      {"file": "blender_manifest.toml"}
+    ]
+  },
+  "skills": [
+    {"name": "workbench-scripting-for-blender"},
+    {"name": "workbench-scene-inspect"},
+    {"name": "workbench-3d-export"},
+    {"name": "workbench-headless-render"},
+    {"name": "workbench-asset-provenance"}
+  ],
+  "mcp": [
+    {
+      "builtin": "blender",
+      "label": "Blender tools",
+      "requires": ["uv"],
+      "default": true,
+      "network": "A local connection to the Blender add-on. Asset sites only when you use those features.",
+      "warning": "Runs Python code inside Blender."
+    }
+  ]
+}

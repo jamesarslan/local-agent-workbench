@@ -1,0 +1,16 @@
+[
+  {
+    "test": "vision",
+    "answer": "Red",
+    "passed": true,
+    "usage": {
+      "prompt_tokens": 30,
+      "completion_tokens": 48,
+      "total_tokens": 78,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "seconds": 1.49
+  }
+]

@@ -1,0 +1,659 @@
+/* Setup guide: classes prefixed guide-. */
+
+/* Step list in the rail */
+.guide-rail-title {
+  margin: 0 0 var(--space-4);
+  padding: 0 var(--space-5);
+}
+#guide-steps {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.guide-step {
+  display: grid;
+  grid-template-columns: 10px 12px minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-4);
+  width: 100%;
+  min-height: var(--nav-h);
+  padding: var(--space-2) var(--space-5);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-muted);
+  font-weight: var(--weight-medium);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--ease);
+}
+.guide-step:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.guide-step[data-state="done"] {
+  color: var(--text);
+}
+.guide-step[aria-current="step"] {
+  background: var(--accent-soft);
+  color: var(--accent-soft-text);
+}
+.guide-step[aria-disabled="true"] {
+  color: var(--text-faint);
+  cursor: default;
+}
+.guide-step[aria-disabled="true"]:hover {
+  background: none;
+  color: var(--text-faint);
+}
+.guide-step-num {
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.guide-step-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.guide-step-reason {
+  display: none;
+  grid-column: 3;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+  line-height: 1.4;
+}
+.guide-step[aria-disabled="true"]:hover .guide-step-reason,
+.guide-step[aria-disabled="true"]:focus-visible .guide-step-reason,
+.guide-step[aria-disabled="true"][data-told] .guide-step-reason {
+  display: block;
+}
+.guide-exit {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+}
+.guide-exit-rail {
+  margin-top: var(--space-8);
+  padding: 0 var(--space-2);
+}
+.guide-exit-line {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+.guide-exit-rail .guide-exit-line {
+  padding: 0 var(--space-3);
+}
+
+/* Frame */
+.view.guide {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  max-width: calc(var(--guide-max) + 2 * var(--page-pad));
+  padding-bottom: 0;
+}
+.guide-body {
+  flex: 1 0 auto;
+}
+.guide-slow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: calc(var(--space-6) * -1) 0 var(--space-6);
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+.guide-top:not(:empty) {
+  margin-bottom: var(--space-6);
+}
+.guide-notice-list {
+  margin: 0;
+  padding-left: var(--space-7);
+}
+.guide-error:not(:empty) {
+  margin-top: var(--space-6);
+}
+.guide-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-5);
+  margin-top: var(--space-8);
+  padding: var(--space-5) 0;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+.guide-foot-exit {
+  display: none;
+}
+.guide-foot-back:has(> [hidden]) {
+  display: none;
+}
+.guide-reason {
+  flex: 1 1 180px;
+  min-width: 0;
+  margin: 0;
+  color: var(--warn-text);
+  font-size: var(--text-md);
+  line-height: 1.4;
+  text-align: right;
+}
+.guide-foot-end {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-left: auto;
+}
+.guide-count {
+  color: var(--text-muted);
+  font-size: var(--text-md);
+  white-space: nowrap;
+}
+.guide-secondary {
+  display: flex;
+  gap: var(--space-4);
+}
+.guide-secondary:empty {
+  display: none;
+}
+
+/* Shared pieces */
+.guide-panel {
+  margin-bottom: var(--space-5);
+}
+.guide-panel .panel-title {
+  margin-bottom: var(--space-4);
+}
+.guide-line,
+.guide-warn,
+.guide-note,
+.guide-hint-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.guide-line > .mark,
+.guide-warn > .mark,
+.guide-note > .mark,
+.guide-hint-line > .mark,
+.guide-slow > .mark {
+  margin-top: 0.45em;
+}
+.guide-slow > .mark {
+  margin-top: 0;
+}
+.guide-warn {
+  color: var(--warn-text);
+}
+.guide-hint-line {
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+.guide-path {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+.guide-more > summary {
+  width: fit-content;
+  color: var(--link);
+  font-size: var(--text-md);
+}
+.guide-more > p {
+  margin: var(--space-3) 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+.guide-fail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  color: var(--danger-text);
+  font-size: var(--text-md);
+}
+.guide-fail-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.guide-empty {
+  margin: 0;
+  color: var(--text-muted);
+}
+.guide-note-line {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+.guide-closing {
+  max-width: 64ch;
+  margin: var(--space-5) 0 0;
+  color: var(--text-muted);
+}
+.guide-closing + .guide-closing {
+  margin-top: var(--space-3);
+}
+
+/* Step 1: This computer */
+.guide-facts {
+  display: grid;
+  grid-template-columns: minmax(130px, max-content) minmax(0, 1fr);
+  margin: 0;
+}
+.guide-facts > dt,
+.guide-facts > dd {
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--border);
+}
+.guide-facts > dt:first-of-type,
+.guide-facts > dt:first-of-type + dd {
+  padding-top: 0;
+  border-top: 0;
+}
+.guide-facts > dt:last-of-type,
+.guide-facts > dd:last-of-type {
+  padding-bottom: 0;
+}
+.guide-facts > dt {
+  padding-right: var(--space-7);
+  color: var(--text-muted);
+  font-size: var(--text-md);
+  line-height: 1.6;
+}
+.guide-facts > dd {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+}
+.guide-facts .skeleton {
+  padding-top: var(--space-2);
+}
+.guide-notes {
+  display: grid;
+  gap: var(--space-3);
+}
+.guide-notes:not(:empty) {
+  margin-bottom: var(--space-5);
+}
+.guide-computer-notice:not(:empty) {
+  margin-bottom: var(--space-5);
+}
+
+/* Step 2: Model */
+.guide-options {
+  gap: var(--space-4);
+}
+.guide-option.choice:has(input:checked) {
+  border: 1px solid var(--border);
+  padding: var(--space-5);
+}
+.guide-option.choice:has(> input:checked) {
+  border: 2px solid var(--accent);
+  padding: calc(var(--space-5) - 1px);
+}
+.guide-option.choice:has(input:focus-visible) {
+  outline: none;
+}
+.guide-option.choice:has(> input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.guide-option .choice-body input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.guide-option-body {
+  display: grid;
+  gap: var(--space-5);
+}
+.guide-picks {
+  display: grid;
+  gap: var(--space-2);
+}
+.guide-picks:empty {
+  display: none;
+}
+.guide-pick {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--space-4);
+  align-items: start;
+  padding: var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.guide-pick:hover {
+  background: var(--surface-hover);
+}
+.guide-pick:has(> input:checked) {
+  border-color: var(--border);
+  background: var(--surface-sunken);
+}
+.guide-pick > input,
+.guide-pick > .mark {
+  margin-top: 5px;
+}
+.guide-pick-found {
+  border-color: var(--border);
+  cursor: default;
+}
+.guide-pick-found:hover {
+  background: none;
+}
+.guide-pick-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+.guide-pick-title {
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+.guide-pick-meta {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+.guide-pick-detail {
+  grid-column: 2;
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  font-size: var(--text-md);
+  cursor: default;
+}
+.guide-pick-detail > p {
+  margin: 0;
+}
+.guide-pick-detail .field {
+  max-width: 440px;
+  margin: 0;
+}
+.guide-pick-facts {
+  color: var(--text-muted);
+}
+.guide-group {
+  margin: var(--space-5) 0 var(--space-2);
+  padding: 0 var(--space-4);
+}
+.guide-hints:empty {
+  display: none;
+}
+.guide-hints {
+  display: grid;
+  gap: var(--space-3);
+}
+.guide-tasks {
+  display: grid;
+  gap: var(--space-4);
+}
+.guide-found:empty {
+  display: none;
+}
+
+/* Step 3: Agent */
+.guide-agents {
+  gap: var(--space-3);
+}
+.guide-agents + .actions {
+  margin-top: var(--space-5);
+}
+.guide-agent .choice-main {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  column-gap: var(--space-5);
+  align-items: baseline;
+}
+.guide-agent .choice-reason {
+  grid-column: 1 / -1;
+}
+.guide-flag {
+  display: inline-flex;
+  margin-left: var(--space-3);
+  vertical-align: baseline;
+}
+.guide-agent-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--text-md);
+  white-space: nowrap;
+}
+.guide-agent-extra {
+  grid-column: 2 / -1;
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  font-size: var(--text-md);
+  cursor: default;
+}
+.guide-agent-extra > .task,
+.guide-agent-extra > .notice,
+.guide-agent-extra > .guide-result {
+  justify-self: stretch;
+}
+.guide-agent .choice-body {
+  grid-column: 2 / -1;
+}
+.guide-warn-text {
+  margin: 0;
+  color: var(--warn-text);
+}
+.guide-hint-text {
+  margin: 0;
+  color: var(--text-muted);
+}
+.guide-result {
+  display: grid;
+  gap: var(--space-3);
+}
+.guide-result p {
+  margin: 0;
+}
+.guide-signin {
+  display: grid;
+  gap: var(--space-4);
+  font-size: var(--text-md);
+}
+.guide-signin > p {
+  margin: 0;
+}
+.guide-signin .field {
+  max-width: 320px;
+  margin: 0;
+}
+
+/* Step 4: Project */
+.guide-scratch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-5);
+  margin: var(--space-5) 0 0;
+}
+.guide-scratch-text {
+  flex: 1 1 240px;
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+.guide-scratch-line {
+  margin: var(--space-4) 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+.guide-recent {
+  margin-top: var(--space-7);
+}
+.guide-recent > .group-label {
+  margin: 0 0 var(--space-3);
+}
+.guide-recent .switch-list {
+  max-height: none;
+}
+.guide-kit {
+  margin-top: var(--space-7);
+}
+.guide-kit-intro {
+  margin: 0 0 var(--space-5);
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+.guide-kit-what {
+  display: none;
+  margin-bottom: var(--space-5);
+}
+.guide-kit-suggest {
+  margin-bottom: var(--space-5);
+}
+.guide-kit-suggest p {
+  margin: 0;
+}
+.guide-kit-choose {
+  display: grid;
+  grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+  align-items: end;
+  gap: var(--space-5);
+}
+.guide-kit-choose .field {
+  margin: 0;
+}
+.guide-kit-summary {
+  margin: 0 0 var(--space-3);
+}
+.guide-kit-details {
+  margin-top: var(--space-5);
+}
+.guide-kit-preview:not(:empty) {
+  margin-top: var(--space-5);
+}
+.guide-kit .guide-result:not([hidden]) {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+.guide-files {
+  margin: 0;
+  padding-left: var(--space-7);
+  font-size: var(--text-md);
+}
+.guide-kit + .guide-note-line {
+  margin-top: var(--space-5);
+}
+
+/* Step 5: Ready */
+.guide-ready .ready-row {
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+}
+.guide-ready .ready-items {
+  grid-column: 2 / -1;
+}
+.guide-change {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: start;
+}
+.guide-where {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-7);
+  margin-top: var(--space-6);
+}
+.guide-where > legend {
+  float: left;
+  margin-right: var(--space-7);
+  font-weight: var(--weight-medium);
+}
+.guide-where-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--control-h-sm);
+  margin-right: var(--space-7);
+  cursor: pointer;
+}
+
+/* Narrow window: icon rail */
+@media (max-width: 1030px) {
+  .guide-rail-title,
+  .guide-exit-rail {
+    display: none;
+  }
+  .guide-step {
+    grid-template-columns: 10px auto;
+    justify-content: center;
+    column-gap: var(--space-2);
+    padding: 0;
+  }
+  .guide-step-name,
+  .guide-step[aria-disabled="true"] .guide-step-reason {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .guide-foot-exit {
+    display: block;
+    flex: 0 1 240px;
+    min-width: 0;
+  }
+  .guide-reason {
+    order: -1;
+    flex-basis: 100%;
+  }
+  .guide-agent .choice-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 899px) {
+  .guide-kit-choose {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Short window: compact cards, the kit text behind a disclosure, three recent folders */
+@media (max-height: 700px) {
+  .view.guide .lede {
+    display: block;
+    margin-bottom: var(--space-6);
+  }
+  .guide-option:not(.choice-open) .choice-desc {
+    display: none;
+  }
+  .guide-kit-intro {
+    display: none;
+  }
+  .guide-kit-what {
+    display: block;
+  }
+  .guide-recent .switch-list > :nth-child(n + 4) {
+    display: none;
+  }
+  .guide-foot {
+    margin-top: var(--space-6);
+    padding: var(--space-4) 0;
+  }
+}
+.guide-kit:has(.guide-kit-details[open]) .guide-kit-summary {
+  display: none;
+}

@@ -1,0 +1,105 @@
+/* Command palette (ui.md 5.14): 640 px wide, at most 92 % of the window, top at 12 % of the window height. */
+.dialog.palette {
+  width: min(640px, 92vw);
+  max-height: min(76vh, 620px);
+  margin: 12vh auto auto;
+}
+#palette-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.palette-head {
+  flex: none;
+  padding: var(--space-6) var(--space-6) var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+.palette-field {
+  position: relative;
+}
+.palette-field > .icon {
+  position: absolute;
+  top: 50%;
+  left: var(--space-5);
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  pointer-events: none;
+}
+.palette-field > input {
+  min-height: var(--control-h);
+  padding-left: calc(var(--space-5) + 16px + var(--space-4));
+  font-size: var(--text-lg);
+}
+.palette-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  overscroll-behavior: contain;
+}
+.palette-group + .palette-group {
+  margin-top: var(--space-3);
+}
+.palette-group-label {
+  margin: var(--space-5) var(--space-4) var(--space-3);
+}
+.palette-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  min-height: var(--control-h);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.palette-option:hover {
+  background: var(--surface-hover);
+}
+.palette-option[aria-selected="true"] {
+  background: var(--accent-soft);
+  color: var(--accent-soft-text);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.palette-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.palette-detail {
+  color: var(--text-muted);
+}
+.palette-option[aria-selected="true"] .palette-detail {
+  color: inherit;
+}
+.palette-title mark {
+  background: none;
+  color: inherit;
+  font-weight: var(--weight-strong);
+}
+.palette-keys {
+  flex: none;
+  display: inline-flex;
+  gap: var(--space-2);
+}
+.palette-option[aria-selected="true"] kbd {
+  border-color: currentColor;
+  color: inherit;
+}
+.palette-empty {
+  margin: 0;
+  padding: var(--space-8) var(--space-6);
+  color: var(--text-muted);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.palette-foot {
+  flex: none;
+  margin: 0;
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}

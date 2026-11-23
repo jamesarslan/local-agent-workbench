@@ -1,0 +1,27 @@
+{
+  "repository": "unsloth/Qwen3.8-Flash-Next-GGUF",
+  "revision": "d96201194f103c906994f283f504209dc8d2a10c",
+  "local_hashes_verified": true,
+  "files": [
+    {
+      "file": [
+        "Qwen3.8-Flash-Next-UD-Q2_K_XL-00001-of-00004.gguf",
+        "Qwen3.8-Flash-Next-UD-Q2_K_XL-00002-of-00004.gguf",
+        "Qwen3.8-Flash-Next-UD-Q2_K_XL-00003-of-00004.gguf",
+        "Qwen3.8-Flash-Next-UD-Q2_K_XL-00004-of-00004.gguf"
+      ],
+      "bytes": [
+        10946618,
+        49732486272,
+        1037181344,
+        28800138432
+      ],
+      "sha256": [
+        "297e174dc185f2bf3ab1856461059cb8a05aa741bc27edf42461cde87e5420af",
+        "a4782511810bb61bd6b3236607a0aad05b1bfa04b90356defd202bb17e7db16d",
+        "4dffc4a1cea7ad484f2d5c711b747840e459b040b636cc8ddaa524d01e60662e",
+        "5de8b5dbf89409acc39468decafd4a4a95b13c29d88a14b0356107897829ec36"
+      ]
+    }
+  ]
+}

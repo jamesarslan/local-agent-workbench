@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "user": "node",
+  "mount_types": [
+    "volume"
+  ],
+  "privileged": false,
+  "exit": 0
+}

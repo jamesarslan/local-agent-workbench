@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "id": "general",
+  "label": "General software",
+  "summary": "For any codebase: run the real checks after every change, debug one step at a time and keep Git history clean.",
+  "works_with": "Any language with a build or test command",
+  "version": "0.4.0",
+  "priority": 10,
+  "detect": {
+    "strong": [
+      {"file": "Cargo.toml"},
+      {"file": "go.mod"},
+      {"file": "pom.xml"},
+      {"file": "CMakeLists.txt"},
+      {"file": "Makefile"},
+      {"file": "Gemfile"},
+      {"file": "composer.json"},
+      {"file": "mix.exs"},
+      {"file": "Package.swift"},
+      {"file": "package.json"},
+      {"glob": "build.gradle*"},
+      {"glob": "*.csproj"},
+      {"glob": "*.sln"}
+    ],
+    "weak": [{"dir": ".git"}, {"dir": "src"}, {"dir": "tests"}]
+  },
+  "skills": [
+    {"name": "workbench-verify-change"},
+    {"name": "workbench-debug-systematically"},
+    {"name": "workbench-git-workflow"},
+    {"name": "workbench-review-diff"},
+    {"name": "workbench-small-context"}
+  ],
+  "mcp": [
+    {
+      "builtin": "search",
+      "label": "Web search",
+      "requires": [],
+      "default": false,
+      "network": "Public search engines.",
+      "warning": "Public search engines receive the query."
+    },
+    {
+      "name": "context7",
+      "label": "Context7",
+      "publisher": "Upstash",
+      "source": "https://github.com/upstash/context7",
+      "license": "MIT (server); hosted backend private",
+      "version": "hosted",
+      "checked": "registry",
+      "transport": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "requires": [],
+      "default": false,
+      "network": "context7.com. Works without a key at a lower rate limit.",
+      "warning": "Hosted service; your question and the library name are sent to it."
+    },
+    {
+      "name": "fetch",
+      "label": "Fetch (reference server)",
+      "publisher": "Model Context Protocol",
+      "source": "https://github.com/modelcontextprotocol/servers/tree/main/src/fetch",
+      "license": "MIT",
+      "version": "2026.11.18",
+      "checked": "registry",
+      "transport": "stdio",
+      "command": "uvx",
+      "args": ["mcp-server-fetch@2026.11.18"],
+      "requires": ["uv"],
+      "default": false,
+      "network": "Any public address the agent asks it to read.",
+      "warning": "Reference server, not production-ready. Blocks local/internal addresses by default; never pass --allow-private-ips; a configured proxy is not covered by the guard."
+    },
+    {
+      "name": "github",
+      "label": "GitHub MCP Server",
+      "publisher": "GitHub",
+      "source": "https://github.com/github/github-mcp-server",
+      "license": "MIT",
+      "version": "2.2.0",
+      "checked": "registry",
+      "transport": "stdio",
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server:v2.2.0"
+      ],
+      "env_from": ["GITHUB_PERSONAL_ACCESS_TOKEN"],
+      "requires": ["docker"],
+      "default": false,
+      "network": "The GitHub API, with the personal access token you provide.",
+      "warning": "Large tool list that uses a lot of context. Needs a GitHub account and a personal access token."
+    }
+  ]
+}

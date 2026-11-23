@@ -1,0 +1,136 @@
+{
+  "model": "Inkling-2-Mini-SQ-20.strata",
+  "context": 131072,
+  "rows": [
+    {
+      "tools": 1,
+      "cases": [
+        {
+          "target": "find_manual",
+          "passed": true,
+          "additional_input_tokens": 101,
+          "elapsed_s": 0.72,
+          "output_tokens": 75
+        },
+        {
+          "target": "read_ticket",
+          "passed": true,
+          "additional_input_tokens": 101,
+          "elapsed_s": 0.72,
+          "output_tokens": 74
+        },
+        {
+          "target": "lookup_asset",
+          "passed": true,
+          "additional_input_tokens": 102,
+          "elapsed_s": 0.72,
+          "output_tokens": 76
+        }
+      ]
+    },
+    {
+      "tools": 9,
+      "cases": [
+        {
+          "target": "find_manual",
+          "passed": true,
+          "additional_input_tokens": 909,
+          "elapsed_s": 0.86,
+          "output_tokens": 75
+        },
+        {
+          "target": "read_ticket",
+          "passed": true,
+          "additional_input_tokens": 909,
+          "elapsed_s": 0.86,
+          "output_tokens": 74
+        },
+        {
+          "target": "lookup_asset",
+          "passed": true,
+          "additional_input_tokens": 910,
+          "elapsed_s": 0.98,
+          "output_tokens": 95
+        }
+      ]
+    },
+    {
+      "tools": 25,
+      "cases": [
+        {
+          "target": "find_manual",
+          "passed": true,
+          "additional_input_tokens": 2525,
+          "elapsed_s": 1.36,
+          "output_tokens": 73
+        },
+        {
+          "target": "read_ticket",
+          "passed": true,
+          "additional_input_tokens": 2525,
+          "elapsed_s": 2.09,
+          "output_tokens": 135
+        },
+        {
+          "target": "lookup_asset",
+          "passed": true,
+          "additional_input_tokens": 2526,
+          "elapsed_s": 1.88,
+          "output_tokens": 122
+        }
+      ]
+    },
+    {
+      "tools": 49,
+      "cases": [
+        {
+          "target": "find_manual",
+          "passed": true,
+          "additional_input_tokens": 4949,
+          "elapsed_s": 2.06,
+          "output_tokens": 79
+        },
+        {
+          "target": "read_ticket",
+          "passed": true,
+          "additional_input_tokens": 4949,
+          "elapsed_s": 2.05,
+          "output_tokens": 75
+        },
+        {
+          "target": "lookup_asset",
+          "passed": true,
+          "additional_input_tokens": 4950,
+          "elapsed_s": 2.44,
+          "output_tokens": 104
+        }
+      ]
+    },
+    {
+      "tools": 97,
+      "cases": [
+        {
+          "target": "find_manual",
+          "passed": true,
+          "additional_input_tokens": 9797,
+          "elapsed_s": 3.41,
+          "output_tokens": 74
+        },
+        {
+          "target": "read_ticket",
+          "passed": true,
+          "additional_input_tokens": 9797,
+          "elapsed_s": 4.11,
+          "output_tokens": 75
+        },
+        {
+          "target": "lookup_asset",
+          "passed": true,
+          "additional_input_tokens": 9798,
+          "elapsed_s": 4.33,
+          "output_tokens": 82
+        }
+      ]
+    }
+  ]
+}

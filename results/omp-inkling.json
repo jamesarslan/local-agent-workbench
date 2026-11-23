@@ -1,0 +1,58 @@
+[
+  {
+    "job": "render",
+    "supplement": false,
+    "elapsed_s": 4.007,
+    "returncode": 0,
+    "tools": [
+      "read",
+      "edit",
+      "read"
+    ],
+    "correct_file": true,
+    "correct_reply": true,
+    "passed": true
+  },
+  {
+    "job": "render",
+    "supplement": true,
+    "elapsed_s": 3.389,
+    "returncode": 0,
+    "tools": [
+      "read",
+      "edit",
+      "read"
+    ],
+    "correct_file": true,
+    "correct_reply": true,
+    "passed": true
+  },
+  {
+    "job": "export",
+    "supplement": true,
+    "elapsed_s": 3.378,
+    "returncode": 0,
+    "tools": [
+      "read",
+      "edit",
+      "read"
+    ],
+    "correct_file": true,
+    "correct_reply": true,
+    "passed": true
+  },
+  {
+    "job": "export",
+    "supplement": false,
+    "elapsed_s": 3.41,
+    "returncode": 0,
+    "tools": [
+      "read",
+      "edit",
+      "read"
+    ],
+    "correct_file": true,
+    "correct_reply": true,
+    "passed": true
+  }
+]

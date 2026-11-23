@@ -1,0 +1,37 @@
+[
+  {
+    "file": "Inkling-2-Mini-UD-Q4_K_XL.gguf",
+    "bytes": 17629759456,
+    "sha256": "e62d463c135ffe283df8d94b279a96ca145ac128b52ce854478613045bf4de15"
+  },
+  {
+    "file": "Inkling-2-Mini-UD-Q8_K_XL.gguf_file",
+    "bytes": 22867452896,
+    "sha256": "2da51788d43a17e1f033bec420fa83ba9cb87ac1f0130dc9135a4d2ed2678b68"
+  },
+  {
+    "file": "Qwen3.8-27B-pi-lora-F16.gguf",
+    "bytes": 318802304,
+    "sha256": "a64f91844f19e67da500d8628bdf9383aa334e61b7ab687805802e7d272d7b67"
+  },
+  {
+    "file": "Qwen3.8-27B-UD-Q4_K_XL.gguf",
+    "bytes": 17659407264,
+    "sha256": "2a5f3565f39cf885103da591182c1266da64745737b42b452fd3e675369f1211"
+  },
+  {
+    "file": "Inkling-2-Mini-UD-Q4_K_XL.gguf_file",
+    "bytes": 17629760736,
+    "sha256": "e64276656f072e9b2197a61723667cbdb71da66a716ffd966e572c21088f3cd3"
+  },
+  {
+    "file": "Inkling-2-Mini-SQ-20.strata",
+    "bytes": 19346685952,
+    "sha256": "0bbfd52344f0dd4779a7807b5f73554a812f24c035e6877b63cd0d499f7e1b97"
+  },
+  {
+    "file": "Inkling-2-Mini-Vision.strata",
+    "bytes": 636526592,
+    "sha256": "6589eff47f9c20bc3a032faa3d449f10bf4f04a84cc6b2ee8a44d51d2b6fc677"
+  }
+]

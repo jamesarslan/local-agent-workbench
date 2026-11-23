@@ -1,0 +1,17 @@
+{
+  "Pi": {
+    "code": 0,
+    "passed": true,
+    "seconds": 0.99
+  },
+  "Claude Code": {
+    "code": 0,
+    "passed": true,
+    "seconds": 1.01
+  },
+  "Codex": {
+    "code": 0,
+    "passed": true,
+    "seconds": 4.25
+  }
+}

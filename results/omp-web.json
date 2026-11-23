@@ -1,0 +1,9 @@
+{
+  "calls": [
+    "bash",
+    "bash"
+  ],
+  "mounted_command": "mcp__firecrawl_scrape",
+  "observed_markdown": true,
+  "passed": true
+}

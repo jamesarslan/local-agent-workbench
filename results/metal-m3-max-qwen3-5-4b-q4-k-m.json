@@ -1,0 +1,237 @@
+{
+  "machine": {
+    "chip": "Apple M3 Max",
+    "unified_memory_gib": 48.0,
+    "os": "macOS 27.2.1",
+    "power": "battery",
+    "note": "Measured on battery power. The 27B runs show decode falling after long prompts in a pattern consistent with power throttling; treat their speeds as lower bounds and rerun on mains power before quoting them."
+  },
+  "engine": {
+    "name": "llama.cpp",
+    "build": "b12633",
+    "backend": "Metal",
+    "flags": "--jinja -fa on -ngl all -np 1 --no-mmproj",
+    "context": 32768,
+    "kv": "f16 (engine default)"
+  },
+  "model": {
+    "file": "Qwen3.5-4B-Q4_K_M.gguf",
+    "hf_repo": "unsloth/Qwen3.5-4B-GGUF",
+    "size_bytes": 2740937888,
+    "sha256": "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4"
+  },
+  "memory": {
+    "peak_server_rss_gib": 5.96,
+    "available_before_gib": 25.49,
+    "min_available_gib": 21.61,
+    "swap_growth_gib": 0.0
+  },
+  "date": "2026-11-22",
+  "benchmark": {
+    "condition": "Qwen3.5-4B-Q4_K_M.gguf",
+    "model": "local-agent",
+    "parallel": 1,
+    "median_decode_tps": 85.7225,
+    "median_ttft_s": 0.10405,
+    "checks_passed": 1,
+    "checks_total": 5,
+    "speed": [
+      {
+        "text": "```python\n\"\"\"\nLRU Cache with TTL (Time-To-Live) support.\nImplements a Least Recently Used cache where entries expire after a specified duration.\nUses a monotonic clock for accurate time tracking.\n\"\"\"\n\nimport time\nfrom collections import OrderedDict\nfrom typing import Any, Callable, Dict, Optional, TypeVar, Generic\nfrom datetime import datetime\nimport threading\n\nK = TypeVar('K')\nV = TypeVar('V')\n\nclass LRUCacheWithTTL(Generic[K, V]):\n    \"\"\"\n    A thread-safe LRU cache with Time-To-Live (TTL) expiration.\n    \n    Attributes:\n        max_size: Maximum number of items the cache can hold.\n        ttl_seconds: Default time-to-live in seconds for all entries.\n    \"\"\"\n    \n    def __init__(self, max_size: int = 100, ttl_seconds: Optional[float",
+        "tool_calls": [],
+        "ttft_s": 0.4056,
+        "wall_s": 2.6196,
+        "prefill_tps": 134.55697117241482,
+        "decode_tps": 86.27,
+        "prompt_tokens": 54,
+        "completion_tokens": 192,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "code-1-1",
+        "text_sha256": "658185d9575f44d089c46494c26c7afea88ff45ffa7848fa4ed07e8b0f2b8d7d"
+      },
+      {
+        "text": "```rust\nuse std::collections::VecDeque;\nuse std::sync::Arc;\nuse std::sync::Mutex;\n\n/// A bounded FIFO queue implemented using `VecDeque`.\n///\n/// This module provides a thread-safe bounded queue that enforces a maximum capacity.\n/// When the queue is full, `push` will return `false` and the new element will not be added.\n/// `pop` will return `None` if the queue is empty.\n///\n/// # Examples\n///\n/// ```\n/// use bounded_queue::BoundedQueue;\n/// let mut q = BoundedQueue::new(3);\n/// q.push(1);\n/// q.push(2);\n/// q.push(3);\n/// assert!(!q.push(4)); // Queue is full\n/// assert_eq!(q.pop(), Some(1));\n/// ```\npub struct BoundedQueue<T>",
+        "tool_calls": [],
+        "ttft_s": 0.1007,
+        "wall_s": 2.3148,
+        "prefill_tps": 503.5458016868784,
+        "decode_tps": 86.27,
+        "prompt_tokens": 48,
+        "completion_tokens": 192,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "code-1-2",
+        "text_sha256": "47cedf7f712d1ba831cf76f62d0db3d1267160c1df516ac3fa1672d967ed67e2"
+      },
+      {
+        "text": "```python\n\"\"\"\nModule for merging overlapping half-open intervals.\n\nThis module provides functionality to take a list of half-open intervals \n[start, end) and merge any overlapping or adjacent intervals into a single \ncontinuous range.\n\nHalf-open intervals are defined such that the start point is included, \nbut the end point is excluded (e.g., [1, 2) includes 1 but not 2).\n\"\"\"\n\nfrom typing import List, Tuple, Optional\nfrom copy import deepcopy\n\n\ndef merge_intervals(intervals: List[Tuple[int, int]]) -> List[Tuple[int, int]]:\n    \"\"\"\n    Merge overlapping or adjacent half-open intervals.\n\n    Two intervals [a, b) and [c, d) are considered overlapping or mergeable \n    if c <= b. When merged, the result is [min(a, c), max(b, d)).\n\n    Args:\n        intervals: A list of",
+        "tool_calls": [],
+        "ttft_s": 0.104,
+        "wall_s": 2.3274,
+        "prefill_tps": 478.6735649977594,
+        "decode_tps": 85.905,
+        "prompt_tokens": 47,
+        "completion_tokens": 192,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "code-1-3",
+        "text_sha256": "a10238f00490324ef5f00908256dd75bbb4c239514dbe8ccadff367d90a9b122"
+      },
+      {
+        "text": "```python\n\"\"\"\nBenchmark case code-2-1: LRU Cache with TTL.\n\nThis module implements a Least Recently Used (LRU) cache with Time-To-Live (TTL) support.\nIt uses a monotonic clock for accurate time tracking.\n\"\"\"\n\nimport time\nfrom collections import OrderedDict\nfrom typing import Any, Callable, Dict, Optional, TypeVar, Generic\nfrom datetime import datetime\nimport threading\n\nK = TypeVar('K')\nV = TypeVar('V')\n\nclass LRUCacheWithTTL(Generic[K, V]):\n    \"\"\"\n    An LRU cache with TTL support.\n    \n    Attributes:\n        max_size: Maximum number of items the cache can hold.\n        default_ttl: Default time-to-live in seconds for items without explicit TTL.\n    \"\"\"\n    \n    def __init__(self, max_size: int = 100, default_ttl",
+        "tool_calls": [],
+        "ttft_s": 0.1041,
+        "wall_s": 2.3371,
+        "prefill_tps": 547.0514937544955,
+        "decode_tps": 85.54,
+        "prompt_tokens": 54,
+        "completion_tokens": 192,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "code-2-1",
+        "text_sha256": "d175a81bd64bbbe36e785c5033ae97daa5086d07e4a8b58989a23a684f3cc179"
+      },
+      {
+        "text": "```rust\nuse std::collections::VecDeque;\nuse std::sync::Arc;\nuse std::sync::Mutex;\n\n/// A bounded FIFO queue implemented using `VecDeque`.\n///\n/// This module provides a thread-safe bounded queue that enforces a maximum capacity.\n/// When the queue is full, `push` will return `false` and the new element will not be added.\n/// `pop` will return `None` if the queue is empty.\n///\n/// # Examples\n///\n/// ```\n/// use bounded_queue::BoundedQueue;\n/// let mut q = BoundedQueue::new(3);\n/// q.push(1);\n/// q.push(2);\n/// q.push(3);\n/// assert!(!q.push(4)); // Queue is full\n/// assert_eq!(q.pop(), Some(1));\n/// ```\npub struct BoundedQueue<T>",
+        "tool_calls": [],
+        "ttft_s": 0.104,
+        "wall_s": 2.3826,
+        "prefill_tps": 492.5046941853665,
+        "decode_tps": 83.829,
+        "prompt_tokens": 48,
+        "completion_tokens": 192,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "code-2-2",
+        "text_sha256": "47cedf7f712d1ba831cf76f62d0db3d1267160c1df516ac3fa1672d967ed67e2"
+      },
+      {
+        "text": "```python\n\"\"\"\nModule for merging overlapping half-open intervals.\n\nThis module provides functionality to take a list of half-open intervals \n[start, end) and merge any overlapping or adjacent intervals into a single \ncontinuous range.\n\nHalf-open intervals are defined such that the start point is included, \nbut the end point is excluded (e.g., [1, 2) includes 1 but not 2).\n\"\"\"\n\nfrom typing import List, Tuple, Optional\nfrom copy import deepcopy\n\n\ndef merge_intervals(intervals: List[Tuple[int, int]]) -> List[Tuple[int, int]]:\n    \"\"\"\n    Merge overlapping or adjacent half-open intervals.\n\n    Two intervals [a, b) and [c, d) are considered overlapping or mergeable \n    if c <= b. When merged, the result is [min(a, c), max(b, d)).\n\n    Args:\n        intervals: A list of",
+        "tool_calls": [],
+        "ttft_s": 0.1052,
+        "wall_s": 2.4753,
+        "prefill_tps": 479.58204934593175,
+        "decode_tps": 80.59,
+        "prompt_tokens": 47,
+        "completion_tokens": 192,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "code-2-3",
+        "text_sha256": "a10238f00490324ef5f00908256dd75bbb4c239514dbe8ccadff367d90a9b122"
+      }
+    ],
+    "prefill": [
+      {
+        "text": "Based on the data provided, here is an analysis of the record structure and instructions on how to look up a specific record by its ID.\n\n### 1",
+        "tool_calls": [],
+        "ttft_s": 3.6853,
+        "wall_s": 4.1167,
+        "prefill_tps": 1102.8169313010083,
+        "decode_tps": 71.852,
+        "prompt_tokens": 4053,
+        "completion_tokens": 32,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "prompt-4k",
+        "text_sha256": "c1eaa61f5a2c4690728db0afe5a5667f8c47ee6c9508785126472c0454959263"
+      },
+      {
+        "text": "Based on the data provided, here is an analysis of the record structure and instructions on how to look up a specific record by its ID.\n\n### 1",
+        "tool_calls": [],
+        "ttft_s": 18.0329,
+        "wall_s": 18.5419,
+        "prefill_tps": 907.5828891838349,
+        "decode_tps": 60.959,
+        "prompt_tokens": 16347,
+        "completion_tokens": 32,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "prompt-16k",
+        "text_sha256": "c1eaa61f5a2c4690728db0afe5a5667f8c47ee6c9508785126472c0454959263"
+      }
+    ],
+    "checks": [
+      {
+        "text": "3087",
+        "tool_calls": [],
+        "ttft_s": 0.1606,
+        "wall_s": 0.2079,
+        "prefill_tps": 339.5189440960838,
+        "decode_tps": 84.706,
+        "prompt_tokens": 32,
+        "completion_tokens": 5,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "arithmetic",
+        "text_sha256": "867067959260d3f3a0d605f9fcc328cc1d891fb6c13643edbf29163ca5e0ba70",
+        "passed": false
+      },
+      {
+        "text": "[7, 2, 9, 1]",
+        "tool_calls": [],
+        "ttft_s": 0.1032,
+        "wall_s": 0.2454,
+        "prefill_tps": 486.47005168744295,
+        "decode_tps": 84.426,
+        "prompt_tokens": 48,
+        "completion_tokens": 13,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "logic",
+        "text_sha256": "9b529010234178668be918c272e3a9c36605a7a7c708c9fc75af5be30c6e2d95",
+        "passed": false
+      },
+      {
+        "text": "[0, 1, 10, 21]",
+        "tool_calls": [],
+        "ttft_s": 0.1136,
+        "wall_s": 0.2816,
+        "prefill_tps": 433.45137966651913,
+        "decode_tps": 83.36,
+        "prompt_tokens": 47,
+        "completion_tokens": 15,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "coding",
+        "text_sha256": "2100f6b0bad688f2a651edf4a2fc8d979a74182933684ce9037280e1c208511b",
+        "passed": false
+      },
+      {
+        "text": "```json\n{\n  \"bolts\": 17,\n  \"nuts\": 4\n}\n```",
+        "tool_calls": [],
+        "ttft_s": 0.1096,
+        "wall_s": 0.4146,
+        "prefill_tps": 371.4710252600297,
+        "decode_tps": 82.003,
+        "prompt_tokens": 39,
+        "completion_tokens": 26,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "extraction",
+        "text_sha256": "c8cf04691351445f7a5792518b2d1de181dae5247036e0a39a88bdffec6120e4",
+        "passed": false
+      },
+      {
+        "text": "",
+        "tool_calls": [
+          {
+            "name": "lookup_fixture",
+            "arguments": "{\"id\":\"fixture-52\"}"
+          }
+        ],
+        "ttft_s": 0.4908,
+        "wall_s": 0.7361,
+        "prefill_tps": 757.7710593951894,
+        "decode_tps": 82.175,
+        "prompt_tokens": 291,
+        "completion_tokens": 29,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "tool-call",
+        "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "passed": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,102 @@
+:root {
+  color-scheme: light;
+
+  /* surfaces */
+  --bg: #f5f5f7;                 /* window */
+  --surface: #ffffff;            /* panels, dialogs, popovers */
+  --surface-sunken: #ebeef3;     /* rail, status strip, code panes */
+  --surface-control: #fbfcfd;    /* buttons, inputs, selects */
+  --surface-hover: #e8eef7;      /* hovered row or button */
+  --overlay: rgba(20, 24, 32, 0.4);
+
+  /* lines */
+  --border: #d8dae1;             /* panels, dividers */
+  --border-strong: #c8cdd5;      /* buttons */
+  --border-control: #848a96;     /* inputs, selects, checkboxes, switch tracks */
+
+  /* text */
+  --text: #191b21;
+  --text-muted: #565c68;
+  --text-faint: #666c78;         /* placeholders, captions */
+
+  /* accent */
+  --accent: #0068cc;             /* primary button, switch on, selected radio */
+  --accent-hover: #075ca7;
+  --on-accent: #ffffff;
+  --link: #075ca7;
+  --accent-soft: #d9e5f6;        /* current nav item, selected row */
+  --accent-soft-text: #144279;
+  --focus: #0068cc;
+
+  /* status */
+  --ok: #178558;      --ok-text: #136442;      --ok-soft: #e6f4ec;
+  --warn: #b45f06;    --warn-text: #7a4200;    --warn-soft: #fdf1df;
+  --danger: #c8323f;  --danger-text: #8d2432;  --danger-soft: #fcebed;
+  --info-text: #234567;  --info-soft: #eaf2fd;  --info-border: #bbcfe8;
+  --idle: #7d838e;
+
+  /* terminal (same in both themes) */
+  --term-bg: #11151c;  --term-text: #e7eaf0;  --term-muted: #bbc7d8;  --term-edge: #417cbd;
+
+  /* elevation */
+  --shadow-1: 0 2px 5px rgba(21, 36, 73, 0.03);
+  --shadow-2: 0 12px 30px rgba(0, 0, 0, 0.13);
+  --shadow-3: 0 18px 75px rgba(0, 0, 0, 0.27);
+
+  /* type */
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+  --text-xs: 12px;   /* group labels in capitals: weight 600, letter-spacing 0.06em, line-height 1.3 */
+  --text-sm: 12px;   /* captions, chips: line-height 1.4 */
+  --text-md: 13px;   /* rows, tables, status strip: line-height 1.5 */
+  --text-base: 14px; /* body and controls: line-height 1.5 */
+  --text-lg: 15px;   /* panel titles: weight 600, line-height 1.35 */
+  --text-xl: 20px;   /* dialog titles: weight 600, line-height 1.25 */
+  --text-2xl: 32px;  /* page titles: weight 600, line-height 1.12, letter-spacing -0.035em */
+  --weight-regular: 400;  --weight-medium: 500;  --weight-strong: 600;
+
+  /* spacing */
+  --space-1: 2px;  --space-2: 4px;  --space-3: 6px;  --space-4: 8px;  --space-5: 12px;
+  --space-6: 16px; --space-7: 20px; --space-8: 24px; --space-9: 32px; --space-10: 40px;
+
+  /* radius */
+  --radius-xs: 4px;   /* progress bars, diff lines */
+  --radius-sm: 6px;   /* chips */
+  --radius-md: 8px;   /* controls, notices, rows */
+  --radius-lg: 12px;  /* popovers */
+  --radius-xl: 14px;  /* panels */
+  --radius-2xl: 16px; /* dialogs */
+  --radius-pill: 999px;
+
+  /* sizes */
+  --rail-w: 190px;  --header-h: 48px;  --strip-h: 32px;
+  --control-h: 36px;  --control-h-sm: 28px;  --row-h: 40px;  --nav-h: 36px;
+  --side-w: 320px;  --content-max: 1040px;  --page-pad: 32px;  --guide-max: 680px;
+
+  /* layers (dialogs use the top layer) */
+  --z-header: 3;  --z-dock: 4;  --z-popover: 5;  --z-toast: 6;
+
+  --ease: 120ms ease-out;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0c0c0e;  --surface: #171719;  --surface-sunken: #111113;  --surface-control: #202023;  --surface-hover: #313137;
+  --overlay: rgba(0, 0, 0, 0.55);
+  --border: #303034;  --border-strong: #39393f;  --border-control: #6a6a75;
+  --text: #f4f4f5;  --text-muted: #aaaab2;  --text-faint: #9494a0;
+  --accent: #1f6fe8;  --accent-hover: #1a62d1;  --on-accent: #ffffff;  --link: #8db4ff;
+  --accent-soft: #1d2a44;  --accent-soft-text: #bcd6ff;  --focus: #78aaff;
+  --ok: #54d59a;      --ok-text: #9fd4b9;      --ok-soft: #14261d;
+  --warn: #ffc269;    --warn-text: #ffd699;    --warn-soft: #2a2114;
+  --danger: #ff7b86;  --danger-text: #ffc2c7;  --danger-soft: #2a1719;
+  --info-text: #cfe0ff;  --info-soft: #181e2b;  --info-border: #343e55;
+  --idle: #85858f;
+  --shadow-1: none;
+  --shadow-2: 0 12px 30px rgba(0, 0, 0, 0.5);
+  --shadow-3: 0 18px 75px rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 1030px) { :root { --rail-w: 56px; --page-pad: 16px; } }
+@media (max-height: 700px) { :root { --text-2xl: 24px; --row-h: 36px; } }
+@media (prefers-reduced-motion: reduce) { :root { --ease: 0ms; } }

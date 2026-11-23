@@ -1,0 +1,424 @@
+/* Connections view, source forms, Attach dialog and Choose a model dialog (ui.md 5.4): classes prefixed accounts-. */
+
+/* List and detail */
+.accounts-split {
+  align-items: start;
+}
+.accounts-list-pane,
+.accounts-detail {
+  margin-bottom: 0;
+}
+.accounts-list-pane {
+  padding: var(--space-5);
+}
+.accounts-toolbar {
+  margin-bottom: var(--space-3);
+}
+.accounts-scan-line {
+  margin: 0 0 var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+.accounts-hints:not(:empty) {
+  margin-bottom: var(--space-4);
+}
+.accounts-hints .hint {
+  margin: 0;
+  color: var(--text-muted);
+}
+.accounts-empty {
+  padding: var(--space-6) var(--space-4);
+}
+.accounts-empty p {
+  margin: 0;
+}
+.accounts-listbox {
+  display: grid;
+  gap: var(--space-5);
+}
+.accounts-listbox:focus-within {
+  outline: none;
+}
+.accounts-group-label {
+  margin: 0 0 var(--space-2);
+  padding: 0 var(--space-4);
+}
+.accounts-option {
+  grid-template-columns: auto minmax(0, 1fr);
+  border-top: 0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.accounts-option:hover {
+  background: var(--surface-hover);
+}
+.accounts-option[aria-selected="true"]:hover {
+  background: var(--accent-soft);
+}
+.accounts-option .row-main {
+  cursor: pointer;
+}
+.accounts-option:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.accounts-detail {
+  min-width: 0;
+}
+.accounts-detail-idle {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+}
+.accounts-pick-hint {
+  margin: 0;
+}
+.accounts-back {
+  display: none;
+  margin: 0 0 var(--space-4);
+}
+.accounts-detail-title {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-xl);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.accounts-detail-title:focus-visible {
+  outline-offset: 4px;
+}
+.accounts-detail-body {
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
+}
+.accounts-detail-body > * {
+  min-width: 0;
+}
+.accounts-head-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.accounts-head .accounts-errors:not(:empty),
+.accounts-tunnel .accounts-errors:not(:empty) {
+  margin-top: var(--space-4);
+}
+.accounts-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+  font-size: var(--text-md);
+}
+.accounts-status > .mark {
+  flex: none;
+}
+.accounts-status-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.accounts-status-word {
+  font-weight: var(--weight-medium);
+}
+.accounts-status-extra:empty {
+  display: none;
+}
+.accounts-endpoint {
+  margin: calc(-1 * var(--space-3)) 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+.accounts-tunnel {
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  font-size: var(--text-md);
+}
+.accounts-block {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.accounts-block > .field,
+.accounts-block > fieldset.field {
+  margin-bottom: 0;
+}
+.accounts-block > .group-label,
+.accounts-detail-body h3.group-label {
+  margin: 0;
+}
+.accounts-local-info {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-md);
+  overflow-wrap: anywhere;
+}
+.accounts-context {
+  display: grid;
+  gap: var(--space-3);
+}
+.accounts-context legend {
+  margin-bottom: var(--space-3);
+}
+.accounts-radio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: var(--control-h-sm);
+  cursor: pointer;
+}
+.accounts-radio-text {
+  display: grid;
+  min-width: 0;
+}
+.accounts-radio-text > span:first-child {
+  overflow-wrap: anywhere;
+}
+.accounts-radio-meta {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+input.accounts-size {
+  width: 120px;
+  flex: none;
+}
+.accounts-footer {
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border);
+}
+.accounts-actions-space {
+  flex: 1;
+}
+.accounts-errors:empty {
+  display: none;
+}
+
+/* Source forms */
+.accounts-form {
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
+}
+.accounts-form > .field,
+.accounts-form .accounts-block > .field {
+  margin-bottom: 0;
+}
+.accounts-form .field > .hint,
+.accounts-provider-note,
+.accounts-key-message {
+  display: block;
+  margin: var(--space-3) 0 0;
+}
+.accounts-steps {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--info-border);
+  border-radius: var(--radius-md);
+  background: var(--info-soft);
+  color: var(--info-text);
+  font-size: var(--text-md);
+}
+.accounts-steps li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.accounts-step-n {
+  font-weight: var(--weight-strong);
+}
+.accounts-task-host:empty {
+  display: none;
+}
+.accounts-task-host > .hint {
+  margin: 0 0 var(--space-3);
+}
+.accounts-account-info {
+  margin: 0;
+  font-size: var(--text-md);
+}
+.accounts-account .hint {
+  margin: 0;
+}
+.accounts-address-after {
+  margin-top: calc(-1 * var(--space-3));
+}
+.accounts-probe-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.accounts-ssh-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-5);
+}
+.accounts-ssh-fields > .field {
+  margin-bottom: 0;
+}
+.accounts-firewall {
+  font-size: var(--text-md);
+}
+.accounts-firewall pre {
+  margin: var(--space-3) 0;
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  font-size: var(--text-sm);
+}
+.accounts-servers {
+  display: grid;
+  gap: var(--space-4);
+}
+.accounts-servers > .group-label {
+  margin: 0;
+}
+.accounts-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: var(--control-h-sm);
+}
+.accounts-group-head > .group-label {
+  margin: 0;
+}
+.accounts-server-list {
+  display: grid;
+  gap: var(--space-2);
+}
+.accounts-server-list > .accounts-radio {
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.accounts-server-list > .accounts-radio:has(input:checked) {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.accounts-works-line {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+.accounts-none {
+  margin: 0;
+  padding: var(--space-4) 0;
+}
+
+/* Attach dialog */
+#attach-dialog .dialog-body {
+  display: grid;
+  gap: var(--space-5);
+  align-content: start;
+}
+#attach-dialog .dialog-body > * {
+  min-width: 0;
+}
+.accounts-or {
+  margin: var(--space-3) 0 0;
+}
+.accounts-attach-address .field {
+  margin-bottom: 0;
+}
+.accounts-attach-choice {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+.accounts-attach-choice > .field {
+  margin-bottom: 0;
+}
+#attach-dialog .dialog-actions {
+  border-top: 1px solid var(--border);
+}
+
+/* Choose a model dialog */
+.accounts-picker-search {
+  margin-bottom: var(--space-3);
+}
+#picker-count {
+  display: block;
+  min-height: 1.4em;
+  margin-bottom: var(--space-3);
+  color: var(--text-muted);
+}
+.accounts-picker-status:empty {
+  display: none;
+}
+.accounts-picker-list {
+  display: grid;
+  gap: var(--space-1);
+}
+.accounts-pick {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: var(--row-h);
+  padding: var(--space-3) var(--space-5);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.accounts-pick:hover {
+  background: var(--surface-hover);
+}
+.accounts-pick:focus-visible {
+  outline-offset: -2px;
+}
+.accounts-pick[aria-current="true"] {
+  background: var(--accent-soft);
+  color: var(--accent-soft-text);
+}
+.accounts-pick-id {
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  overflow-wrap: anywhere;
+}
+.accounts-pick-meta {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+.accounts-pick[aria-current="true"] .accounts-pick-meta {
+  color: inherit;
+}
+.accounts-picker-none {
+  margin: 0;
+  padding: var(--space-5);
+}
+
+/* Two levels below 900 px: the list fills the view; a chosen row replaces it with the detail. */
+@media (max-width: 899px) {
+  .accounts-split.show-detail .accounts-list-pane,
+  .accounts-split:not(.show-detail) .accounts-detail {
+    display: none;
+  }
+  .accounts-back {
+    display: inline-flex;
+  }
+  .accounts-ssh-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-height: 700px) {
+  .accounts-detail-body {
+    gap: var(--space-5);
+  }
+}
+.accounts-detail-body > :empty,
+.accounts-detail-body > .stack:empty {
+  display: none;
+}
+.accounts-detail-body > .field {
+  margin-bottom: 0;
+}

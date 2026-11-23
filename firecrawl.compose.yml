@@ -1,0 +1,194 @@
+# Adapted from Firecrawl v2.11.0 docker-compose.yaml (AGPL-3.0).
+# Upstream: https://github.com/firecrawl/firecrawl, copyright the Firecrawl authors. Licence text: LICENSE-Firecrawl.
+# Modified for Agent Workbench, last on 2026-11-23: images referenced by digest instead of built from source,
+# the API published on 127.0.0.1 only, third-party service variables blanked, values fixed instead of read
+# from the host environment.
+name: agent-workbench-web
+services:
+  playwright-service:
+    environment:
+      PORT: 3000
+      PROXY_SERVER: ''
+      PROXY_USERNAME: ''
+      PROXY_PASSWORD: ''
+      ALLOW_LOCAL_WEBHOOKS: ''
+      BLOCK_MEDIA: ''
+      MAX_CONCURRENT_PAGES: '10'
+    networks:
+    - backend
+    cpus: 2.0
+    mem_limit: 4G
+    memswap_limit: 4G
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+        compress: 'true'
+    tmpfs:
+    - /tmp/.cache:noexec,nosuid,size=1g
+    image: ghcr.io/firecrawl/playwright-service@sha256:227ce3d8059173925a5a0697c63a1e947662cca934a609151651f578774edd5d
+  api:
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    networks:
+    - backend
+    extra_hosts:
+    - host.docker.internal:host-gateway
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+        compress: 'true'
+    environment:
+      REDIS_URL: redis://redis:6379
+      REDIS_RATE_LIMIT_URL: redis://redis:6379
+      PLAYWRIGHT_MICROSERVICE_URL: http://playwright-service:3000/scrape
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_HOST: nuq-postgres
+      POSTGRES_PORT: '5432'
+      USE_DB_AUTHENTICATION: 'false'
+      NUM_WORKERS_PER_QUEUE: '1'
+      CRAWL_CONCURRENT_REQUESTS: '2'
+      MAX_CONCURRENT_JOBS: '2'
+      BROWSER_POOL_SIZE: '1'
+      OPENAI_API_KEY: ''
+      OPENAI_BASE_URL: ''
+      MODEL_NAME: ''
+      MODEL_EMBEDDING_NAME: ''
+      OLLAMA_BASE_URL: ''
+      AUTUMN_SECRET_KEY: ''
+      SLACK_WEBHOOK_URL: ''
+      BULL_AUTH_KEY: ''
+      TEST_API_KEY: ''
+      SUPABASE_ANON_TOKEN: ''
+      SUPABASE_URL: ''
+      SUPABASE_SERVICE_TOKEN: ''
+      SELF_HOSTED_WEBHOOK_URL: ''
+      LOGGING_LEVEL: ''
+      PROXY_SERVER: ''
+      PROXY_USERNAME: ''
+      PROXY_PASSWORD: ''
+      SEARXNG_ENDPOINT: ''
+      SEARXNG_ENGINES: ''
+      SEARXNG_CATEGORIES: ''
+      NUQ_BACKEND: ''
+      FDB_CLUSTER_FILE: ''
+      HOST: 0.0.0.0
+      PORT: '3002'
+      EXTRACT_WORKER_PORT: '3004'
+      WORKER_PORT: '3005'
+      NUQ_RABBITMQ_URL: amqp://rabbitmq:5672
+      HARNESS_STARTUP_TIMEOUT_MS: '60000'
+      ENV: local
+    depends_on:
+      redis:
+        condition: service_started
+      playwright-service:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    ports:
+    - 127.0.0.1:3002:3002
+    volumes:
+    - fdb-cluster-file:/var/fdb:ro
+    command: node dist/src/harness.js --start-docker
+    cpus: 4.0
+    mem_limit: 8G
+    memswap_limit: 8G
+    image: ghcr.io/firecrawl/firecrawl@sha256:3736b7582b1b261f0fa346f9feb235fbf70fb7c6ef734603bfcfd540c490142b
+  redis:
+    image: redis:alpine
+    networks:
+    - backend
+    command: redis-server --bind 0.0.0.0
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '2'
+        compress: 'true'
+  rabbitmq:
+    image: rabbitmq:3-management
+    networks:
+    - backend
+    command: rabbitmq-server
+    healthcheck:
+      test:
+      - CMD
+      - rabbitmq-diagnostics
+      - -q
+      - check_running
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '2'
+        compress: 'true'
+  nuq-postgres:
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    networks:
+    - backend
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+        compress: 'true'
+    image: ghcr.io/firecrawl/nuq-postgres@sha256:d719b36160eac2fcbe16dc7e7360ddb9c82c40ea5da183d07bf4a755c6a0b2ae
+  foundationdb:
+    image: foundationdb/foundationdb:7.3.63
+    environment:
+      FDB_NETWORKING_MODE: container
+      FDB_COORDINATOR_PORT: 4500
+    networks:
+    - backend
+    volumes:
+    - fdb-data:/var/fdb/data
+    - fdb-cluster-file:/var/fdb
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+        compress: 'true'
+    profiles:
+    - foundationdb
+  foundationdb-init:
+    image: foundationdb/foundationdb:7.3.63
+    depends_on:
+    - foundationdb
+    entrypoint:
+    - /bin/bash
+    - -c
+    - 'sleep 5 && out=$(fdbcli -C /var/fdb/fdb.cluster --exec ''configure new single
+      ssd'' 2>&1); status=$$?; printf ''%s
+
+      '' "$$out"; if [ "$$status" -eq 0 ]; then exit 0; fi; printf ''%s
+
+      '' "$$out" | grep -Eiq ''already.*configured|database.*configured'''
+    volumes:
+    - fdb-cluster-file:/var/fdb
+    networks:
+    - backend
+    restart: 'no'
+    profiles:
+    - foundationdb
+networks:
+  backend:
+    driver: bridge
+volumes:
+  fdb-data: null
+  fdb-cluster-file: null

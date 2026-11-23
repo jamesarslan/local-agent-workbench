@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en" data-theme="light" data-theme-choice="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; connect-src 'none'; base-uri 'none'" />
+    <title>Agent Workbench</title>
+    <script src="ui/theme-boot.js"></script>
+    <link rel="stylesheet" href="css/tokens.css" />
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/shell.css" />
+    <link rel="stylesheet" href="vendor/xterm/xterm.css" />
+    <link rel="stylesheet" href="css/terminal.css" />
+    <link rel="stylesheet" href="css/launch.css" />
+    <link rel="stylesheet" href="css/overview.css" />
+    <link rel="stylesheet" href="css/guide.css" />
+    <link rel="stylesheet" href="css/project.css" />
+    <link rel="stylesheet" href="css/connections.css" />
+    <link rel="stylesheet" href="css/machines.css" />
+    <link rel="stylesheet" href="css/advanced.css" />
+    <link rel="stylesheet" href="css/palette.css" />
+  </head>
+  <body>
+    <button type="button" class="btn skip-link" id="skip-link">Skip to content</button>
+
+    <svg class="sprite" aria-hidden="true" focusable="false">
+      <symbol id="i-brand" viewBox="0 0 20 20"><path d="M2.6 12.4 8.9 6l1.9 3.2 6.6-2.9-6.3 7.5-1.9-3.3z" /></symbol>
+      <symbol id="i-launch" viewBox="0 0 16 16"><path d="M4.5 11.5 11 5M6 4.5h5.5V10" /></symbol>
+      <symbol id="i-overview" viewBox="0 0 16 16"><path d="M2.5 2.5H7V7H2.5zM9 2.5h4.5V7H9zM2.5 9H7v4.5H2.5zM9 9h4.5v4.5H9z" /></symbol>
+      <symbol id="i-project" viewBox="0 0 16 16"><path d="M4 2.5h5.5L12 5v8.5H4zM9.5 2.5V5H12M6 8h4M6 10.5h4" /></symbol>
+      <symbol id="i-connections" viewBox="0 0 16 16"><path d="M3 5.5h9.5M10 3l2.5 2.5L10 8M13 10.5H3.5M6 8l-2.5 2.5L6 13" /></symbol>
+      <symbol id="i-machines" viewBox="0 0 16 16"><path d="M2.5 3h11v4h-11zM2.5 9h11v4h-11zM5 5h.01M5 11h.01" /></symbol>
+      <symbol id="i-advanced" viewBox="0 0 16 16"><path d="M2.5 5h6M11.5 5h2M2.5 11h2M7.5 11h6" /><circle cx="10" cy="5" r="1.5" /><circle cx="6" cy="11" r="1.5" /></symbol>
+      <symbol id="i-guide" viewBox="0 0 16 16"><path d="M4 14V2.5M4 3h7.5L10 5.5 11.5 8H4" /></symbol>
+      <symbol id="i-terminal" viewBox="0 0 16 16"><path d="M2.5 3h11v10h-11zM5 6.5l2 2-2 2M8.5 10.5H11" /></symbol>
+      <symbol id="i-sun" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.5" /><path d="M8 1.5V3M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1" /></symbol>
+      <symbol id="i-moon" viewBox="0 0 16 16"><path d="M13 9.5A5.5 5.5 0 0 1 6.5 3 5.5 5.5 0 1 0 13 9.5z" /></symbol>
+      <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4" /><path d="M10 10l3.5 3.5" /></symbol>
+      <symbol id="i-caret" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" /></symbol>
+      <symbol id="i-close" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" /></symbol>
+      <symbol id="i-folder" viewBox="0 0 16 16"><path d="M2 4h4l1.5 1.5H14v7H2z" /></symbol>
+      <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" /></symbol>
+      <symbol id="i-warning" viewBox="0 0 16 16"><path d="M8 2.5L14 13H2zM8 6.5v3M8 11.3v.01" /></symbol>
+      <symbol id="i-external" viewBox="0 0 16 16"><path d="M9 3h4v4M13 3L7.5 8.5M11 9.5V13H3V5h3.5" /></symbol>
+      <symbol id="i-copy" viewBox="0 0 16 16"><path d="M5.5 5.5h7v7h-7zM3.5 10.5v-7h7" /></symbol>
+      <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 2.5V5h-2.5" /></symbol>
+      <symbol id="i-more" viewBox="0 0 16 16"><path d="M3.5 8h.01M8 8h.01M12.5 8h.01" /></symbol>
+      <symbol id="i-back" viewBox="0 0 16 16"><path d="M10 3.5L5.5 8l4.5 4.5" /></symbol>
+      <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" /></symbol>
+      <symbol id="i-computer" viewBox="0 0 16 16"><path d="M2.5 3h11v7.5h-11zM6 13.5h4M8 10.5v3" /></symbol>
+      <symbol id="i-server" viewBox="0 0 16 16"><path d="M3 2.5h10v11H3zM5.5 5.5h5M5.5 8h5M5.5 11h.01" /></symbol>
+      <symbol id="i-key" viewBox="0 0 16 16"><circle cx="5.5" cy="10.5" r="2.5" /><path d="M7.5 8.5L13 3M11 5l1.5 1.5M9.3 6.7l1.2 1.2" /></symbol>
+      <symbol id="i-plug" viewBox="0 0 16 16"><path d="M6 2v3.5M10 2v3.5M4 5.5h8v2a4 4 0 0 1-8 0zM8 11.5V14" /></symbol>
+    </svg>
+
+    <aside id="rail" aria-label="Main" data-region="rail">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><use href="#i-brand" /></svg></span>
+        <span class="brand-name">Workbench</span>
+      </div>
+      <nav id="rail-nav" aria-label="Views">
+        <button type="button" class="nav" id="nav-launch" data-route="launch"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-launch" /></svg><span class="nav-label">Launch</span></button>
+        <button type="button" class="nav" id="nav-overview" data-route="overview"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-overview" /></svg><span class="nav-label">Overview</span></button>
+        <button type="button" class="nav" id="nav-project" data-route="project"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-project" /></svg><span class="nav-label">Project setup</span></button>
+        <button type="button" class="nav" id="nav-accounts" data-route="accounts"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-connections" /></svg><span class="nav-label">Connections</span></button>
+        <button type="button" class="nav" id="nav-machines" data-route="machines"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-machines" /></svg><span class="nav-label">Machines</span></button>
+        <button type="button" class="nav" id="nav-advanced" data-route="advanced"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-advanced" /></svg><span class="nav-label">Advanced</span></button>
+      </nav>
+      <div id="guide-rail" hidden>
+        <ol id="guide-steps" aria-label="Setup steps"></ol>
+        <div id="guide-exit"></div>
+      </div>
+      <div class="rail-foot">
+        <button type="button" class="nav" id="nav-guide"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-guide" /></svg><span class="nav-label">Setup guide</span></button>
+        <button type="button" class="nav" id="terminal-toggle" aria-expanded="false" aria-controls="terminal-dock"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-terminal" /></svg><span class="nav-label">Terminal</span></button>
+        <button type="button" class="nav" id="theme-switch"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-moon" /></svg><span class="nav-label">Dark mode</span></button>
+        <div class="machine">
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-computer" /></svg>
+          <div class="machine-text">
+            <span id="machine-label">Your workstation</span>
+            <span id="machine-name">Detecting hardware…</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div id="main">
+      <header id="header" data-region="header">
+        <button type="button" class="btn" id="project-switch" aria-haspopup="dialog" aria-controls="project-pop" aria-expanded="false">Choose project</button>
+        <span class="crumb-sep" aria-hidden="true">/</span>
+        <span id="crumb">Launch</span>
+        <span id="crumb-step" hidden></span>
+        <span class="header-space"></span>
+        <button type="button" class="btn" id="command-open" aria-label="Search or run a command" hidden><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-search" /></svg><span class="command-label">Search or run a command</span><kbd id="command-key"></kbd></button>
+        <span id="launch-target" hidden></span>
+        <button type="button" class="btn primary" id="launch-quick" aria-describedby="launch-target" hidden>Launch…</button>
+        <div id="project-pop" class="popover" role="dialog" aria-label="Project folder" hidden>
+          <input id="workspace" type="text" role="combobox" aria-label="Filter folders or paste a path" aria-controls="project-list" aria-expanded="true" aria-autocomplete="list" aria-describedby="project-error" placeholder="Filter folders or paste a path" spellcheck="false" autocomplete="off" />
+          <p id="project-error" class="field-error" role="alert" hidden></p>
+          <h2 class="group-label" id="project-list-label">Recent</h2>
+          <div id="project-list" class="switch-list" role="listbox" aria-labelledby="project-list-label"></div>
+          <div class="switch-foot">
+            <button type="button" class="btn sm" id="browse">Browse…</button>
+            <button type="button" class="link" id="folder-profiles" hidden></button>
+            <span class="hint">Up/Down choose · Enter open</span>
+          </div>
+        </div>
+      </header>
+
+      <div id="notices"></div>
+
+      <main id="view" tabindex="-1" data-region="view">
+        <section id="launch-view" class="view" hidden aria-labelledby="launch-title">
+          <h1 id="launch-title" class="title" tabindex="-1">Launch</h1>
+          <p class="lede">Choose where your agent works and what powers it.</p>
+          <div id="launch-notices" class="stack"></div>
+          <div class="cols launch-cols">
+            <div class="launch-form">
+              <section class="panel" aria-labelledby="launch-model-head">
+                <div class="panel-head"><h2 class="panel-title" id="launch-model-head">Project and model</h2></div>
+                <div class="field">
+                  <span class="field-label" id="launch-project-label">Project</span>
+                  <button type="button" class="btn launch-project" id="launch-project" aria-describedby="launch-project-label">Choose a project folder…</button>
+                </div>
+                <div class="field">
+                  <label class="field-label" for="source">Model source</label>
+                  <select id="source"></select>
+                  <div id="source-health" class="hint" hidden></div>
+                  <button type="button" class="link" id="launch-machine" hidden>Open machine</button>
+                </div>
+                <div class="field" id="local-field">
+                  <label class="field-label" for="preset">Saved setup</label>
+                  <select id="preset"></select>
+                  <small id="preset-info" class="hint"></small>
+                </div>
+                <div class="field" id="remote-field" hidden>
+                  <label class="field-label" for="remote">Model</label>
+                  <div class="inputrow">
+                    <input id="remote" type="text" placeholder="Choose or enter a model" spellcheck="false" autocomplete="off" />
+                    <button type="button" class="btn" id="list-models">Browse models</button>
+                  </div>
+                  <small id="model-context" class="hint" hidden></small>
+                  <small id="routing-hint" class="hint" hidden>OpenRouter chooses the underlying model for each request. Browse models to pin one.</small>
+                  <button type="button" class="link" id="account-link" hidden>Open this connection</button>
+                </div>
+              </section>
+
+              <section class="panel" aria-labelledby="launch-agent-head">
+                <div class="panel-head"><h2 class="panel-title" id="launch-agent-head">Agent</h2></div>
+                <input type="hidden" id="agent" />
+                <div id="agent-cards" class="launch-agents" role="radiogroup" aria-labelledby="launch-agent-head"></div>
+              </section>
+
+              <section class="panel" id="tools" aria-labelledby="launch-tools-head">
+                <div class="panel-head">
+                  <h2 class="panel-title" id="launch-tools-head">Tools for this session</h2>
+                  <span class="panel-count" id="tools-count"></span>
+                </div>
+                <div class="launch-tools">
+                  <label class="toggle"><span class="toggle-text">Web search<small>Search public sources</small></span><input type="checkbox" role="switch" class="switch" id="search" /></label>
+                  <label class="toggle"><span class="toggle-text">Page crawling<small>Read pages with local Firecrawl</small></span><input type="checkbox" role="switch" class="switch" id="firecrawl" /></label>
+                  <label class="toggle"><span class="toggle-text">Blender<small>Build and inspect the scene</small></span><input type="checkbox" role="switch" class="switch" id="blender" /></label>
+                  <label class="toggle" id="desktop-tool" hidden><span class="toggle-text">Windows desktop</span><input type="checkbox" role="switch" class="switch" id="desktop" /></label>
+                </div>
+                <div id="session-extra" class="launch-tools"></div>
+                <div id="visual-panel" class="field launch-visual" hidden>
+                  <label class="field-label" for="image-route">Reference images</label>
+                  <select id="image-route">
+                    <option value="auto">Automatic image reader</option>
+                    <option value="selected">Selected model only</option>
+                    <option value="pareto">OpenRouter Pareto for image analysis</option>
+                    <option value="manual">I verified image support on this model</option>
+                  </select>
+                  <small id="visual-preview" class="hint" role="status"></small>
+                </div>
+              </section>
+            </div>
+
+            <div class="launch-side">
+              <section class="panel" aria-labelledby="launch-ready-head">
+                <div class="panel-head"><h2 class="panel-title" id="launch-ready-head">Before you launch</h2></div>
+                <div id="launch-readiness"></div>
+              </section>
+              <section class="panel launch-action" aria-label="Launch">
+                <fieldset class="field">
+                  <legend class="field-label">Open in</legend>
+                  <label class="check"><input type="radio" name="where" id="where-dock" value="dock" checked />Terminal dock</label>
+                  <label class="check"><input type="radio" name="where" id="where-window" value="window" />New terminal window</label>
+                </fieldset>
+                <p id="launch-needs" class="launch-needs" role="status"></p>
+                <div class="launch-buttons">
+                  <button type="button" class="btn primary" id="launch" aria-describedby="launch-needs">Launch</button>
+                  <button type="button" class="btn" id="save">Save for this folder</button>
+                </div>
+                <p id="save-state" class="hint"></p>
+                <p id="session-indicator" class="hint" role="status"></p>
+              </section>
+              <section class="panel" id="launch-recent" aria-labelledby="launch-recent-head" hidden>
+                <div class="panel-head"><h2 class="panel-title" id="launch-recent-head">Recent sessions here</h2></div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section id="overview-view" class="view" hidden aria-labelledby="overview-title"></section>
+        <section id="project-view" class="view" hidden aria-labelledby="project-title"></section>
+        <section id="accounts-view" class="view" hidden aria-labelledby="accounts-title"></section>
+        <section id="machines-view" class="view" hidden aria-labelledby="machines-title"></section>
+        <section id="advanced-view" class="view" hidden aria-labelledby="advanced-title">
+          <select id="advanced-section" aria-label="Advanced section" hidden></select>
+          <div id="advanced-body"></div>
+        </section>
+        <section id="guide-view" class="view" hidden aria-labelledby="guide-title"></section>
+
+        <div id="boot-screen" hidden>
+          <div class="boot-card">
+            <div class="brand">
+              <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><use href="#i-brand" /></svg></span>
+              <span class="brand-name">Workbench</span>
+            </div>
+            <p role="status">Starting Agent Workbench…</p>
+          </div>
+        </div>
+        <div id="boot-failed" hidden>
+          <div class="boot-card">
+            <div class="brand">
+              <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><use href="#i-brand" /></svg></span>
+              <span class="brand-name">Workbench</span>
+            </div>
+            <h1 id="boot-failed-title" tabindex="-1">Agent Workbench could not start</h1>
+            <div id="boot-failed-body"></div>
+          </div>
+        </div>
+      </main>
+
+      <section id="terminal-dock" aria-label="Project terminal" data-region="dock" hidden>
+        <div id="dock-resize" role="separator" aria-orientation="horizontal" aria-label="Resize terminal" aria-valuemin="160" aria-valuemax="600" aria-valuenow="320" tabindex="0"></div>
+        <div class="term-head">
+          <div id="term-tabs" class="term-tabs" role="tablist" aria-label="Project terminal sessions"></div>
+          <select id="terminal-list" aria-label="Project terminal sessions" hidden></select>
+          <button type="button" class="btn sm" id="term-shell" aria-label="New shell"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-plus" /></svg><span class="term-shell-label">New shell</span></button>
+          <span class="term-space"></span>
+          <button type="button" class="btn sm" id="term-agent" aria-describedby="launch-needs-dock">Start agent</button>
+          <span id="launch-needs-dock" class="sr-only"></span>
+          <button type="button" class="btn sm" id="term-resume">Resume…</button>
+          <button type="button" class="btn sm" id="term-watch">Watch…</button>
+          <button type="button" class="btn sm" id="term-close">End</button>
+          <button type="button" class="btn sm" id="term-hide" aria-label="Hide terminal">Hide</button>
+        </div>
+        <div class="term-status">
+          <div id="term-info" role="status"></div>
+          <span id="term-quit-hint" hidden>Closing Agent Workbench ends these terminals.</span>
+        </div>
+        <div id="term-screen"></div>
+      </section>
+
+      <footer id="status-strip" aria-label="Status" data-region="strip">
+        <button type="button" class="seg" id="strip-model" aria-haspopup="dialog" aria-expanded="false"><span class="mark idle" aria-hidden="true"></span><span class="seg-text">Local model: Checking…</span></button>
+        <button type="button" class="seg" id="strip-sessions" aria-haspopup="dialog" aria-expanded="false"><span class="seg-text">No sessions</span></button>
+        <button type="button" class="seg" id="strip-tasks" aria-haspopup="dialog" aria-expanded="false" hidden><span class="mark busy" aria-hidden="true"></span><span class="seg-text"></span><progress aria-label="Task progress" max="100" value="0" hidden></progress></button>
+        <button type="button" class="seg" id="strip-service" aria-haspopup="dialog" aria-expanded="false" hidden><span class="mark warn" aria-hidden="true"></span><span class="seg-text"></span></button>
+        <span class="strip-space"></span>
+        <button type="button" class="seg" id="strip-keys" aria-haspopup="dialog"><span class="seg-text">Shortcuts</span></button>
+      </footer>
+    </div>
+
+    <div id="toasts"></div>
+    <div id="live-status" class="sr-only" role="status" aria-live="polite"></div>
+    <div id="live-alert" class="sr-only" role="alert" aria-live="assertive"></div>
+
+    <dialog id="session-picker" class="dialog w-580" aria-labelledby="session-picker-title">
+      <div class="dialog-head">
+        <h2 class="dialog-title" id="session-picker-title">Resume a session</h2>
+        <button type="button" class="btn sm" data-close>Close</button>
+      </div>
+      <div class="dialog-body" id="session-picker-body">
+        <div class="field inline">
+          <label class="field-label" for="session-agent">Agent</label>
+          <select id="session-agent"></select>
+        </div>
+        <div id="saved-sessions"></div>
+      </div>
+    </dialog>
+
+    <dialog id="model-picker" class="dialog w-580" aria-labelledby="model-picker-title">
+      <div class="dialog-head">
+        <h2 class="dialog-title" id="model-picker-title">Choose a model</h2>
+        <button type="button" class="btn sm" data-close>Close</button>
+      </div>
+      <div class="dialog-body" id="model-picker-body">
+        <input id="model-filter" type="text" aria-label="Search models" placeholder="Search by model or organization" spellcheck="false" autocomplete="off" />
+        <small id="picker-count" class="hint" role="status"></small>
+        <div id="picker-list" role="list"></div>
+      </div>
+    </dialog>
+
+    <dialog id="plan-review" class="dialog w-760" aria-labelledby="plan-review-title">
+      <div class="dialog-head">
+        <h2 class="dialog-title" id="plan-review-title">Review changes</h2>
+        <button type="button" class="btn sm" data-close>Close</button>
+      </div>
+      <div class="dialog-body" id="plan-review-body"></div>
+    </dialog>
+
+    <dialog id="profile-dialog" class="dialog w-580" aria-labelledby="profile-dialog-title">
+      <div class="dialog-head">
+        <h2 class="dialog-title" id="profile-dialog-title">Apply profile</h2>
+        <button type="button" class="btn sm" data-close>Close</button>
+      </div>
+      <div class="dialog-body" id="profile-dialog-body"></div>
+    </dialog>
+
+    <dialog id="consent-dialog" class="dialog w-580" aria-labelledby="consent-dialog-title">
+      <div class="dialog-head">
+        <h2 class="dialog-title" id="consent-dialog-title">Review this folder's programs</h2>
+        <button type="button" class="btn sm" data-close>Close</button>
+      </div>
+      <div class="dialog-body" id="consent-dialog-body"></div>
+    </dialog>
+
+    <dialog id="attach-dialog" class="dialog w-580" aria-labelledby="attach-dialog-title">
+      <div class="dialog-head">
+        <h2 class="dialog-title" id="attach-dialog-title">Attach a running server</h2>
+        <button type="button" class="btn sm" data-close>Close</button>
+      </div>
+      <div class="dialog-body" id="attach-dialog-body"></div>
+    </dialog>
+
+    <dialog id="secret-dialog" class="dialog w-420" aria-labelledby="secret-dialog-title">
+      <div class="dialog-head">
+        <h2 class="dialog-title" id="secret-dialog-title">Value for a variable</h2>
+        <button type="button" class="btn sm" data-close>Close</button>
+      </div>
+      <div class="dialog-body" id="secret-dialog-body"></div>
+    </dialog>
+
+    <dialog id="server-dialog" class="dialog w-580" aria-labelledby="server-dialog-title">
+      <div class="dialog-head">
+        <h2 class="dialog-title" id="server-dialog-title">Add a server</h2>
+        <button type="button" class="btn sm" data-close>Close</button>
+      </div>
+      <div class="dialog-body" id="server-dialog-body"></div>
+    </dialog>
+
+    <dialog id="file-dialog" class="dialog w-760" aria-labelledby="file-dialog-title">
+      <div class="dialog-head">
+        <h2 class="dialog-title" id="file-dialog-title">File</h2>
+        <button type="button" class="btn sm" data-close>Close</button>
+      </div>
+      <div class="dialog-body" id="file-dialog-body"></div>
+    </dialog>
+
+    <dialog id="confirm-dialog" class="dialog w-420" aria-labelledby="confirm-dialog-title">
+      <div class="dialog-head">
+        <h2 class="dialog-title" id="confirm-dialog-title"></h2>
+      </div>
+      <div class="dialog-actions" id="confirm-dialog-body">
+        <button type="button" class="btn" id="confirm-cancel">Cancel</button>
+        <button type="button" class="btn primary" id="confirm-ok">OK</button>
+      </div>
+    </dialog>
+
+    <dialog id="keys-dialog" class="dialog w-580" aria-labelledby="keys-dialog-title">
+      <div class="dialog-head">
+        <h2 class="dialog-title" id="keys-dialog-title">Keyboard shortcuts</h2>
+        <button type="button" class="btn sm" data-close>Close</button>
+      </div>
+      <div class="dialog-body" id="keys-dialog-body"></div>
+    </dialog>
+
+    <dialog id="palette" class="dialog palette" aria-labelledby="palette-title">
+      <h2 class="sr-only" id="palette-title">Command palette</h2>
+      <div id="palette-body"></div>
+    </dialog>
+
+    <script src="ui/core.js"></script>
+    <script src="ui/components.js"></script>
+    <script src="ui/feedback.js"></script>
+    <script src="ui/router.js"></script>
+    <script src="ui/store.js"></script>
+    <script src="ui/form.js"></script>
+    <script src="ui/jobs.js"></script>
+    <script src="ui/readiness.js"></script>
+    <script src="ui/rail.js"></script>
+    <script src="ui/header.js"></script>
+    <script src="ui/project-switch.js"></script>
+    <script src="ui/strip.js"></script>
+    <script src="ui/sessions.js"></script>
+    <script src="ui/terminal.js"></script>
+    <script src="ui/gallery.js"></script>
+    <script src="ui/launch.js"></script>
+    <script src="ui/view-launch.js"></script>
+    <script src="ui/view-overview.js"></script>
+    <script src="ui/guide.js"></script>
+    <script src="ui/guide-model.js"></script>
+    <script src="ui/guide-steps.js"></script>
+    <script src="ui/plan-review.js"></script>
+    <script src="ui/consent.js"></script>
+    <script src="ui/kit-preview.js"></script>
+    <script src="ui/view-project.js"></script>
+    <script src="ui/project-instructions.js"></script>
+    <script src="ui/project-skills.js"></script>
+    <script src="ui/project-mcp.js"></script>
+    <script src="ui/project-kit.js"></script>
+    <script src="ui/project-profiles.js"></script>
+    <script src="ui/source-forms.js"></script>
+    <script src="ui/attach.js"></script>
+    <script src="ui/model-picker.js"></script>
+    <script src="ui/view-connections.js"></script>
+    <script src="ui/view-machines.js"></script>
+    <script src="ui/tools.js"></script>
+    <script src="ui/model-install.js"></script>
+    <script src="ui/view-advanced.js"></script>
+    <script src="ui/adv-setup.js"></script>
+    <script src="ui/adv-models.js"></script>
+    <script src="ui/adv-agent.js"></script>
+    <script src="ui/adv-hub.js"></script>
+    <script src="ui/adv-bench.js"></script>
+    <script src="ui/adv-trace.js"></script>
+    <script src="ui/adv-sandbox.js"></script>
+    <script src="ui/adv-appearance.js"></script>
+    <script src="ui/palette.js"></script>
+    <script src="ui/compat.js"></script>
+    <script src="ui/boot.js"></script>
+  </body>
+</html>

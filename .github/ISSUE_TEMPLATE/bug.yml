@@ -1,0 +1,88 @@
+name: Something does not work
+description: A crash, a wrong result, an install that fails or an error message that does not help.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Remove API keys, tokens, private paths and transcripts before you post. This tracker is public.
+  - type: input
+    id: version
+    attributes:
+      label: Agent Workbench version
+      description: The first line of the VERSION file in the app folder, or the release you downloaded.
+      placeholder: 0.4.0
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: System
+      options:
+        - Windows 11 x64
+        - Linux x64
+        - macOS on Apple Silicon
+        - Something else
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How you installed it
+      options:
+        - One-line installer (install.sh or install.ps1)
+        - Device kit archive
+        - Source checkout or source archive
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Model source
+      options:
+        - Managed local engine
+        - A server already running on this computer (Ollama, LM Studio or another)
+        - A machine over SSH
+        - Hosted API
+        - Not relevant
+    validations:
+      required: true
+  - type: dropdown
+    id: harness
+    attributes:
+      label: Agent
+      options:
+        - OMP
+        - Pi
+        - Claude Code
+        - Codex
+        - Hermes
+        - opencode
+        - Not relevant
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what you saw instead. Paste the exact error text.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The shortest list of steps that shows the problem on a new project folder.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Doctor output
+      description: Run `workbench doctor` (from a kit, `sh workbench.sh cli.py doctor` or `Run.cmd cli.py doctor`) and paste the output. It shows folder paths, so replace your user name and any host name you do not want to share.
+      render: text
+  - type: input
+    id: hardware
+    attributes:
+      label: GPU and memory
+      description: Needed for model and engine problems.
+      placeholder: RTX 4090 24 GB, 64 GB RAM
