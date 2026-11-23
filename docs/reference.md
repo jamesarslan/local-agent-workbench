@@ -119,7 +119,7 @@ Workbench keeps these files in plain JSON. You can read them without Workbench, 
 | 10542 | The Workbench-managed model on an SSH machine | That machine's `127.0.0.1`, reached through a tunnel |
 | A free port | The local end of each SSH tunnel | `127.0.0.1` |
 | A free port | The SSH port of each Docker sandbox container | `127.0.0.1` |
-| 11434, 1234, 9931, 8080, 8000, 1337, 5001, 5000, 13305, 30000, 10240, 9292 | Ports the scan looks at for model servers | `127.0.0.1`, or a paired machine's own loopback |
+| 11434, 1234, 9931, 8080, 8081, 8000, 1337, 5001, 5000, 13305, 30000, 10240, 9292 | Ports the scan looks at for model servers | `127.0.0.1`, or a paired machine's own loopback |
 | 41343, 52993, 16141, 39414, 22931 | LM Studio's control ports, checked to tell you when its server is off | `127.0.0.1` |
 
 ## Reproducing the measurements

@@ -13,6 +13,7 @@ All notable changes to Agent Workbench are listed here. Versions follow semantic
 
 ### Changed
 
+- The scan also looks at port 8081, where a second llama.cpp server is often run.
 - Windows: the suite passes on Windows 11. The SSH public key sent during pairing ends in LF, the `profiles.json` lock lives in the data folder instead of the project's `.agent-workbench/` folder, npm shims run only when they point into their own `node_modules`, and `workbench doctor` prints ASCII punctuation when the console is not UTF-8.
 - Redesigned project site. The first screen has the install command for each system; the page shows one setup per folder, the three setup steps with screenshots, the two features above marked as new in the next release, and a status table built from `docs/verification.json`.
 

@@ -178,7 +178,7 @@ For a server you attach, that server's own template handling decides. Workbench 
 
 ### What Workbench looks for
 
-The scan looks only at this computer's loopback address, `127.0.0.1`, on these ports: 11434, 1234, 9931, 8080, 8000, 1337, 5001, 5000, 13305, 30000, 10240 and 9292, leaving out Workbench's own model port. It also checks LM Studio's control ports, so it can tell you when LM Studio is open but its server is off. It never scans your network. A server on another machine is reached through [SSH](#a-gpu-machine-over-ssh) or by an `https://` address you type.
+The scan looks only at this computer's loopback address, `127.0.0.1`, on these ports: 11434, 1234, 9931, 8080, 8081, 8000, 1337, 5001, 5000, 13305, 30000, 10240 and 9292, leaving out Workbench's own model port. It also checks LM Studio's control ports, so it can tell you when LM Studio is open but its server is off. It never scans your network. A server on another machine is reached through [SSH](#a-gpu-machine-over-ssh) or by an `https://` address you type.
 
 For each server that answers, Workbench reads the model list, the context size of each model where the server reports it, and which of the three APIs it offers. It names the server from what it answers.
 
@@ -188,7 +188,7 @@ The server kinds Workbench recognises, with the APIs their documentation says th
 | --- | --- | --- | --- | --- |
 | Ollama | 11434 | Yes | Yes | Yes |
 | LM Studio | 1234 | Yes | Yes | Yes |
-| llama.cpp server | 9931, 8080 | Yes | Yes | Yes |
+| llama.cpp server | 9931, 8080, 8081 | Yes | Yes | Yes |
 | vLLM | 8000 | Yes | Yes | Yes |
 | MLX LM server | 8080 | Yes | No | No |
 | MLX Omni Server | 10240 | Yes | No | Yes |
@@ -273,7 +273,7 @@ Workbench uses a separate key for each machine, stored in the data folder, and a
 
 ### Use a server that runs there
 
-After the connection check, **Servers running there** lists the model servers answering on the machine's own loopback address. Workbench finds them with one SSH command that runs a small probe on the machine; it does not scan the machine's network. Choose **Attach…** next to a server, pick the model, and attach it. **Look again** repeats the search. A server on a port outside the usual list, such as 8081, is found once you add the port under **Other ports** and choose **Look again**; Workbench remembers the ports for that machine.
+After the connection check, **Servers running there** lists the model servers answering on the machine's own loopback address. Workbench finds them with one SSH command that runs a small probe on the machine; it does not scan the machine's network. Choose **Attach…** next to a server, pick the model, and attach it. **Look again** repeats the search. A server on a port outside the usual list, such as 9000, is found once you add the port under **Other ports** and choose **Look again**; Workbench remembers the ports for that machine.
 
 Attaching opens an SSH tunnel from a free port on this computer's `127.0.0.1` to that server's port on the machine's `127.0.0.1`, one port per server. The connection appears in **Connections** under "Over SSH", and agents talk to the model through the tunnel. **Reconnect** opens a tunnel again after the machine or this computer restarted; **Detach** closes it and removes the connection.
 

@@ -7,6 +7,7 @@ import tempfile
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from unittest.mock import patch
 
 import requests
@@ -137,6 +138,17 @@ class ProviderTableTests(unittest.TestCase):
         }
         self.assertEqual(sorted(providers.SWEEP_PORTS), sorted(defaults))
         self.assertEqual(len(providers.SWEEP_PORTS), len(set(providers.SWEEP_PORTS)))
+        # A second llama.cpp server commonly runs on 8081; the list stays short.
+        self.assertIn(8081, providers.KINDS["llamacpp"]["default_ports"])
+        self.assertLessEqual(len(providers.SWEEP_PORTS), 16)
+
+    def test_docs_list_the_sweep_ports(self):
+        root = Path(__file__).resolve().parent.parent
+        listed = ", ".join(map(str, providers.SWEEP_PORTS))
+        self.assertIn("| " + listed + " |", (root / "docs/reference.md").read_text())
+        spoken = ", ".join(map(str, providers.SWEEP_PORTS[:-1]))
+        spoken += " and " + str(providers.SWEEP_PORTS[-1])
+        self.assertIn(spoken, (root / "docs/model-sources.md").read_text())
 
     def test_identity_routes_name_known_kinds(self):
         order = [route[0] for route in providers.IDENTITY]

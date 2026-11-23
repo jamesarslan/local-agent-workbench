@@ -275,22 +275,22 @@ class WindowsMachineTest(Base):
         import providers
 
         machines.save("Lin", "me@lin")
-        self.assertEqual(machines.set_ports("me@lin", "8081, 9000 8081"), [8081, 9000])
+        self.assertEqual(machines.set_ports("me@lin", "9100, 9000 9100"), [9100, 9000])
         for bad in ("80", "10542", "70000", "x", list(range(2000, 2009))):
             with self.assertRaises(ValueError):
                 machines.set_ports("me@lin", bad)
-        self.assertEqual(machines.extra_ports("me@lin"), [8081, 9000])
+        self.assertEqual(machines.extra_ports("me@lin"), [9100, 9000])
         execute = self.use(patch.object(machines, "execute", return_value={"endpoints": []}))
-        found = machines.dispatch("machine-discover", {"host": "me@lin", "ports": "8081"})
-        self.assertEqual(found["ports"], [8081])
+        found = machines.dispatch("machine-discover", {"host": "me@lin", "ports": "9100"})
+        self.assertEqual(found["ports"], [9100])
         script = execute.call_args.args[1].decode()
-        self.assertIn(json.dumps([*providers.SWEEP_PORTS, 8081]), script)
+        self.assertIn(json.dumps([*providers.SWEEP_PORTS, 9100]), script)
         self.windows_box()
-        machines.set_ports("me@win", [8081])
+        machines.set_ports("me@win", [9100])
         machines.discover("me@win")
         probe = decode_feed(execute.call_args.args[1])
         table = json.loads(unquote(probe.split("$Table = ", 1)[1].splitlines()[0]))
-        self.assertEqual(table[0], [*providers.SWEEP_PORTS, 8081])
+        self.assertEqual(table[0], [*providers.SWEEP_PORTS, 9100])
 
     def test_an_unchecked_windows_machine_is_detected_when_posix_fails(self):
         machines.save("Win", "me@win")
