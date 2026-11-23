@@ -25,22 +25,28 @@
     else P.countProfiles(workspace);
   }
 
+  // Only the newest open() may fill the dialog, so a slow summary never lands in a dialog opened for another run.
+  const shown = AW.ticket();
+
   function open({ workspace, id, origin } = {}) {
     if (!workspace || !id) return Promise.resolve(null);
     const dialog = AW.ui.dialog("run-dialog");
     const body = AW.$("run-dialog-body");
     AW.$("run-dialog-title").textContent = "Run summary";
+    const mine = shown.next();
 
     async function load() {
+      if (!shown.current(mine)) return;
       body.replaceChildren(AW.ui.skeleton(5, "the run summary"));
       let summary;
       try {
         summary = await AW.request("run-summary", { workspace, id });
       } catch (thrown) {
+        if (!shown.current(mine)) return;
         body.replaceChildren(AW.ui.errorNotice(thrown, { retry: load }), el("div", { class: "dialog-actions" }, AW.ui.button("Close", { onClick: () => dialog.close(null) })));
         return;
       }
-      render(summary || {});
+      if (shown.current(mine)) render(summary || {});
     }
 
     function render(summary) {
@@ -104,7 +110,15 @@
 
     dialog.open();
     load();
-    return dialog.opened().then(() => origin && origin.isConnected && origin.focus());
+    return dialog.opened().then(() => back(origin));
+  }
+
+  // Focus returns to the button that opened the dialog, or to its replacement when the list was painted again meanwhile.
+  function back(origin) {
+    if (!origin) return;
+    const key = origin.dataset && origin.dataset.k;
+    const again = origin.isConnected || !key ? origin : [...document.querySelectorAll("[data-k]")].find((node) => node.dataset.k === key);
+    if (again && again.isConnected) again.focus();
   }
 
   AW.runs = { open };
@@ -197,6 +211,15 @@
     AW.ui.toast("Cleared the runs for " + (ctx.name || "this folder") + ".", { kind: "ok" });
     await load();
   }
+
+  // A launch adds a run: the sessions list changes when an agent starts, so the list reloads then.
+  let seen = null;
+  AW.store.on("sessions", (value) => {
+    const now = JSON.stringify(Array.isArray(value) ? value.map((row) => (row ? row.id + ":" + row.pid : "")) : []);
+    const changed = seen !== null && now !== seen;
+    seen = now;
+    if (changed && parts && ctx.workspace) load();
+  });
 
   P.tab({
     id: "runs",

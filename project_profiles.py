@@ -943,6 +943,8 @@ VAULTS = {
 
 def places(workspace):
     """Where a folder's settings are kept: the files that travel with the folder, then what stays on this computer."""
+    import run_log
+
     root = folder_paths.canonical(workspace)
 
     def row(ident, label, path, note, travels):
@@ -996,6 +998,13 @@ def places(workspace):
             "Connections",
             DATA / "connections.json",
             "Stays on this computer. Holds no keys.",
+            False,
+        ),
+        row(
+            "runs",
+            "Run summaries",
+            DATA / "runs" / run_log.file_name(root),
+            "Stays on this computer. Holds no keys, but has folder paths, file names and the folder prompt.",
             False,
         ),
         row(

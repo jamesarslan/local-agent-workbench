@@ -222,6 +222,19 @@ class RecordTest(RunCase):
         run = self.record()
         self.assertEqual([row["id"] for row in run_log.rows(self.work)], [run["id"]])
 
+    def test_the_file_stays_under_its_size_cap(self):
+        big = {"instructions": [{"path": "x" * 200, "sha256": "0" * 64}] * 300}
+        with patch.object(run_log, "MAX_FILE", 400_000):
+            for n in range(20):
+                run_log.save({"id": f"{n:016x}", "project": str(self.work), **big})
+            kept = run_log.runs(self.work)
+            self.assertLessEqual(run_log.run_file(self.work).stat().st_size, 400_000)
+            self.assertLess(len(kept), 20)
+            self.assertEqual(kept[0]["id"], f"{19:016x}")
+            run_log.run_file(self.work).write_text(" " * 400_001, encoding="utf8")
+            with self.assertRaisesRegex(ValueError, "Clear runs"):
+                run_log.rows(self.work)
+
 
 class SummaryTest(RunCase):
     def test_markdown_names_everything_needed_to_rerun(self):
@@ -244,6 +257,19 @@ class SummaryTest(RunCase):
         ):
             self.assertIn(line, text)
         self.assertEqual(json.loads(run_log.summary_json(run)), run)
+        self.assertNotIn(run_log.NATIVE_FILES, text)
+
+    def test_an_agent_account_run_says_personal_files_are_not_listed(self):
+        run = self.record(harness="Codex", provider="Native login", auth_provider="openai-codex")
+        text = run_log.summary_markdown(run, self.work)
+        self.assertIn("## Instruction files\n\n- AGENTS.md", text)
+        self.assertIn(run_log.NATIVE_FILES, text)
+        self.assertIn("- Account: openai-codex", text)
+
+    def test_a_summary_survives_a_folder_that_cannot_be_read(self):
+        run = self.record()
+        with patch.object(project_setup, "resolve", side_effect=PermissionError("denied")):
+            self.assertEqual(run_log.drift(run, self.work), [])
 
     def test_changes_since_the_run_are_listed(self):
         run = self.record()
@@ -312,6 +338,24 @@ class ProfileTest(RunCase):
         self.assertEqual(changed["connection"], "Model lab")
         with self.assertRaisesRegex(ValueError, "Review what this profile changes"):
             projects.apply_project(s, "Rerun lab", [], "")
+
+    def test_a_saved_run_never_takes_or_clears_the_folder_default(self):
+        s = runtime.DEFAULTS | dict(workspace=str(self.work), harness="Pi", provider="OpenRouter", remote_model="a/b")
+        projects.save_project(s, projects.DEFAULT_NAME, default=True)
+        run = self.record()
+        with self.assertRaisesRegex(ValueError, "already has a profile named"):
+            run_log.save_profile(self.work, run["id"], projects.DEFAULT_NAME)
+        run_log.save_profile(self.work, run["id"], "From the run")
+        self.assertEqual(projects.folder_default(self.work), projects.DEFAULT_NAME)
+        rows = projects.load_profiles(self.work)
+        self.assertNotIn("default", rows["From the run"])
+        self.assertEqual(rows[projects.DEFAULT_NAME]["harness"], "Pi")
+        # Saving the launch choices over the default keeps it the default.
+        projects.save_project(s | dict(harness="Claude Code"), projects.DEFAULT_NAME)
+        self.assertEqual(projects.folder_default(self.work), projects.DEFAULT_NAME)
+        projects.set_default(self.work, "From the run")
+        run_log.save_profile(self.work, run["id"], "Another")
+        self.assertEqual(projects.folder_default(self.work), "From the run")
 
 
 class BridgeTest(RunCase):
