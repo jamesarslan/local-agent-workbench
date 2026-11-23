@@ -4,7 +4,7 @@
   "label": "Game development",
   "summary": "For game projects: follow the engine's layout, leave serialised assets to the editor and test from the command line.",
   "works_with": "Godot, Unity, Unreal Engine, Roblox",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "priority": 70,
   "detect": {
     "strong": [

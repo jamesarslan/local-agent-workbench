@@ -27,7 +27,7 @@ Every key below is required. Any other key is an error.
 | `label` | Shown in the kit list, at most 60 characters |
 | `summary` | One sentence, at most 200 characters |
 | `works_with` | Product names, at most 120 characters; may be empty |
-| `version` | Three numbers, for example `0.4.0` |
+| `version` | Three numbers, for example `0.5.0`. Raise it when the kit's own files change |
 | `priority` | 0 to 100; decides between kits that both match a folder strongly |
 | `detect` | `{"strong": [rule], "weak": [rule]}`, at most 24 rules in each list |
 | `skills` | At most 6 entries `{"name": "workbench-…", "when": rule}`; `when` is optional |

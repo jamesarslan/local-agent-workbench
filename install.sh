@@ -2,7 +2,7 @@
 # Install Agent Workbench for the current user: fetch the pinned kit, check its SHA-256, unpack it, add a workbench command.
 set -eu
 
-VERSION="0.4.0"
+VERSION="0.5.0"
 REPOSITORY="jamesarslan/local-agent-workbench"
 
 say() {

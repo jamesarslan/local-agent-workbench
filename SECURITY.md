@@ -6,7 +6,8 @@ This page says how to report a security problem in Agent Workbench, what the app
 
 | Version | Supported |
 | --- | --- |
-| 0.4.x | Yes |
+| 0.5.x | Yes |
+| 0.4.x | No. Upgrade to 0.5 |
 | 0.3.0-rc.1 and earlier | No. These were private release candidates |
 
 Fixes are released as a new version. There are no back-ports to older versions.
@@ -77,7 +78,7 @@ Programs Workbench starts. The agent CLIs, package managers, Docker and MCP serv
 
 | Download | Checked against | Limits |
 | --- | --- | --- |
-| Kit archive | `SHA256SUMS` of the same release. The install scripts check it and stop on a mismatch; the by-hand steps show the command | A checksum shows the file is intact, not who made it. The kits are not code-signed or notarised. The release workflow is set up to record a build attestation for each file; it has not run yet, so 0.4.0 may ship without one. When a release has one, `gh attestation verify <file> --repo jamesarslan/local-agent-workbench` checks it |
+| Kit archive | `SHA256SUMS` of the same release. The install scripts check it and stop on a mismatch; the by-hand steps show the command | A checksum shows the file is intact, not who made it. The kits are not code-signed or notarised. The release workflow is set up to record a build attestation for each file; it has not run yet, so 0.5.0 may ship without one. When a release has one, `gh attestation verify <file> --repo jamesarslan/local-agent-workbench` checks it |
 | Python inside the kit | SHA-256 pinned in `release/build.py`, checked when the kit is built | — |
 | Python packages | `requirements.lock`, installed with `pip --require-hashes --only-binary :all:` | — |
 | Electron runtime | SHA-256 pinned in `desktop_app.py` for each system | — |
@@ -106,5 +107,5 @@ Programs Workbench starts. The agent CLIs, package managers, Docker and MCP serv
 - The local model: **Stop** in the status bar, or `workbench stop`.
 - A model on an SSH machine: **Stop…** on that machine in **Machines**.
 - Page crawling: `workbench web-stop`.
-- When Workbench quits, its Python backend closes the terminal sessions in the dock before it exits. This was not checked in a full desktop run for 0.4.0.
+- When Workbench quits, its Python backend closes the terminal sessions in the dock before it exits. This was not checked in a full desktop run for 0.5.0.
 - Native agent windows, the local model server and detached remote tmux sessions keep running after Workbench closes. Stop them yourself when you no longer need them.

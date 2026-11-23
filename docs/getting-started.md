@@ -26,7 +26,7 @@ The downloads are not code-signed or notarised. Your system may warn you before 
 
 ### macOS and Linux
 
-Parts of these steps were run for 0.4.0: the install script installed kits built by the release builder from a local folder on macOS and on Fedora Linux, refused a changed archive and a wrong checksum, and uninstalled them. Downloading the script and the kits from GitHub was not run, because no release is published yet.
+Parts of these steps were run for 0.5.0: on Fedora 44 the install script installed a kit built by the release builder from a local folder, checked its SHA-256, ran the test suite and Doctor through the installed `workbench` command and uninstalled it, keeping the data folder. For 0.4.0 the same was run on macOS, where a changed archive and a wrong checksum were refused. Downloading the script and the kits from GitHub was not run, because no release is published yet.
 
 With the install script:
 
@@ -52,7 +52,7 @@ The script downloads the kit for your system and `SHA256SUMS`, stops unless they
 
 When `~/.local/bin` is not on your `PATH` and your shell is zsh or bash, the script asks before it adds one line to your shell profile; otherwise it prints the line for you to add. On macOS it also removes the download mark (quarantine) from the files it unpacks. On Linux, run `sh ~/.local/lib/agent-workbench/setup-linux.sh` once: it lists the desktop libraries it needs and asks before it uses sudo. Then start the app with `workbench`.
 
-By hand on Linux: download `agent-workbench-linux-x64.tar.gz` and `SHA256SUMS` from the [0.4.0 release](https://github.com/jamesarslan/local-agent-workbench/releases/tag/v0.4.0), then in the folder that holds them:
+By hand on Linux: download `agent-workbench-linux-x64.tar.gz` and `SHA256SUMS` from the [0.5.0 release](https://github.com/jamesarslan/local-agent-workbench/releases/tag/v0.5.0), then in the folder that holds them:
 
 ```sh
 sha256sum -c SHA256SUMS --ignore-missing
@@ -84,7 +84,7 @@ If you move or rename the `Agent-Workbench` folder after the first start, the la
 
 ### Windows
 
-These steps were not run for 0.4.0.
+Parts of these steps were run for 0.5.0 on Windows 11: `install.ps1` installed a kit built by the release builder from a local folder into a temporary folder, checked its SHA-256, ran the test suite and Doctor through the installed `workbench` command and uninstalled it. Downloading from GitHub, the `PATH` change and the Start menu entry were not run.
 
 With the install script, in PowerShell:
 
@@ -102,7 +102,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 The script downloads the Windows kit and `SHA256SUMS`, stops unless they match, installs under `%LOCALAPPDATA%\Agent Workbench` without administrator rights (the app in `app`, your data in `data`), adds a `workbench` command and a Start menu entry, and puts the command folder first in your user `PATH`.
 
-By hand: download `agent-workbench-windows-x64.zip` and `SHA256SUMS` from the [0.4.0 release](https://github.com/jamesarslan/local-agent-workbench/releases/tag/v0.4.0). In PowerShell, in the folder that holds them, print the hash and compare it with the line for that file in `SHA256SUMS`, then unblock and extract the archive:
+By hand: download `agent-workbench-windows-x64.zip` and `SHA256SUMS` from the [0.5.0 release](https://github.com/jamesarslan/local-agent-workbench/releases/tag/v0.5.0). In PowerShell, in the folder that holds them, print the hash and compare it with the line for that file in `SHA256SUMS`, then unblock and extract the archive:
 
 ```powershell
 Get-FileHash -Algorithm SHA256 agent-workbench-windows-x64.zip
@@ -127,7 +127,7 @@ The data folder is the one in the table above for a script install, `%LOCALAPPDA
 
 ## Guided setup
 
-These steps were not run for 0.4.0 in the finished desktop window. The pieces behind them were run from the command line; see [Tested configurations](../README.md#tested-configurations).
+These steps were not run for 0.5.0 in the finished desktop window. The pieces behind them were run from the command line; see [Tested configurations](../README.md#tested-configurations).
 
 The **Setup guide** opens on the first start. It has five steps in the sidebar: This computer, Model, Agent, Project and Ready. A step you cannot open yet says which step to finish first.
 
@@ -185,7 +185,7 @@ The main button carries the agent's name, for example "Start Claude Code". **Fin
 
 ### You already run Ollama or LM Studio
 
-These steps were not run for 0.4.0 in the desktop window. Attaching Ollama 0.40.8 and starting OMP, Claude Code, Codex and opencode against it was run through the same code from the command line on a Mac.
+These steps were not run for 0.5.0 in the desktop window. For 0.4.0, attaching Ollama 0.40.8 and starting OMP, Claude Code, Codex and opencode against it was run through the same code from the command line on a Mac.
 
 1. Start Ollama, or in LM Studio open Developer and start the server. Load the model you want.
 2. Open the setup guide. Under "Model servers running" you see the server and its port.
@@ -198,7 +198,7 @@ If you use Claude Code, Codex or opencode with Ollama and want nothing else, [`o
 
 ### You have an API key and no GPU
 
-These steps were not run for 0.4.0.
+These steps were not run for 0.5.0.
 
 1. In the setup guide's Model step, choose **Use a hosted API**.
 2. Choose the provider. Paste the key and choose **Save key**. The key goes to your system's credential vault; without a vault it is kept in memory until Workbench closes.
@@ -210,7 +210,7 @@ Everything the agent sends, which can include your files and images, goes to the
 
 ### A local model on this computer
 
-These steps were not run for 0.4.0 in the desktop window. On a Mac, installing the engine, starting and stopping a model, and starting OMP, Claude Code, Codex and opencode against it were run from the command line.
+These steps were not run for 0.5.0 in the desktop window. On a Mac, installing the engine, starting and stopping a model, and starting OMP, Claude Code, Codex and opencode against it were run from the command line.
 
 1. In the Model step, choose **Download a model for this computer**.
 2. Read the recommendation and **How this was sized**. Pick another model under **Other models that fit** if you prefer.

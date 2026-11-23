@@ -5,7 +5,7 @@ license: MIT
 compatibility: Roblox Studio on Windows or macOS with "Enable Studio as MCP server" switched on. Rojo, Wally, Selene and StyLua are needed only when the project uses them.
 metadata:
   source: agent-workbench
-  version: "0.4.0"
+  version: "0.5.0"
 ---
 
 ## When to use

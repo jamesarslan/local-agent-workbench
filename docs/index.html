@@ -1,1080 +1,1218 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="light dark" />
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'"
-    />
-    <title>Agent Workbench: a model and a coding agent for each project folder</title>
-    <meta
-      name="description"
-      content="Agent Workbench is a free, MIT-licensed desktop app. Pick where your model runs and which coding agent you use, remembered per project folder."
-    />
-    <link rel="canonical" href="https://jamesarslan.github.io/local-agent-workbench/" />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="Agent Workbench" />
-    <meta
-      property="og:description"
-      content="Pick where your model runs and which coding agent you use, remembered per project folder. Free, MIT-licensed, no account, no telemetry."
-    />
-    <meta property="og:url" content="https://jamesarslan.github.io/local-agent-workbench/" />
-    <meta name="twitter:card" content="summary" />
-    <link
-      rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230059b8'/%3E%3Cpath d='M8 10l4 12 4-9 4 9 4-12' fill='none' stroke='%23fff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
-    />
-    <style>
-      :root {
-        color-scheme: light dark;
-        --bg: #f6f7f9;
-        --surface: #ffffff;
-        --raised: #f1f3f6;
-        --code: #eceff3;
-        --edge: #e1e4ea;
-        --edge-strong: #767d8a;
-        --text: #0f1115;
-        --muted: #4c5260;
-        --accent: #0059b8;
-        --accent-ink: #ffffff;
-        --accent-soft: #e4edf9;
-        --note-bg: #fdf3d8;
-        --note-ink: #5e3d00;
-        --term-bg: #101217;
-        --term-text: #e8eaef;
-        --term-muted: #a2a7b3;
-        --ok: #13804a;
-        --glow: rgba(0, 89, 184, 0.12);
-        --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 14px 36px -14px rgba(16, 24, 40, 0.2);
-        --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --bg: #0b0c0f;
-          --surface: #14161a;
-          --raised: #1b1e23;
-          --code: #21252b;
-          --edge: #2a2e36;
-          --edge-strong: #6f7683;
-          --text: #f1f2f4;
-          --muted: #a9aeb8;
-          --accent: #7db3ff;
-          --accent-ink: #0b0c0f;
-          --accent-soft: #14233a;
-          --note-bg: #2a2312;
-          --note-ink: #f6d68f;
-          --term-bg: #08090b;
-          --term-text: #e8eaef;
-          --term-muted: #a2a7b3;
-          --ok: #4cc38a;
-          --glow: rgba(125, 179, 255, 0.12);
-          --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 18px 44px -18px rgba(0, 0, 0, 0.8);
-        }
-      }
-      *, *::before, *::after { box-sizing: border-box; }
-      html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-top: 72px; }
-      @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
-      body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.6 var(--sans); overflow-wrap: break-word; -webkit-font-smoothing: antialiased; }
-      .wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
-      a { color: var(--accent); text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
-      a:hover { text-decoration-thickness: 2px; }
-      a:focus-visible, summary:focus-visible, .tab-input:focus-visible + label { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
-      .skip { position: absolute; left: 16px; top: -64px; z-index: 20; padding: 10px 14px; background: var(--surface); border: 1px solid var(--edge-strong); border-radius: 8px; }
-      .skip:focus { top: 12px; }
-      .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-      header.site { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--edge); }
-      @supports (backdrop-filter: blur(8px)) { header.site { background: color-mix(in srgb, var(--bg) 84%, transparent); backdrop-filter: saturate(1.4) blur(12px); } }
-      header.site .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 60px; }
-      .brand { display: inline-flex; align-items: center; gap: 10px; flex: none; font-weight: 700; letter-spacing: -0.01em; color: var(--text); text-decoration: none; }
-      .brand svg { width: 26px; height: 26px; flex: none; }
-      .logo-bg { fill: var(--accent); }
-      .logo-mark { fill: none; stroke: var(--accent-ink); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
-      nav { min-width: 0; }
-      nav ul { display: flex; gap: 2px 18px; margin: 0; padding: 0; list-style: none; font-size: 15px; white-space: nowrap; }
-      nav a { display: inline-block; padding: 6px 0; color: var(--muted); text-decoration: none; }
-      nav a:hover { color: var(--text); }
-      nav .gh a { padding: 5px 12px; border: 1px solid var(--edge-strong); border-radius: 8px; color: var(--text); font-weight: 600; }
-      h1, h2, h3 { line-height: 1.15; text-wrap: balance; }
-      h1 { font-size: clamp(34px, 4.4vw, 52px); letter-spacing: -0.035em; margin: 18px 0 18px; }
-      h2 { font-size: clamp(27px, 3.4vw, 40px); letter-spacing: -0.025em; margin: 0 0 14px; max-width: 26ch; }
-      h3 { font-size: 18px; letter-spacing: -0.005em; margin: 0 0 6px; }
-      p, li { max-width: 70ch; }
-      section { padding: 88px 0; border-top: 1px solid var(--edge); }
-      .kicker { margin: 0 0 10px; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
-      .intro { margin: 0; color: var(--muted); font-size: 18px; }
-      code, pre { font-family: var(--mono); font-size: 0.86em; }
-      code { background: var(--code); padding: 0.1em 0.35em; border-radius: 5px; overflow-wrap: anywhere; }
-      pre { margin: 8px 0 14px; padding: 12px 14px; background: var(--code); border: 1px solid var(--edge); border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; }
-      pre code { background: none; padding: 0; font-size: 1em; }
-      .card { padding: 24px 26px; background: var(--surface); border: 1px solid var(--edge); border-radius: 16px; }
-      .card > :last-child { margin-bottom: 0; }
-      .card.quiet { background: transparent; border-style: dashed; border-color: var(--edge-strong); }
-      .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 20px; margin: 36px 0 0; }
-      .plain { margin: 10px 0 0; padding-left: 1.2em; }
-      .plain li { margin-bottom: 8px; }
-      .plain li::marker { color: var(--accent); }
-      .small { font-size: 15px; color: var(--muted); }
-      .more { margin: 26px 0 0; }
-      .badge { display: inline-block; margin: 0 0 12px; padding: 3px 10px; border-radius: 8px; background: var(--note-bg); color: var(--note-ink); font-size: 13px; font-weight: 700; }
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light dark" />
+<meta
+http-equiv="Content-Security-Policy"
+content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'"
+/>
+<title>Agent Workbench: a model and a coding agent for each project folder</title>
+<meta
+name="description"
+content="Agent Workbench is a free, MIT-licensed desktop app. Pick where your model runs and which coding agent you use, remembered per project folder."
+/>
+<link rel="canonical" href="https://jamesarslan.github.io/local-agent-workbench/" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Agent Workbench" />
+<meta
+property="og:description"
+content="Pick where your model runs and which coding agent you use, remembered per project folder. Free, MIT-licensed, no account, no telemetry."
+/>
+<meta property="og:url" content="https://jamesarslan.github.io/local-agent-workbench/" />
+<meta name="twitter:card" content="summary" />
+<link
+rel="icon"
+href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230059b8'/%3E%3Cpath d='M8 10l4 12 4-9 4 9 4-12' fill='none' stroke='%23fff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+/>
+<style>
+:root {
+color-scheme: light dark;
+--bg: #f6f7f9;
+--surface: #ffffff;
+--raised: #f1f3f6;
+--code: #eceff3;
+--edge: #e1e4ea;
+--edge-strong: #767d8a;
+--text: #0f1115;
+--muted: #4c5260;
+--accent: #0059b8;
+--accent-ink: #ffffff;
+--accent-soft: #e4edf9;
+--note-bg: #fdf3d8;
+--note-ink: #5e3d00;
+--term-bg: #101217;
+--term-text: #e8eaef;
+--term-muted: #a2a7b3;
+--ok: #13804a;
+--bad: #b42318;
+--glow: rgba(0, 89, 184, 0.12);
+--shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 14px 36px -14px rgba(16, 24, 40, 0.2);
+--sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+--mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+:root {
+--bg: #0b0c0f;
+--surface: #14161a;
+--raised: #1b1e23;
+--code: #21252b;
+--edge: #2a2e36;
+--edge-strong: #6f7683;
+--text: #f1f2f4;
+--muted: #a9aeb8;
+--accent: #7db3ff;
+--accent-ink: #0b0c0f;
+--accent-soft: #14233a;
+--note-bg: #2a2312;
+--note-ink: #f6d68f;
+--term-bg: #08090b;
+--term-text: #e8eaef;
+--term-muted: #a2a7b3;
+--ok: #4cc38a;
+--bad: #ff8a80;
+--glow: rgba(125, 179, 255, 0.12);
+--shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 18px 44px -18px rgba(0, 0, 0, 0.8);
+}
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-top: 72px; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.6 var(--sans); overflow-wrap: break-word; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+a { color: var(--accent); text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+a:focus-visible, summary:focus-visible, .tab-input:focus-visible + label { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.skip { position: absolute; left: 16px; top: -64px; z-index: 20; padding: 10px 14px; background: var(--surface); border: 1px solid var(--edge-strong); border-radius: 8px; }
+.skip:focus { top: 12px; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+header.site { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--edge); }
+@supports (backdrop-filter: blur(8px)) { header.site { background: color-mix(in srgb, var(--bg) 84%, transparent); backdrop-filter: saturate(1.4) blur(12px); } }
+header.site .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 60px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; flex: none; font-weight: 700; letter-spacing: -0.01em; color: var(--text); text-decoration: none; }
+.brand svg { width: 26px; height: 26px; flex: none; }
+.logo-bg { fill: var(--accent); }
+.logo-mark { fill: none; stroke: var(--accent-ink); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+nav { min-width: 0; }
+nav ul { display: flex; gap: 2px 18px; margin: 0; padding: 0; list-style: none; font-size: 15px; white-space: nowrap; }
+nav a { display: inline-block; padding: 6px 0; color: var(--muted); text-decoration: none; }
+nav a:hover { color: var(--text); }
+nav .gh a { padding: 5px 12px; border: 1px solid var(--edge-strong); border-radius: 8px; color: var(--text); font-weight: 600; }
+h1, h2, h3 { line-height: 1.15; text-wrap: balance; }
+h1 { font-size: clamp(34px, 4.4vw, 52px); letter-spacing: -0.035em; margin: 18px 0 18px; }
+h2 { font-size: clamp(27px, 3.4vw, 40px); letter-spacing: -0.025em; margin: 0 0 14px; max-width: 26ch; }
+h3 { font-size: 18px; letter-spacing: -0.005em; margin: 0 0 6px; }
+p, li { max-width: 70ch; }
+section { padding: 88px 0; border-top: 1px solid var(--edge); }
+.kicker { margin: 0 0 10px; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.intro { margin: 0; color: var(--muted); font-size: 18px; }
+code, pre { font-family: var(--mono); font-size: 0.86em; }
+code { background: var(--code); padding: 0.1em 0.35em; border-radius: 5px; overflow-wrap: anywhere; }
+pre { margin: 8px 0 14px; padding: 12px 14px; background: var(--code); border: 1px solid var(--edge); border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; }
+pre code { background: none; padding: 0; font-size: 1em; }
+.card { padding: 24px 26px; background: var(--surface); border: 1px solid var(--edge); border-radius: 16px; }
+.card > :last-child { margin-bottom: 0; }
+.card.quiet { background: transparent; border-style: dashed; border-color: var(--edge-strong); }
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 20px; margin: 36px 0 0; }
+.plain { margin: 10px 0 0; padding-left: 1.2em; }
+.plain li { margin-bottom: 8px; }
+.plain li::marker { color: var(--accent); }
+.small { font-size: 15px; color: var(--muted); }
+.more { margin: 26px 0 0; }
+.badge { display: inline-block; margin: 0 0 12px; padding: 3px 10px; border-radius: 8px; background: var(--note-bg); color: var(--note-ink); font-size: 13px; font-weight: 700; }
 
-      .hero { position: relative; border-top: 0; padding: 48px 0 72px; background: radial-gradient(60% 55% at 90% 0%, var(--glow), transparent 70%), radial-gradient(45% 45% at 0% 0%, var(--glow), transparent 70%); }
-      .hero-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 48px; align-items: start; }
-      .eyebrow { display: inline-block; margin: 12px 0 0; padding: 5px 12px; border: 1px solid var(--edge); border-radius: 10px; background: var(--surface); font-size: 14px; color: var(--muted); }
-      .lede { margin: 0; font-size: clamp(18px, 2vw, 20px); color: var(--muted); }
-      .lede strong { color: var(--text); font-weight: 600; }
-      .actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0 24px; }
-      .button { display: inline-block; padding: 11px 20px; border: 1px solid var(--edge-strong); border-radius: 10px; background: var(--surface); color: var(--text); font-weight: 600; font-size: 16px; text-decoration: none; }
-      .button:hover { background: var(--raised); }
-      .button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-      .facts { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: 15.5px; }
-      .facts li { position: relative; padding-left: 26px; }
-      .facts li::before { content: ""; position: absolute; left: 2px; top: 0.42em; width: 12px; height: 7px; border: solid var(--ok); border-width: 0 0 2.5px 2.5px; transform: rotate(-45deg); }
+.hero { position: relative; border-top: 0; padding: 48px 0 72px; background: radial-gradient(60% 55% at 90% 0%, var(--glow), transparent 70%), radial-gradient(45% 45% at 0% 0%, var(--glow), transparent 70%); }
+.hero-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 48px; align-items: start; }
+.eyebrow { display: inline-block; margin: 12px 0 0; padding: 5px 12px; border: 1px solid var(--edge); border-radius: 10px; background: var(--surface); font-size: 14px; color: var(--muted); }
+.lede { margin: 0; font-size: clamp(18px, 2vw, 20px); color: var(--muted); }
+.lede strong { color: var(--text); font-weight: 600; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0 24px; }
+.button { display: inline-block; padding: 11px 20px; border: 1px solid var(--edge-strong); border-radius: 10px; background: var(--surface); color: var(--text); font-weight: 600; font-size: 16px; text-decoration: none; }
+.button:hover { background: var(--raised); }
+.button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.facts { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: 15.5px; }
+.facts li { position: relative; padding-left: 26px; }
+.facts li::before { content: ""; position: absolute; left: 2px; top: 0.42em; width: 12px; height: 7px; border: solid var(--ok); border-width: 0 0 2.5px 2.5px; transform: rotate(-45deg); }
 
-      .install { padding: 22px 24px 18px; background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; box-shadow: var(--shadow); }
-      .install h2 { font-size: 22px; letter-spacing: -0.01em; margin: 0 0 12px; }
-      .tabs { display: flex; flex-wrap: wrap; gap: 6px; }
-      .tab-input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-      .tabs > label { padding: 7px 14px; border: 1px solid var(--edge-strong); border-radius: 999px; background: var(--surface); font-weight: 600; font-size: 15px; cursor: pointer; }
-      .tab-input:checked + label { background: var(--text); border-color: var(--text); color: var(--bg); }
-      .panel { display: none; flex: 0 0 100%; min-width: 0; margin-top: 14px; }
-      #os-linux:checked ~ #panel-linux, #os-macos:checked ~ #panel-macos, #os-windows:checked ~ #panel-windows { display: block; }
-      .panel h3 { font-size: 16px; color: var(--muted); margin: 0 0 8px; }
-      .status { margin: 0 0 12px; padding-left: 12px; border-left: 3px solid var(--edge-strong); color: var(--muted); font-size: 14.5px; }
-      .term { margin: 0 0 10px; padding: 14px 16px; border: 0; border-radius: 12px; background: var(--term-bg); color: var(--term-text); font-size: 13.5px; }
-      .term code { color: var(--term-text); -webkit-user-select: all; user-select: all; }
-      .term::before { content: "$ "; color: #7db3ff; }
-      .term.ps::before { content: "> "; }
-      .hint { margin: 0 0 12px; font-size: 13.5px; color: var(--muted); }
-      .panel p { font-size: 15px; }
-      .ways summary { padding: 10px 0; font-weight: 600; font-size: 15px; color: var(--accent); cursor: pointer; }
-      .ways[open] summary { margin-bottom: 4px; }
-      .ways p { margin: 10px 0 4px; }
-      .way-title { font-weight: 650; color: var(--text); }
-      .warn { margin: 12px 0 6px; padding: 12px 14px; border: 1px dashed var(--edge-strong); border-radius: 10px; font-size: 14.5px; }
-      .warn ol { margin: 6px 0; padding-left: 1.3em; }
-      .install-foot { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--edge); font-size: 14px; color: var(--muted); }
-      .install-foot code, .nowrap { white-space: nowrap; }
-      b.ui { font-weight: 650; color: var(--text); }
+.install { padding: 22px 24px 18px; background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; box-shadow: var(--shadow); }
+.install h2 { font-size: 22px; letter-spacing: -0.01em; margin: 0 0 12px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab-input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.tabs > label { padding: 7px 14px; border: 1px solid var(--edge-strong); border-radius: 999px; background: var(--surface); font-weight: 600; font-size: 15px; cursor: pointer; }
+.tab-input:checked + label { background: var(--text); border-color: var(--text); color: var(--bg); }
+.panel { display: none; flex: 0 0 100%; min-width: 0; margin-top: 14px; }
+#os-linux:checked ~ #panel-linux, #os-macos:checked ~ #panel-macos, #os-windows:checked ~ #panel-windows { display: block; }
+.panel h3 { font-size: 16px; color: var(--muted); margin: 0 0 8px; }
+.status { margin: 0 0 12px; padding-left: 12px; border-left: 3px solid var(--edge-strong); color: var(--muted); font-size: 14.5px; }
+.term { margin: 0 0 10px; padding: 14px 16px; border: 0; border-radius: 12px; background: var(--term-bg); color: var(--term-text); font-size: 13.5px; }
+.term code { color: var(--term-text); -webkit-user-select: all; user-select: all; }
+.term::before { content: "$ "; color: #7db3ff; }
+.term.ps::before { content: "> "; }
+.hint { margin: 0 0 12px; font-size: 13.5px; color: var(--muted); }
+.panel p { font-size: 15px; }
+.ways summary { padding: 10px 0; font-weight: 600; font-size: 15px; color: var(--accent); cursor: pointer; }
+.ways[open] summary { margin-bottom: 4px; }
+.ways p { margin: 10px 0 4px; }
+.way-title { font-weight: 650; color: var(--text); }
+.warn { margin: 12px 0 6px; padding: 12px 14px; border: 1px dashed var(--edge-strong); border-radius: 10px; font-size: 14.5px; }
+.warn ol { margin: 6px 0; padding-left: 1.3em; }
+.install-foot { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--edge); font-size: 14px; color: var(--muted); }
+.install-foot code, .nowrap { white-space: nowrap; }
+b.ui { font-weight: 650; color: var(--text); }
 
-      .shot { margin: 0; }
-      .frame { display: block; overflow: hidden; border: 1px solid var(--edge); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
-      .frame img { display: block; width: 100%; height: auto; }
-      .hero-shot { margin-top: 56px; }
-      figcaption { margin-top: 10px; font-size: 15px; color: var(--muted); }
+.shot { margin: 0; }
+.frame { display: block; overflow: hidden; border: 1px solid var(--edge); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+.frame img { display: block; width: 100%; height: auto; }
+.hero-shot { margin-top: 56px; }
+figcaption { margin-top: 10px; font-size: 15px; color: var(--muted); }
 
-      .folders { display: grid; gap: 12px; margin: 36px 0 0; padding: 0; list-style: none; counter-reset: f; }
-      .folders li { display: grid; grid-template-columns: minmax(0, 15rem) auto 8.5rem auto minmax(0, 1fr); align-items: center; gap: 16px; max-width: none; padding: 16px 18px; background: var(--surface); border: 1px solid var(--edge); border-radius: 14px; counter-increment: f; }
-      .f-dir { font-family: var(--mono); font-size: 15px; font-weight: 600; }
-      .f-dir::before { content: "Folder " counter(f, upper-alpha); display: block; font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
-      .f-arrow { color: var(--accent); font-weight: 700; }
-      .pill { justify-self: start; padding: 5px 12px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 15px; }
-      .f-src { font-weight: 600; }
-      .f-src small { display: block; font-weight: 400; font-size: 14px; color: var(--muted); }
+.folders { display: grid; gap: 12px; margin: 36px 0 0; padding: 0; list-style: none; counter-reset: f; }
+.folders li { display: grid; grid-template-columns: minmax(0, 15rem) auto 8.5rem auto minmax(0, 1fr); align-items: center; gap: 16px; max-width: none; padding: 16px 18px; background: var(--surface); border: 1px solid var(--edge); border-radius: 14px; counter-increment: f; }
+.f-dir { font-family: var(--mono); font-size: 15px; font-weight: 600; }
+.f-dir::before { content: "Folder " counter(f, upper-alpha); display: block; font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.f-arrow { color: var(--accent); font-weight: 700; }
+.pill { justify-self: start; padding: 5px 12px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 15px; }
+.f-src { font-weight: 600; }
+.f-src small { display: block; font-weight: 400; font-size: 14px; color: var(--muted); }
 
-      .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 20px; margin: 36px 0 0; padding: 0; list-style: none; counter-reset: s; }
-      .steps > li { max-width: none; counter-increment: s; }
-      .steps h3::before { content: counter(s); display: inline-grid; place-items: center; width: 26px; height: 26px; margin-right: 10px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); font-size: 14px; }
-      .steps h3 { margin-top: 18px; }
-      .steps p { margin: 0; font-size: 15.5px; color: var(--muted); }
-      .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 32px 0 0; padding: 18px 20px; border: 1px solid var(--edge); border-radius: 14px; background: var(--surface); }
-      .flow p { flex: 1 1 280px; margin: 0; font-size: 15.5px; color: var(--muted); }
-      .flow-boxes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
-      .flow-boxes span { padding: 6px 12px; border: 1px solid var(--edge-strong); border-radius: 8px; background: var(--raised); }
-      .flow-boxes b { color: var(--accent); }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 20px; margin: 36px 0 0; padding: 0; list-style: none; counter-reset: s; }
+.steps > li { max-width: none; counter-increment: s; }
+.steps h3::before { content: counter(s); display: inline-grid; place-items: center; width: 26px; height: 26px; margin-right: 10px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); font-size: 14px; }
+.steps h3 { margin-top: 18px; }
+.steps p { margin: 0; font-size: 15.5px; color: var(--muted); }
+.flow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 32px 0 0; padding: 18px 20px; border: 1px solid var(--edge); border-radius: 14px; background: var(--surface); }
+.flow p { flex: 1 1 280px; margin: 0; font-size: 15.5px; color: var(--muted); }
+.flow-boxes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.flow-boxes span { padding: 6px 12px; border: 1px solid var(--edge-strong); border-radius: 8px; background: var(--raised); }
+.flow-boxes b { color: var(--accent); }
 
-      .feature { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 40px; align-items: center; margin: 48px 0 0; }
-      .feature.flip > .shot { order: -1; }
-      .feature ul { margin: 12px 0 0; padding-left: 1.2em; color: var(--muted); }
-      .feature li { margin-bottom: 8px; }
-      .feature li strong { color: var(--text); }
-      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 16px; margin: 40px 0 0; padding: 0; list-style: none; }
-      .grid > li { max-width: none; padding: 20px; background: var(--surface); border: 1px solid var(--edge); border-radius: 14px; }
-      .grid p { margin: 0; font-size: 15.5px; color: var(--muted); }
-      .grid .wide { grid-column: 1 / -1; }
-      .grid.three { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
-      .moves { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 16px; margin: 36px 0 0; padding: 0; list-style: none; counter-reset: m; }
-      .moves li { max-width: none; padding: 18px 20px; background: var(--surface); border: 1px solid var(--edge); border-radius: 14px; font-size: 15.5px; color: var(--muted); counter-increment: m; }
-      .moves li::before { content: counter(m); display: grid; place-items: center; width: 26px; height: 26px; margin-bottom: 10px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 14px; }
-      .portable-table, .sub { margin-top: 40px; }
-      .sub + .moves { margin-top: 14px; }
-      .tags { margin: 12px 0 0; font-size: 13.5px; }
-      .tags span { display: inline-block; margin: 0 4px 4px 0; padding: 1px 8px; border: 1px solid var(--edge); border-radius: 999px; background: var(--raised); }
-      table { width: 100%; border-collapse: collapse; font-size: 15px; }
-      th, td { padding: 10px 12px; border-bottom: 1px solid var(--edge); text-align: left; vertical-align: top; }
-      thead th { font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); border-bottom-color: var(--edge-strong); }
-      td { color: var(--muted); }
-      tbody th { font-weight: 600; }
-      .table { overflow-x: auto; margin: 14px 0 0; background: var(--surface); border: 1px solid var(--edge); border-radius: 14px; }
-      .table tr:last-child > * { border-bottom: 0; }
-      .fields { columns: 2 220px; column-gap: 28px; margin: 10px 0 0; padding: 0; list-style: none; font-size: 15px; }
-      .fields li { break-inside: avoid; padding: 6px 0; border-bottom: 1px solid var(--edge); }
-      .note { max-width: 74ch; margin: 22px 0 0; padding: 13px 16px; border-radius: 10px; background: var(--note-bg); color: var(--note-ink); font-size: 15.5px; }
-      .note a { color: inherit; }
-      .checks { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 0; padding: 0; list-style: none; }
-      .checks li { padding: 1px 8px; border: 1px solid var(--edge); border-radius: 10px; background: var(--raised); font-size: 13.5px; color: var(--text); }
-      .record td:nth-child(2) li { border-color: var(--ok); }
-      .record td:nth-child(2) li::before { content: "\2713\00a0"; color: var(--ok); font-weight: 700; }
-      .fields code, .plain code { font-size: 0.84em; }
+.feature { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 40px; align-items: center; margin: 48px 0 0; }
+.feature.flip > .shot { order: -1; }
+.feature ul { margin: 12px 0 0; padding-left: 1.2em; color: var(--muted); }
+.feature li { margin-bottom: 8px; }
+.feature li strong { color: var(--text); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 16px; margin: 40px 0 0; padding: 0; list-style: none; }
+.grid > li { max-width: none; padding: 20px; background: var(--surface); border: 1px solid var(--edge); border-radius: 14px; }
+.grid p { margin: 0; font-size: 15.5px; color: var(--muted); }
+.grid .wide { grid-column: 1 / -1; }
+.grid.three { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.moves { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 16px; margin: 36px 0 0; padding: 0; list-style: none; counter-reset: m; }
+.moves li { max-width: none; padding: 18px 20px; background: var(--surface); border: 1px solid var(--edge); border-radius: 14px; font-size: 15.5px; color: var(--muted); counter-increment: m; }
+.moves li::before { content: counter(m); display: grid; place-items: center; width: 26px; height: 26px; margin-bottom: 10px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 14px; }
+.portable-table, .sub { margin-top: 40px; }
+.sub + .moves { margin-top: 14px; }
+.tags { margin: 12px 0 0; font-size: 13.5px; }
+.tags span { display: inline-block; margin: 0 4px 4px 0; padding: 1px 8px; border: 1px solid var(--edge); border-radius: 999px; background: var(--raised); }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { padding: 10px 12px; border-bottom: 1px solid var(--edge); text-align: left; vertical-align: top; }
+thead th { font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); border-bottom-color: var(--edge-strong); }
+td { color: var(--muted); }
+tbody th { font-weight: 600; }
+.table { overflow-x: auto; margin: 14px 0 0; background: var(--surface); border: 1px solid var(--edge); border-radius: 14px; }
+.table tr:last-child > * { border-bottom: 0; }
+.fields { columns: 2 220px; column-gap: 28px; margin: 10px 0 0; padding: 0; list-style: none; font-size: 15px; }
+.fields li { break-inside: avoid; padding: 6px 0; border-bottom: 1px solid var(--edge); }
+.note { max-width: 74ch; margin: 22px 0 0; padding: 13px 16px; border-radius: 10px; background: var(--note-bg); color: var(--note-ink); font-size: 15.5px; }
+.note a { color: inherit; }
+.checks { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 0; padding: 0; list-style: none; }
+.checks li { padding: 1px 8px; border: 1px solid var(--edge); border-radius: 10px; background: var(--raised); font-size: 13.5px; color: var(--text); }
+.record td:nth-child(2) li { border-color: var(--ok); }
+.record td:nth-child(2) li::before { content: "\2713\00a0"; color: var(--ok); font-weight: 700; }
+.fields code, .plain code { font-size: 0.84em; }
 
-      .faq { max-width: 840px; margin-top: 28px; }
-      details.q { border-top: 1px solid var(--edge); }
-      details.q:last-of-type { border-bottom: 1px solid var(--edge); }
-      .q summary { position: relative; padding: 18px 40px 18px 4px; font-weight: 600; cursor: pointer; list-style: none; }
-      .q summary::-webkit-details-marker { display: none; }
-      .q summary::after { content: "+"; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 22px; font-weight: 400; color: var(--muted); }
-      .q[open] summary::after { content: "\2212"; }
-      .q p { margin: 0 4px 20px; color: var(--muted); }
-      footer { border-top: 1px solid var(--edge); padding: 40px 0 48px; font-size: 15px; color: var(--muted); }
-      .foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px 40px; }
-      .foot > div { max-width: 60ch; }
-      footer ul { display: grid; grid-template-columns: repeat(2, max-content); gap: 6px 36px; margin: 0; padding: 0; list-style: none; }
-      footer ul a { color: var(--muted); text-decoration: none; }
-      footer ul a:hover { color: var(--accent); text-decoration: underline; }
-      footer p { margin: 6px 0 0; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 14px; margin: 32px 0 0; padding: 0; list-style: none; }
+.tiles li { max-width: none; padding: 16px 18px; background: var(--surface); border: 1px solid var(--edge); border-radius: 14px; font-size: 14.5px; color: var(--muted); }
+.tiles b { display: block; font-size: 30px; line-height: 1.2; letter-spacing: -0.02em; color: var(--text); }
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 20px; margin: 20px 0 0; }
+.chart { margin: 0; padding: 20px 22px; background: var(--surface); border: 1px solid var(--edge); border-radius: 16px; }
+.chart svg { display: block; margin: 14px 0 4px; overflow: visible; }
+.chart text { font: 13px var(--sans); fill: var(--text); }
+.chart .c-num, .chart .c-axis text { fill: var(--muted); }
+.chart .c-head { font-weight: 700; fill: var(--muted); }
+.chart .c-in { font-weight: 600; fill: var(--accent-ink); }
+.c-pass { fill: var(--accent); }
+.c-gpu { fill: var(--ok); }
+.c-skip { fill: var(--edge-strong); }
+.c-grid line { stroke: var(--edge); stroke-dasharray: 3 3; }
+.chart figcaption { font-size: 14px; }
+.matrix th small { display: block; font-weight: 400; font-size: 13px; color: var(--muted); }
+.matrix td { text-align: center; font-weight: 700; font-size: 17px; }
+.matrix .y { color: var(--ok); }
+.matrix .n { color: var(--bad); }
+.matrix sup { font-size: 11px; }
+.shots { margin-top: 28px; }
+.shot.sub { margin-top: 28px; max-width: 880px; }
+.faq { max-width: 840px; margin-top: 28px; }
+details.q { border-top: 1px solid var(--edge); }
+details.q:last-of-type { border-bottom: 1px solid var(--edge); }
+.q summary { position: relative; padding: 18px 40px 18px 4px; font-weight: 600; cursor: pointer; list-style: none; }
+.q summary::-webkit-details-marker { display: none; }
+.q summary::after { content: "+"; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 22px; font-weight: 400; color: var(--muted); }
+.q[open] summary::after { content: "\2212"; }
+.q p { margin: 0 4px 20px; color: var(--muted); }
+footer { border-top: 1px solid var(--edge); padding: 40px 0 48px; font-size: 15px; color: var(--muted); }
+.foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px 40px; }
+.foot > div { max-width: 60ch; }
+footer ul { display: grid; grid-template-columns: repeat(2, max-content); gap: 6px 36px; margin: 0; padding: 0; list-style: none; }
+footer ul a { color: var(--muted); text-decoration: none; }
+footer ul a:hover { color: var(--accent); text-decoration: underline; }
+footer p { margin: 6px 0 0; }
 
-      @media (max-width: 960px) {
-        .hero-grid, .feature { grid-template-columns: minmax(0, 1fr); gap: 32px; }
-        .feature.flip > .shot { order: 0; }
-        .folders li { grid-template-columns: 8.5rem auto minmax(0, 1fr); gap: 8px 12px; }
-        .f-dir { grid-column: 1 / -1; }
-        .folders .f-arrow:nth-of-type(2) { display: none; }
-        nav ul { overflow-x: auto; }
-      }
-      @media (max-width: 760px) {
-        nav li:not(.gh) { display: none; }
-        .stack thead { display: none; }
-        .stack tr, .stack th, .stack td { display: block; }
-        .stack td::before { content: attr(data-label); display: block; margin-bottom: 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
-        .stack tr { border-bottom: 1px solid var(--edge); }
-        .stack th, .stack td { border: 0; padding-bottom: 4px; }
-        .stack tbody tr { padding: 8px 0 12px; }
-        .stack tbody th { font-size: 16px; }
-        .moves li { position: relative; padding-left: 56px; }
-        .moves li::before { position: absolute; left: 18px; top: 18px; margin: 0; }
-      }
-      @media (max-width: 480px) {
-        body { font-size: 16px; }
-        .wrap { padding: 0 16px; }
-        section { padding: 56px 0; }
-        .hero { padding: 24px 0 48px; }
-        .install, .card { padding: 18px 16px; }
-        .hero-shot { margin-top: 36px; }
-        pre { padding: 11px 12px; font-size: 0.8em; }
-        footer ul { grid-template-columns: max-content; }
-        .folders li { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-        .folders .f-arrow { display: none; }
-        .f-src { padding-left: 12px; border-left: 2px solid var(--accent-soft); }
-      }
-      @media (forced-colors: active) {
-        .tab-input:checked + label { border-color: Highlight; background: Highlight; color: HighlightText; }
-        .button, .install, .card, .grid > li, .folders li, .pill, .flow { border: 1px solid CanvasText; }
-      }
-      @media print {
-        .panel { display: block !important; }
-        header.site { position: static; }
-        .tabs > label, .skip, nav { display: none; }
-      }
-    </style>
-  </head>
-  <body id="top">
-    <a class="skip" href="#main">Skip to content</a>
-    <header class="site">
-      <div class="wrap">
-        <a class="brand" href="#top"
-          ><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-            <rect class="logo-bg" width="32" height="32" rx="7" />
-            <path class="logo-mark" d="M8 10l4 12 4-9 4 9 4-12" /></svg
-          >Agent Workbench</a
-        >
-        <nav aria-label="Sections">
-          <ul>
-            <li><a href="#how">How it works</a></li>
-            <li><a href="#features">Features</a></li>
-            <li><a href="#runs">Next release</a></li>
-            <li><a href="#privacy">Privacy</a></li>
-            <li><a href="#status">Status</a></li>
-            <li><a href="#faq">FAQ</a></li>
-            <li class="gh"><a href="https://github.com/jamesarslan/local-agent-workbench">GitHub</a></li>
-          </ul>
-        </nav>
-      </div>
-    </header>
-    <main id="main">
-      <section class="hero" id="install" aria-labelledby="hero-h">
-        <div class="wrap">
-          <div class="hero-grid">
-            <div>
-              <p class="eyebrow">Version 0.4.0 · MIT licence · Windows x64, Linux x64, macOS arm64 (preview)</p>
-              <h1 id="hero-h">Pick where your model runs and which coding agent you use, remembered per project folder.</h1>
-              <p class="lede">
-                Agent Workbench is a free desktop app. Run the model on this computer, on a GPU box over SSH, in an
-                Ollama, LM Studio or vLLM server you already have, or at a hosted API. Start
-                <strong>OMP, Pi, Claude Code, Codex, Hermes or opencode</strong> in the folder. Workbench keeps that
-                setup with the folder, together with its instructions, skills and MCP tools.
-              </p>
-              <p class="actions">
-                <a class="button primary" href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/getting-started.md">Getting started</a>
-                <a class="button" href="https://github.com/jamesarslan/local-agent-workbench">Source on GitHub</a>
-              </p>
-              <ul class="facts">
-                <li>No account, no telemetry, no analytics, no background update checks.</li>
-                <li>API keys stay in your system's credential vault, never on a command line or in project files.</li>
-                <li>Every file it would write into a project is shown first, and only what you confirm is written.</li>
-              </ul>
-            </div>
-            <div class="install">
-              <h2 id="install-h">Install</h2>
-              <div class="tabs" role="group" aria-labelledby="install-h">
-                <input class="tab-input" type="radio" name="os" id="os-linux" checked />
-                <label for="os-linux">Linux</label>
-                <input class="tab-input" type="radio" name="os" id="os-macos" />
-                <label for="os-macos">macOS (preview)</label>
-                <input class="tab-input" type="radio" name="os" id="os-windows" />
-                <label for="os-windows">Windows</label>
+@media (max-width: 960px) {
+.hero-grid, .feature { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+.feature.flip > .shot { order: 0; }
+.folders li { grid-template-columns: 8.5rem auto minmax(0, 1fr); gap: 8px 12px; }
+.f-dir { grid-column: 1 / -1; }
+.folders .f-arrow:nth-of-type(2) { display: none; }
+nav ul { overflow-x: auto; }
+}
+@media (max-width: 760px) {
+nav li:not(.gh) { display: none; }
+.stack thead { display: none; }
+.stack tr, .stack th, .stack td { display: block; }
+.stack td::before { content: attr(data-label); display: block; margin-bottom: 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.stack tr { border-bottom: 1px solid var(--edge); }
+.stack th, .stack td { border: 0; padding-bottom: 4px; }
+.stack tbody tr { padding: 8px 0 12px; }
+.stack tbody th { font-size: 16px; }
+.moves li { position: relative; padding-left: 56px; }
+.moves li::before { position: absolute; left: 18px; top: 18px; margin: 0; }
+.matrix thead { display: none; }
+.matrix tr { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--edge); }
+.matrix tbody th { grid-column: 1 / -1; border: 0; padding-bottom: 2px; }
+.matrix td { border: 0; padding: 4px 4px 12px; }
+.matrix td::before { display: block; white-space: nowrap; font-size: 12px; font-weight: 600; color: var(--muted); }
+.matrix td:nth-of-type(1)::before { content: "OMP"; }
+.matrix td:nth-of-type(2)::before { content: "Claude Code"; }
+.matrix td:nth-of-type(3)::before { content: "Codex"; }
+.matrix td:nth-of-type(4)::before { content: "opencode"; }
+}
+@media (max-width: 480px) {
+body { font-size: 16px; }
+.chart { padding: 16px 14px; }
+.chart text { font-size: 12px; }
+.matrix th, .matrix td { padding: 8px 6px; }
+.wrap { padding: 0 16px; }
+section { padding: 56px 0; }
+.hero { padding: 24px 0 48px; }
+.install, .card { padding: 18px 16px; }
+.hero-shot { margin-top: 36px; }
+pre { padding: 11px 12px; font-size: 0.8em; }
+footer ul { grid-template-columns: max-content; }
+.folders li { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.folders .f-arrow { display: none; }
+.f-src { padding-left: 12px; border-left: 2px solid var(--accent-soft); }
+}
+@media (forced-colors: active) {
+.tab-input:checked + label { border-color: Highlight; background: Highlight; color: HighlightText; }
+.button, .install, .card, .grid > li, .folders li, .pill, .flow, .chart, .tiles li { border: 1px solid CanvasText; }
+.c-pass, .c-gpu { fill: Highlight; }
+.c-skip { fill: GrayText; }
+.chart text { fill: CanvasText; }
+}
+@media print {
+.panel { display: block !important; }
+header.site { position: static; }
+.tabs > label, .skip, nav { display: none; }
+}
+</style>
+</head>
+<body id="top">
+<a class="skip" href="#main">Skip to content</a>
+<header class="site">
+<div class="wrap">
+<a class="brand" href="#top"
+><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+<rect class="logo-bg" width="32" height="32" rx="7" />
+<path class="logo-mark" d="M8 10l4 12 4-9 4 9 4-12" /></svg
+>Agent Workbench</a
+>
+<nav aria-label="Sections">
+<ul>
+<li><a href="#how">How it works</a></li>
+<li><a href="#features">Features</a></li>
+<li><a href="#runs">New in 0.5.0</a></li>
+<li><a href="#tested">Tested</a></li>
+<li><a href="#privacy">Privacy</a></li>
+<li><a href="#faq">FAQ</a></li>
+<li class="gh"><a href="https://github.com/jamesarslan/local-agent-workbench">GitHub</a></li>
+</ul>
+</nav>
+</div>
+</header>
+<main id="main">
+<section class="hero" id="install" aria-labelledby="hero-h">
+<div class="wrap">
+<div class="hero-grid">
+<div>
+<p class="eyebrow">Version 0.5.0 · MIT licence · Windows x64, Linux x64, macOS arm64 (preview)</p>
+<h1 id="hero-h">Pick where your model runs and which coding agent you use, remembered per project folder.</h1>
+<p class="lede">
+Agent Workbench is a free desktop app. Run the model on this computer, on a Linux or Windows GPU box over SSH, in an
+Ollama, LM Studio or vLLM server you already have, or at a hosted API. Start
+<strong>OMP, Pi, Claude Code, Codex, Hermes or opencode</strong> in the folder. Workbench keeps that
+setup with the folder, together with its instructions, skills and MCP tools.
+</p>
+<p class="actions">
+<a class="button primary" href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/getting-started.md">Getting started</a>
+<a class="button" href="https://github.com/jamesarslan/local-agent-workbench">Source on GitHub</a>
+</p>
+<ul class="facts">
+<li>No account, no telemetry, no analytics, no background update checks.</li>
+<li>API keys stay in your system's credential vault, never on a command line or in project files.</li>
+<li>Every file it would write into a project is shown first, and only what you confirm is written.</li>
+</ul>
+</div>
+<div class="install">
+<h2 id="install-h">Install</h2>
+<div class="tabs" role="group" aria-labelledby="install-h">
+<input class="tab-input" type="radio" name="os" id="os-linux" checked />
+<label for="os-linux">Linux</label>
+<input class="tab-input" type="radio" name="os" id="os-macos" />
+<label for="os-macos">macOS (preview)</label>
+<input class="tab-input" type="radio" name="os" id="os-windows" />
+<label for="os-windows">Windows</label>
 
-                <div class="panel" id="panel-linux">
-                  <h3>Linux x64</h3>
-                  <p class="status">Status for 0.4.0: some checks were run on Linux. The tested-configurations table says which.</p>
-                  <pre class="term"><code>curl -fsSL https://github.com/jamesarslan/local-agent-workbench/releases/latest/download/install.sh | sh</code></pre>
-                  <p class="hint">One click selects the whole command. Then run <code>sh ~/.local/lib/agent-workbench/setup-linux.sh</code> once and start the app with <code>workbench</code>.</p>
-                  <details class="ways">
-                    <summary>Read the script first, or install by hand</summary>
-                    <p class="way-title">Read the script before it runs</p>
-                    <pre><code>curl -fsSLO https://github.com/jamesarslan/local-agent-workbench/releases/latest/download/install.sh
+<div class="panel" id="panel-linux">
+<h3>Linux x64</h3>
+<p class="status">Status for 0.5.0: some checks were run on Linux. The tested-configurations table says which.</p>
+<pre class="term"><code>curl -fsSL https://github.com/jamesarslan/local-agent-workbench/releases/latest/download/install.sh | sh</code></pre>
+<p class="hint">One click selects the whole command. Then run <code>sh ~/.local/lib/agent-workbench/setup-linux.sh</code> once and start the app with <code>workbench</code>.</p>
+<details class="ways">
+<summary>Read the script first, or install by hand</summary>
+<p class="way-title">Read the script before it runs</p>
+<pre><code>curl -fsSLO https://github.com/jamesarslan/local-agent-workbench/releases/latest/download/install.sh
 less install.sh
 sh install.sh</code></pre>
-                    <p class="way-title">By hand</p>
-                    <p>
-                      Download <code>agent-workbench-linux-x64.tar.gz</code> and <code>SHA256SUMS</code> from the
-                      <a href="https://github.com/jamesarslan/local-agent-workbench/releases/tag/v0.4.0">0.4.0 release</a>,
-                      then in the folder that holds them:
-                    </p>
-                    <pre><code>sha256sum -c SHA256SUMS --ignore-missing
+<p class="way-title">By hand</p>
+<p>
+Download <code>agent-workbench-linux-x64.tar.gz</code> and <code>SHA256SUMS</code> from the
+<a href="https://github.com/jamesarslan/local-agent-workbench/releases/tag/v0.5.0">0.5.0 release</a>,
+then in the folder that holds them:
+</p>
+<pre><code>sha256sum -c SHA256SUMS --ignore-missing
 tar -xzf agent-workbench-linux-x64.tar.gz
 sh Agent-Workbench/setup-linux.sh</code></pre>
-                    <p>
-                      <code>setup-linux.sh</code> lists the desktop libraries it needs and asks before it uses sudo.
-                      Later, start the app with <code>sh Agent-Workbench/workbench.sh</code>.
-                    </p>
-                  </details>
-                </div>
+<p>
+<code>setup-linux.sh</code> lists the desktop libraries it needs and asks before it uses sudo.
+Later, start the app with <code>sh Agent-Workbench/workbench.sh</code>.
+</p>
+</details>
+</div>
 
-                <div class="panel" id="panel-macos">
-                  <h3>macOS on Apple Silicon (preview)</h3>
-                  <p class="status">Status for 0.4.0: preview. The macOS checks listed in the README have not all passed. Intel Macs are not supported.</p>
-                  <pre class="term"><code>curl -fsSL https://github.com/jamesarslan/local-agent-workbench/releases/latest/download/install.sh | sh</code></pre>
-                  <p class="hint">One click selects the whole command. The script removes the macOS download mark (quarantine) from the files it unpacks.</p>
-                  <details class="ways">
-                    <summary>Read the script first, or install by hand</summary>
-                    <p class="way-title">Read the script before it runs</p>
-                    <pre><code>curl -fsSLO https://github.com/jamesarslan/local-agent-workbench/releases/latest/download/install.sh
+<div class="panel" id="panel-macos">
+<h3>macOS on Apple Silicon (preview)</h3>
+<p class="status">Status for 0.5.0: preview. The macOS checks listed in the README have not all passed. Intel Macs are not supported.</p>
+<pre class="term"><code>curl -fsSL https://github.com/jamesarslan/local-agent-workbench/releases/latest/download/install.sh | sh</code></pre>
+<p class="hint">One click selects the whole command. The script removes the macOS download mark (quarantine) from the files it unpacks.</p>
+<details class="ways">
+<summary>Read the script first, or install by hand</summary>
+<p class="way-title">Read the script before it runs</p>
+<pre><code>curl -fsSLO https://github.com/jamesarslan/local-agent-workbench/releases/latest/download/install.sh
 less install.sh
 sh install.sh</code></pre>
-                    <p class="way-title">By hand</p>
-                    <p>
-                      Download <code>agent-workbench-macos-arm64.tar.gz</code> and <code>SHA256SUMS</code> from the
-                      <a href="https://github.com/jamesarslan/local-agent-workbench/releases/tag/v0.4.0">0.4.0 release</a>,
-                      then in Terminal:
-                    </p>
-                    <pre><code>cd ~/Downloads
+<p class="way-title">By hand</p>
+<p>
+Download <code>agent-workbench-macos-arm64.tar.gz</code> and <code>SHA256SUMS</code> from the
+<a href="https://github.com/jamesarslan/local-agent-workbench/releases/tag/v0.5.0">0.5.0 release</a>,
+then in Terminal:
+</p>
+<pre><code>cd ~/Downloads
 shasum -a 256 -c SHA256SUMS --ignore-missing
 tar -xzf agent-workbench-macos-arm64.tar.gz
 sh Agent-Workbench/"Launch Workbench.command"</code></pre>
-                    <div class="warn">
-                      <p>
-                        <strong>If macOS blocks the launcher.</strong> The kit is not notarised, so macOS refuses
-                        <code>Launch Workbench.command</code> when you double-click it in Finder. Choose Done, then:
-                      </p>
-                      <ol>
-                        <li>Open System Settings, then Privacy &amp; Security.</li>
-                        <li>Find the message about <code>Launch Workbench.command</code> and choose Open Anyway.</li>
-                        <li>Confirm with your password (<a href="https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac">Apple's steps</a>).</li>
-                      </ol>
-                      <p>Starting it from Terminal, as above, avoids this. macOS asks once whether Workbench may control Terminal for agent windows.</p>
-                    </div>
-                  </details>
-                </div>
+<div class="warn">
+<p>
+<strong>If macOS blocks the launcher.</strong> The kit is not notarised, so macOS refuses
+<code>Launch Workbench.command</code> when you double-click it in Finder. Choose Done, then:
+</p>
+<ol>
+<li>Open System Settings, then Privacy &amp; Security.</li>
+<li>Find the message about <code>Launch Workbench.command</code> and choose Open Anyway.</li>
+<li>Confirm with your password (<a href="https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac">Apple's steps</a>).</li>
+</ol>
+<p>Starting it from Terminal, as above, avoids this. macOS asks once whether Workbench may control Terminal for agent windows.</p>
+</div>
+</details>
+</div>
 
-                <div class="panel" id="panel-windows">
-                  <h3>Windows x64</h3>
-                  <p class="status">Status for 0.4.0: some checks were run on Windows. The tested-configurations table says which.</p>
-                  <pre class="term ps"><code>irm https://github.com/jamesarslan/local-agent-workbench/releases/latest/download/install.ps1 | iex</code></pre>
-                  <p class="hint">In PowerShell. One click selects the whole command. It installs under <code>%LOCALAPPDATA%\Agent Workbench</code> and adds a Start menu entry.</p>
-                  <details class="ways">
-                    <summary>Read the script first, or install by hand</summary>
-                    <p class="way-title">Read the script before it runs</p>
-                    <pre><code>irm https://github.com/jamesarslan/local-agent-workbench/releases/latest/download/install.ps1 -OutFile install.ps1
+<div class="panel" id="panel-windows">
+<h3>Windows x64</h3>
+<p class="status">Status for 0.5.0: some checks were run on Windows. The tested-configurations table says which.</p>
+<pre class="term ps"><code>irm https://github.com/jamesarslan/local-agent-workbench/releases/latest/download/install.ps1 | iex</code></pre>
+<p class="hint">In PowerShell. One click selects the whole command. It installs under <code>%LOCALAPPDATA%\Agent Workbench</code> and adds a Start menu entry.</p>
+<details class="ways">
+<summary>Read the script first, or install by hand</summary>
+<p class="way-title">Read the script before it runs</p>
+<pre><code>irm https://github.com/jamesarslan/local-agent-workbench/releases/latest/download/install.ps1 -OutFile install.ps1
 notepad install.ps1
 powershell -ExecutionPolicy Bypass -File .\install.ps1</code></pre>
-                    <p class="way-title">By hand</p>
-                    <p>
-                      Download <code>agent-workbench-windows-x64.zip</code> and <code>SHA256SUMS</code> from the
-                      <a href="https://github.com/jamesarslan/local-agent-workbench/releases/tag/v0.4.0">0.4.0 release</a>.
-                      In PowerShell, compare the hash with its line in <code>SHA256SUMS</code>, then unblock and extract:
-                    </p>
-                    <pre><code>Get-FileHash -Algorithm SHA256 agent-workbench-windows-x64.zip
+<p class="way-title">By hand</p>
+<p>
+Download <code>agent-workbench-windows-x64.zip</code> and <code>SHA256SUMS</code> from the
+<a href="https://github.com/jamesarslan/local-agent-workbench/releases/tag/v0.5.0">0.5.0 release</a>.
+In PowerShell, compare the hash with its line in <code>SHA256SUMS</code>, then unblock and extract:
+</p>
+<pre><code>Get-FileHash -Algorithm SHA256 agent-workbench-windows-x64.zip
 Unblock-File agent-workbench-windows-x64.zip
 Expand-Archive agent-workbench-windows-x64.zip -DestinationPath .</code></pre>
-                    <p>Then double-click <code>Launch Workbench.cmd</code> inside <code>Agent-Workbench</code>.</p>
-                    <div class="warn">
-                      <p>
-                        <strong>If Windows warns you.</strong> "Windows protected your PC": check that the file is
-                        <code>Launch Workbench.cmd</code> from the folder you extracted, then choose More info and Run
-                        anyway. If Smart App Control blocks the unsigned Python in the kit, use
-                        <code>agent-workbench-source.tar.gz</code> with Python 3.12, 3.13 or 3.14 from python.org.
-                      </p>
-                    </div>
-                  </details>
-                </div>
-              </div>
-              <p class="install-foot">
-                The scripts check the kit against <code>SHA256SUMS</code>, install for your user without sudo or
-                administrator rights, and add a <code>workbench</code> command. The downloads are not code-signed or
-                notarised. <code>--uninstall</code> (<code>-Uninstall</code> on Windows) removes the app and keeps
-                your data.
-              </p>
-            </div>
-          </div>
-          <figure class="shot hero-shot">
-            <span class="frame">
-              <picture>
-                <source srcset="images/launch-dark.png" media="(prefers-color-scheme: dark)" />
-                <img
-                  src="images/launch.png"
-                  width="1320"
-                  height="860"
-                  decoding="async"
-                  alt="The Launch view for the storefront project: Ollama chosen as the model source and answering, the model qwen3.8:27b-mlx with a 32K context, six agent cards with OMP selected, and a Before you launch checklist with Launch OMP and Save for this folder buttons."
-                />
-              </picture>
-            </span>
-            <figcaption>Launch: the folder, where the model runs, the model and the agent, and what is still missing before launch.</figcaption>
-          </figure>
-        </div>
-      </section>
+<p>Then double-click <code>Launch Workbench.cmd</code> inside <code>Agent-Workbench</code>.</p>
+<div class="warn">
+<p>
+<strong>If Windows warns you.</strong> "Windows protected your PC": check that the file is
+<code>Launch Workbench.cmd</code> from the folder you extracted, then choose More info and Run
+anyway. If Smart App Control blocks the unsigned Python in the kit, use
+<code>agent-workbench-source.tar.gz</code> with Python 3.12, 3.13 or 3.14 from python.org.
+</p>
+</div>
+</details>
+</div>
+</div>
+<p class="install-foot">
+The scripts check the kit against <code>SHA256SUMS</code>, install for your user without sudo or
+administrator rights, and add a <code>workbench</code> command. The downloads are not code-signed or
+notarised. <code>--uninstall</code> (<code>-Uninstall</code> on Windows) removes the app and keeps
+your data.
+</p>
+</div>
+</div>
+<figure class="shot hero-shot">
+<span class="frame">
+<picture>
+<source srcset="images/launch-dark.png" media="(prefers-color-scheme: dark)" />
+<img
+src="images/launch.png"
+width="1320"
+height="860"
+decoding="async"
+alt="The Launch view for the storefront project: Ollama chosen as the model source and answering, the model qwen3.8:27b-mlx with a 32K context, six agent cards with OMP selected, and a Before you launch checklist with Launch OMP and Save for this folder buttons."
+/>
+</picture>
+</span>
+<figcaption>Launch: the folder, where the model runs, the model and the agent, and what is still missing before launch.</figcaption>
+</figure>
+</div>
+</section>
 
-      <section id="folders" aria-labelledby="folders-h">
-        <div class="wrap">
-          <p class="kicker">The idea</p>
-          <h2 id="folders-h">One folder, one setup</h2>
-          <p class="intro">
-            No more editing four config files to switch. Each project folder keeps its own agent and model source.
-            Open the folder again and the same setup comes back; you can still launch something else in it whenever
-            you like.
-          </p>
-          <ol class="folders" aria-label="Three example folders, each with its own agent and model source">
-            <li>
-              <span class="f-dir">~/code/shop-api</span>
-              <span class="f-arrow" aria-hidden="true">→</span>
-              <span class="pill"><span class="vh">starts </span>Claude Code</span>
-              <span class="f-arrow" aria-hidden="true">→</span>
-              <span class="f-src"><span class="vh">with </span>A local Qwen model on a GPU box over SSH<small>llama.cpp on the box, reached through one forwarded SSH port</small></span>
-            </li>
-            <li>
-              <span class="f-dir">~/code/docs-site</span>
-              <span class="f-arrow" aria-hidden="true">→</span>
-              <span class="pill"><span class="vh">starts </span>OMP</span>
-              <span class="f-arrow" aria-hidden="true">→</span>
-              <span class="f-src"><span class="vh">with </span>OpenRouter<small>a hosted API, with the key in your credential vault</small></span>
-            </li>
-            <li>
-              <span class="f-dir">~/code/game-jam</span>
-              <span class="f-arrow" aria-hidden="true">→</span>
-              <span class="pill"><span class="vh">starts </span>Codex</span>
-              <span class="f-arrow" aria-hidden="true">→</span>
-              <span class="f-src"><span class="vh">with </span>LM Studio or Ollama, already running<small>attached as a named connection on this computer</small></span>
-            </li>
-          </ol>
-          <p class="small more">
-            Before it offers an agent, Workbench checks that the model source speaks the API that agent needs, and
-            says in one sentence why an agent is switched off.
-          </p>
-        </div>
-      </section>
+<section id="folders" aria-labelledby="folders-h">
+<div class="wrap">
+<p class="kicker">The idea</p>
+<h2 id="folders-h">One folder, one setup</h2>
+<p class="intro">
+No more editing four config files to switch. Each project folder keeps its own agent and model source.
+Open the folder again and the same setup comes back; you can still launch something else in it whenever
+you like.
+</p>
+<ol class="folders" aria-label="Three example folders, each with its own agent and model source">
+<li>
+<span class="f-dir">~/code/shop-api</span>
+<span class="f-arrow" aria-hidden="true">→</span>
+<span class="pill"><span class="vh">starts </span>Claude Code</span>
+<span class="f-arrow" aria-hidden="true">→</span>
+<span class="f-src"><span class="vh">with </span>A local Qwen model on a GPU box over SSH<small>llama.cpp on the box, reached through one forwarded SSH port</small></span>
+</li>
+<li>
+<span class="f-dir">~/code/docs-site</span>
+<span class="f-arrow" aria-hidden="true">→</span>
+<span class="pill"><span class="vh">starts </span>OMP</span>
+<span class="f-arrow" aria-hidden="true">→</span>
+<span class="f-src"><span class="vh">with </span>OpenRouter<small>a hosted API, with the key in your credential vault</small></span>
+</li>
+<li>
+<span class="f-dir">~/code/game-jam</span>
+<span class="f-arrow" aria-hidden="true">→</span>
+<span class="pill"><span class="vh">starts </span>Codex</span>
+<span class="f-arrow" aria-hidden="true">→</span>
+<span class="f-src"><span class="vh">with </span>LM Studio or Ollama, already running<small>attached as a named connection on this computer</small></span>
+</li>
+</ol>
+<p class="small more">
+Before it offers an agent, Workbench checks that the model source speaks the API that agent needs, and
+says in one sentence why an agent is switched off.
+</p>
+</div>
+</section>
 
-      <section id="how" aria-labelledby="how-h">
-        <div class="wrap">
-          <p class="kicker">Three steps</p>
-          <h2 id="how-h">How it works</h2>
-          <ol class="steps">
-            <li>
-              <a class="frame" href="images/guide-computer.png">
-                <picture>
-                  <source srcset="images/guide-computer-dark.png" media="(prefers-color-scheme: dark)" />
-                  <img src="images/guide-computer.png" width="1320" height="860" decoding="async" loading="lazy"
-                    alt="Setup guide step 1, This computer: an Apple M3 Max with 48 GiB of memory, an Ollama server on port 11434 with three models, a note that LM Studio's server is off, four installed agents with their versions, and the local engine not yet installed." />
-                </picture>
-              </a>
-              <h3>Run the setup guide</h3>
-              <p>
-                On the first start it looks at this computer: memory, model servers already running and the agents
-                you have installed. Nothing is downloaded until you choose it.
-              </p>
-            </li>
-            <li>
-              <a class="frame" href="images/guide-model.png">
-                <picture>
-                  <source srcset="images/guide-model-dark.png" media="(prefers-color-scheme: dark)" />
-                  <img src="images/guide-model.png" width="1320" height="860" decoding="async" loading="lazy"
-                    alt="Setup guide step 2, Choose where the model runs: a server that is already running, a model downloaded for this computer with a recommended pick, a hosted API, and a machine over SSH." />
-                </picture>
-              </a>
-              <h3>Choose where the model runs</h3>
-              <p>
-                A server you already run, a model for this computer picked to fit your memory, a hosted API with your
-                key, or a GPU machine over SSH.
-              </p>
-            </li>
-            <li>
-              <a class="frame" href="images/terminal.png">
-                <picture>
-                  <source srcset="images/terminal-dark.png" media="(prefers-color-scheme: dark)" />
-                  <img src="images/terminal.png" width="1320" height="860" decoding="async" loading="lazy"
-                    alt="The terminal dock below the Launch view, with a shell open in the storefront project folder and the buttons Start agent, Resume, Watch, End and Hide." />
-                </picture>
-              </a>
-              <h3>Launch the agent in your folder</h3>
-              <p>
-                The agent CLI starts in the project folder, in the terminal dock or its own terminal window, with its
-                key in the process environment. The folder remembers the setup.
-              </p>
-            </li>
-          </ol>
-          <div class="flow">
-            <div class="flow-boxes" aria-hidden="true">
-              <span>Model source</span><b>⇄</b><span>Agent CLI</span><b>⇄</b><span>Your folder</span>
-            </div>
-            <p>
-              Workbench sets up, then steps aside. It is not a proxy: prompts and replies go straight between the
-              agent and the model.
-            </p>
-          </div>
-        </div>
-      </section>
+<section id="how" aria-labelledby="how-h">
+<div class="wrap">
+<p class="kicker">Three steps</p>
+<h2 id="how-h">How it works</h2>
+<ol class="steps">
+<li>
+<a class="frame" href="images/guide-computer.png">
+<picture>
+<source srcset="images/guide-computer-dark.png" media="(prefers-color-scheme: dark)" />
+<img src="images/guide-computer.png" width="1320" height="860" decoding="async" loading="lazy"
+alt="Setup guide step 1, This computer: an Apple M3 Max with 48 GiB of memory, an Ollama server on port 11434 with three models, a note that LM Studio's server is off, four installed agents with their versions, and the local engine not yet installed." />
+</picture>
+</a>
+<h3>Run the setup guide</h3>
+<p>
+On the first start it looks at this computer: memory, model servers already running and the agents
+you have installed. Nothing is downloaded until you choose it.
+</p>
+</li>
+<li>
+<a class="frame" href="images/guide-model.png">
+<picture>
+<source srcset="images/guide-model-dark.png" media="(prefers-color-scheme: dark)" />
+<img src="images/guide-model.png" width="1320" height="860" decoding="async" loading="lazy"
+alt="Setup guide step 2, Choose where the model runs: a server that is already running, a model downloaded for this computer with a recommended pick, a hosted API, and a machine over SSH." />
+</picture>
+</a>
+<h3>Choose where the model runs</h3>
+<p>
+A server you already run, a model for this computer picked to fit your memory, a hosted API with your
+key, or a GPU machine over SSH.
+</p>
+</li>
+<li>
+<a class="frame" href="images/terminal.png">
+<picture>
+<source srcset="images/terminal-dark.png" media="(prefers-color-scheme: dark)" />
+<img src="images/terminal.png" width="1320" height="860" decoding="async" loading="lazy"
+alt="The terminal dock below the Launch view, with a shell open in the storefront project folder and the buttons Start agent, Resume, Watch, End and Hide." />
+</picture>
+</a>
+<h3>Launch the agent in your folder</h3>
+<p>
+The agent CLI starts in the project folder, in the terminal dock or its own terminal window, with its
+key in the process environment. The folder remembers the setup.
+</p>
+</li>
+</ol>
+<div class="flow">
+<div class="flow-boxes" aria-hidden="true">
+<span>Model source</span><b>⇄</b><span>Agent CLI</span><b>⇄</b><span>Your folder</span>
+</div>
+<p>
+Workbench sets up, then steps aside. It is not a proxy: prompts and replies go straight between the
+agent and the model.
+</p>
+</div>
+</div>
+</section>
 
-      <section id="features" aria-labelledby="features-h">
-        <div class="wrap">
-          <p class="kicker">Features</p>
-          <h2 id="features-h">What it does</h2>
-          <p class="intro">One window for the model, the agent and the folder, and a command line for the same jobs.</p>
+<section id="features" aria-labelledby="features-h">
+<div class="wrap">
+<p class="kicker">Features</p>
+<h2 id="features-h">What it does</h2>
+<p class="intro">One window for the model, the agent and the folder, and a command line for the same jobs.</p>
 
-          <div class="feature">
-            <div>
-              <h3>Model sources</h3>
-              <ul>
-                <li><strong>This computer.</strong> A pinned llama.cpp build for your GPU (CUDA, Vulkan, Metal or CPU), or Strata on NVIDIA, with a recommended model that fits your memory. Downloads are checked against their SHA-256.</li>
-                <li><strong>A server you already run.</strong> Ollama, LM Studio, vLLM, llama.cpp, Jan and other OpenAI-compatible servers on this computer's own ports. It never scans your network.</li>
-                <li><strong>A GPU box over plain SSH.</strong> Pair it with your normal SSH login. Workbench finds servers on the box's loopback, or sets up llama.cpp on a Linux box, and forwards one port.</li>
-                <li><strong>Hosted APIs.</strong> OpenAI, Anthropic, OpenRouter, Google Gemini, Groq, DeepSeek, Together, Fireworks, Mistral, xAI, Cerebras and Hugging Face, or an agent's own sign-in.</li>
-              </ul>
-            </div>
-            <figure class="shot">
-              <a class="frame" href="images/attach.png">
-                <picture>
-                  <source srcset="images/attach-dark.png" media="(prefers-color-scheme: dark)" />
-                  <img src="images/attach.png" width="1320" height="860" decoding="async" loading="lazy"
-                    alt="The Attach a running server dialog: Ollama found on port 11434 with three models, a field for another address on this computer, the connection name and model, and a note on which agents work with it." />
-                </picture>
-              </a>
-              <figcaption>Attach a server that is already running and save it as a named connection.</figcaption>
-            </figure>
-          </div>
+<div class="feature">
+<div>
+<h3>Model sources</h3>
+<ul>
+<li><strong>This computer.</strong> A pinned llama.cpp build for your GPU (CUDA, Vulkan, Metal or CPU), or Strata on NVIDIA, with a recommended model that fits your memory. Unsloth's llama.cpp build is an opt-in third engine. Downloads are checked against their SHA-256.</li>
+<li><strong>A server you already run.</strong> Ollama, LM Studio, vLLM, llama.cpp, Jan and other OpenAI-compatible servers on this computer's own ports. It never scans your network.</li>
+<li><strong>A GPU box over plain SSH, Linux or Windows.</strong> Pair it with your normal SSH login. Workbench finds servers on the box's loopback (a PowerShell probe on Windows, no Python needed), opens agent terminals there (tmux on Linux, PowerShell on Windows) and forwards one port. It can run its own llama.cpp node on the box, with CUDA on a Windows NVIDIA card, and when a Workbench there serves a model, such as Strata on an RTX card, it reads that server's key over SSH so nothing is pasted.</li>
+<li><strong>Hosted APIs.</strong> OpenAI, Anthropic, OpenRouter, Google Gemini, Groq, DeepSeek, Together, Fireworks, Mistral, xAI, Cerebras and Hugging Face, or an agent's own sign-in.</li>
+</ul>
+</div>
+<figure class="shot">
+<a class="frame" href="images/machines.png">
+<picture>
+<source srcset="images/machines-dark.png" media="(prefers-color-scheme: dark)" />
+<img src="images/machines.png" width="1320" height="860" decoding="async" loading="lazy"
+alt="The Machines view with two machines, gpu-box-linux on Linux and gpu-box-win on Windows, both connected. The Windows machine shows an RTX 5090 with 31.8 GiB of GPU memory and Windows PowerShell, an attached Strata server on port 10532, a llama.cpp server on port 8080, an open tunnel and the Workbench-managed Inkling 2 Mini model serving on port 10542." />
+</picture>
+</a>
+<figcaption>Machines: a Linux and a Windows box over SSH, the servers found there, the tunnel and the managed model.</figcaption>
+</figure>
+</div>
 
-          <div class="feature flip">
-            <div>
-              <h3>Project setup you can read first</h3>
-              <ul>
-                <li>See which instruction files (<code>AGENTS.md</code>, <code>CLAUDE.md</code> and others), skills and MCP servers each agent will read in the folder, with a warning where one file shadows another.</li>
-                <li>Before the first launch in a folder whose own files define MCP servers, hooks or other programs, Workbench asks for consent, and asks again when those files change.</li>
-                <li>Every write is a plan first: create, update or skip, with a diff. Only what you confirm is written.</li>
-                <li>Eight MIT starter kits give a folder an <code>AGENTS.md</code>, up to six skills and optional MCP servers.</li>
-              </ul>
-            </div>
-            <figure class="shot">
-              <a class="frame" href="images/project-setup.png">
-                <picture>
-                  <source srcset="images/project-setup-dark.png" media="(prefers-color-scheme: dark)" />
-                  <img src="images/project-setup.png" width="1320" height="860" decoding="async" loading="lazy"
-                    alt="Project setup on the Instructions tab: a Show for selector with the six agents, the list of instruction files the chosen agent reads with a status label on each, and the AGENTS.md editor." />
-                </picture>
-              </a>
-              <figcaption>Project setup: what the chosen agent will read in this folder.</figcaption>
-            </figure>
-          </div>
+<div class="feature flip">
+<div>
+<h3>Project setup you can read first</h3>
+<ul>
+<li>See which instruction files (<code>AGENTS.md</code>, <code>CLAUDE.md</code> and others), skills and MCP servers each agent will read in the folder, with a warning where one file shadows another.</li>
+<li>Before the first launch in a folder whose own files define MCP servers, hooks or other programs, Workbench asks for consent, and asks again when those files change.</li>
+<li>Every write is a plan first: create, update or skip, with a diff. Only what you confirm is written.</li>
+<li>Eight MIT starter kits give a folder an <code>AGENTS.md</code>, up to six skills and optional MCP servers.</li>
+</ul>
+</div>
+<figure class="shot">
+<a class="frame" href="images/project-setup.png">
+<picture>
+<source srcset="images/project-setup-dark.png" media="(prefers-color-scheme: dark)" />
+<img src="images/project-setup.png" width="1320" height="860" decoding="async" loading="lazy"
+alt="Project setup on the Instructions tab: a Show for selector with the six agents, the list of instruction files the chosen agent reads with a status label on each, and the AGENTS.md editor." />
+</picture>
+</a>
+<figcaption>Project setup: what the chosen agent will read in this folder.</figcaption>
+</figure>
+</div>
 
-          <div class="feature">
-            <div>
-              <h3>Terminals and sessions</h3>
-              <ul>
-                <li>Run the agent in the terminal dock, with tabs kept per project folder, or in a terminal window of your system.</li>
-                <li>One list shows running terminals, agent windows, remote tmux sessions, the local model and SSH tunnels.</li>
-                <li>Recent sessions are read from each agent's own history and can be resumed. <code>workbench sessions</code> prints the same in a terminal.</li>
-              </ul>
-            </div>
-            <figure class="shot">
-              <a class="frame" href="images/overview.png">
-                <picture>
-                  <source srcset="images/overview-dark.png" media="(prefers-color-scheme: dark)" />
-                  <img src="images/overview.png" width="1320" height="860" decoding="async" loading="lazy"
-                    alt="The Overview view: the current project storefront with its agent, model, instructions, skills and tools, a Running now list with one shell session, and the projects and connections panels." />
-                </picture>
-              </a>
-              <figcaption>Overview: what is set up and what is running.</figcaption>
-            </figure>
-          </div>
+<div class="feature">
+<div>
+<h3>Terminals and sessions</h3>
+<ul>
+<li>Run the agent in the terminal dock, with tabs kept per project folder, or in a terminal window of your system.</li>
+<li>One list shows running terminals, agent windows, remote tmux sessions, the local model and SSH tunnels.</li>
+<li>Recent sessions are read from each agent's own history and can be resumed. <code>workbench sessions</code> prints the same in a terminal.</li>
+</ul>
+</div>
+<figure class="shot">
+<a class="frame" href="images/overview.png">
+<picture>
+<source srcset="images/overview-dark.png" media="(prefers-color-scheme: dark)" />
+<img src="images/overview.png" width="1320" height="860" decoding="async" loading="lazy"
+alt="The Overview view: the current project storefront with its agent, model, instructions, skills and tools, a Running now list with one shell session, and the projects and connections panels." />
+</picture>
+</a>
+<figcaption>Overview: what is set up and what is running.</figcaption>
+</figure>
+</div>
 
-          <ul class="grid three">
-            <li>
-              <h3>The right API for each agent</h3>
-              <p>
-                OMP, Pi and opencode need OpenAI Chat Completions, Codex needs OpenAI Responses and Claude Code needs
-                Anthropic Messages. Workbench checks which APIs a server answers and offers the agents that will work.
-                Hermes starts with its own account.
-              </p>
-            </li>
-            <li>
-              <h3>Doctor</h3>
-              <p>
-                One page, or <code>workbench doctor</code>, checks Python, the data folder, the credential vault, the
-                engine, the GPU driver, the agent CLIs and ports, with one sentence per problem that says what to fix.
-              </p>
-            </li>
-            <li>
-              <h3>Measure your own setup</h3>
-              <p>
-                Run a short benchmark against the model you serve, and see how many prompt tokens your MCP tools add
-                before a long session. The reference figures are in
-                <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/MEASUREMENTS.md">MEASUREMENTS.md</a>.
-              </p>
-            </li>
-            <li class="wide">
-              <h3>Inkling 2 Mini with Unsloth's build</h3>
-              <p>
-                New in the next release. Set <b class="ui">Engine release</b> to <b class="ui">Unsloth</b> and Workbench
-                installs <a href="https://github.com/unslothai/llama.cpp">Unsloth's llama.cpp build</a> beside the
-                default one and adds Unsloth's DSpark drafter for
-                <a href="https://huggingface.co/unsloth/Inkling-2-Mini-GGUF">Inkling 2 Mini</a>. Each platform's build
-                and the drafter are pinned by SHA-256. It is opt-in: the tested mainline build stays the default.
-              </p>
-            </li>
-            <li class="wide">
-              <h3>Roblox Studio in the Game development kit</h3>
-              <p>
-                New in the next release. When Roblox Studio is installed, the kit turns on
-                <a href="https://create.roblox.com/docs/studio/mcp">Studio's built-in MCP server</a> with the command
-                Roblox documents for macOS and Windows, and adds a Roblox skill: list the open Studio first, read
-                before editing, and never save or publish a place unless you ask. Turn on Enable Studio as MCP server
-                in Studio's Assistant first.
-              </p>
-            </li>
-            <li class="wide">
-              <h3>Claude Code and Codex on local Qwen models</h3>
-              <p>
-                Claude Code sends a system message after the first user turn, and Codex sends developer messages.
-                Several Qwen chat templates in llama.cpp reject both with an HTTP 500 error: "System message must be
-                at the beginning". When Workbench serves a Qwen model, it serves a corrected copy of the template, so
-                both agents can use it. The correction applies only to models Workbench serves.
-              </p>
-            </li>
-          </ul>
-        </div>
-      </section>
+<ul class="grid three">
+<li>
+<h3>The right API for each agent</h3>
+<p>
+OMP, Pi and opencode need OpenAI Chat Completions, Codex needs OpenAI Responses and Claude Code needs
+Anthropic Messages. Workbench checks which APIs a server answers and offers the agents that will work.
+Hermes starts with its own account.
+</p>
+</li>
+<li>
+<h3>Doctor</h3>
+<p>
+One page, or <code>workbench doctor</code>, checks Python, the data folder, the credential vault, the
+engine, the GPU driver, the agent CLIs and ports, with one sentence per problem that says what to fix.
+</p>
+</li>
+<li>
+<h3>Measure your own setup</h3>
+<p>
+Run a short benchmark against the model you serve, and see how many prompt tokens your MCP tools add
+before a long session. The reference figures are in
+<a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/MEASUREMENTS.md">MEASUREMENTS.md</a>.
+</p>
+</li>
+<li class="wide">
+<h3>Inkling 2 Mini with Unsloth's build</h3>
+<p>
+New in 0.5.0. Set <b class="ui">Engine release</b> to <b class="ui">Unsloth</b> and Workbench
+installs <a href="https://github.com/unslothai/llama.cpp">Unsloth's llama.cpp build</a> beside the
+default one and adds Unsloth's DSpark drafter for
+<a href="https://huggingface.co/unsloth/Inkling-2-Mini-GGUF">Inkling 2 Mini</a>. Each platform's build
+and the drafter are pinned by SHA-256. It is opt-in: the tested mainline build stays the default.
+</p>
+</li>
+<li class="wide">
+<h3>Roblox Studio in the Game development kit</h3>
+<p>
+New in 0.5.0. When Roblox Studio is installed, the kit turns on
+<a href="https://create.roblox.com/docs/studio/mcp">Studio's built-in MCP server</a> with the command
+Roblox documents for macOS and Windows, and adds a Roblox skill: list the open Studio first, read
+before editing, and never save or publish a place unless you ask. Turn on Enable Studio as MCP server
+in Studio's Assistant first.
+</p>
+</li>
+<li class="wide">
+<h3>Claude Code and Codex on local Qwen models</h3>
+<p>
+Claude Code sends a system message after the first user turn, and Codex sends developer messages.
+Several Qwen chat templates in llama.cpp reject both with an HTTP 500 error: "System message must be
+at the beginning". When Workbench serves a Qwen model, it serves a corrected copy of the template, so
+both agents can use it. For a server you attach, Workbench asks the model once in that shape and, when the template refuses, switches Claude Code and Codex off for it with the reason.
+</p>
+</li>
+</ul>
+</div>
+</section>
 
-      <section id="kits" aria-labelledby="kits-h">
-        <div class="wrap">
-          <p class="kicker">Templates</p>
-          <h2 id="kits-h">Starter kits</h2>
-          <p class="intro">
-            A kit is a starting point for one kind of project: an <code>AGENTS.md</code> template, up to six skills
-            and a few optional MCP servers. Workbench suggests one from the files in your folder and shows every file
-            it would create. Files you already have are left alone.
-          </p>
-          <ul class="grid">
-            <li><h3>General software</h3><p>Run the real checks after every change, debug one step at a time and keep Git history clean.</p><p class="tags"><span>Any language</span><span>Build or test command</span></p></li>
-            <li><h3>Web front end</h3><p>Run the dev server, check the page in a real browser and keep components consistent.</p><p class="tags"><span>React</span><span>Next.js</span><span>Vue</span><span>Svelte</span><span>Astro</span></p></li>
-            <li><h3>Python and data</h3><p>Work inside the project's environment, treat source data as read-only and keep results reproducible.</p><p class="tags"><span>Python</span><span>Jupyter</span><span>pandas</span><span>Polars</span><span>DuckDB</span></p></li>
-            <li><h3>3D scenes and assets</h3><p>Inspect before changing, script small repeatable steps and export with checked scale and axes.</p><p class="tags"><span>Blender</span></p></li>
-            <li><h3>Research and writing</h3><p>Find and cite real sources, draft in passes and check every claim.</p><p class="tags"><span>Markdown</span><span>LaTeX</span><span>Quarto</span><span>Typst</span></p></li>
-            <li><h3>DevOps and infrastructure</h3><p>Plan and read before anything changes, keep secrets out of output and never apply unasked.</p><p class="tags"><span>Terraform</span><span>OpenTofu</span><span>Docker</span><span>Kubernetes</span></p></li>
-            <li><h3>Game development</h3><p>Follow the engine's layout, leave serialised assets to the editor and test from the command line.</p><p class="tags"><span>Godot</span><span>Unity</span><span>Unreal Engine</span><span>Roblox</span></p></li>
-            <li><h3>Blank</h3><p>A short <code>AGENTS.md</code> with the headings every agent reads. No skills and no tools.</p><p class="tags"><span>Any project</span></p></li>
-          </ul>
-          <p class="small more">
-            Kit text is written for Agent Workbench under the MIT licence. Third-party MCP servers are not bundled: a
-            local one is fetched from its package registry the first time an agent starts it, and the kit preview
-            names its publisher and licence. None of the kit servers was started for this release.
-            <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/project-setup.md#starter-kits">Kit contents in detail</a>
-          </p>
-        </div>
-      </section>
+<section id="kits" aria-labelledby="kits-h">
+<div class="wrap">
+<p class="kicker">Templates</p>
+<h2 id="kits-h">Starter kits</h2>
+<p class="intro">
+A kit is a starting point for one kind of project: an <code>AGENTS.md</code> template, up to six skills
+and a few optional MCP servers. Workbench suggests one from the files in your folder and shows every file
+it would create. Files you already have are left alone.
+</p>
+<ul class="grid">
+<li><h3>General software</h3><p>Run the real checks after every change, debug one step at a time and keep Git history clean.</p><p class="tags"><span>Any language</span><span>Build or test command</span></p></li>
+<li><h3>Web front end</h3><p>Run the dev server, check the page in a real browser and keep components consistent.</p><p class="tags"><span>React</span><span>Next.js</span><span>Vue</span><span>Svelte</span><span>Astro</span></p></li>
+<li><h3>Python and data</h3><p>Work inside the project's environment, treat source data as read-only and keep results reproducible.</p><p class="tags"><span>Python</span><span>Jupyter</span><span>pandas</span><span>Polars</span><span>DuckDB</span></p></li>
+<li><h3>3D scenes and assets</h3><p>Inspect before changing, script small repeatable steps and export with checked scale and axes.</p><p class="tags"><span>Blender</span></p></li>
+<li><h3>Research and writing</h3><p>Find and cite real sources, draft in passes and check every claim.</p><p class="tags"><span>Markdown</span><span>LaTeX</span><span>Quarto</span><span>Typst</span></p></li>
+<li><h3>DevOps and infrastructure</h3><p>Plan and read before anything changes, keep secrets out of output and never apply unasked.</p><p class="tags"><span>Terraform</span><span>OpenTofu</span><span>Docker</span><span>Kubernetes</span></p></li>
+<li><h3>Game development</h3><p>Follow the engine's layout, leave serialised assets to the editor and test from the command line.</p><p class="tags"><span>Godot</span><span>Unity</span><span>Unreal Engine</span><span>Roblox</span></p></li>
+<li><h3>Blank</h3><p>A short <code>AGENTS.md</code> with the headings every agent reads. No skills and no tools.</p><p class="tags"><span>Any project</span></p></li>
+</ul>
+<p class="small more">
+Kit text is written for Agent Workbench under the MIT licence. Third-party MCP servers are not bundled: a
+local one is fetched from its package registry the first time an agent starts it, and the kit preview
+names its publisher and licence. None of the kit servers was started for this release.
+<a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/project-setup.md#starter-kits">Kit contents in detail</a>
+</p>
+</div>
+</section>
 
-      <section id="runs" aria-labelledby="runs-h">
-        <div class="wrap">
-          <p class="badge">New in the next release · not in the 0.4.0 download</p>
-          <h2 id="runs-h">Run summaries</h2>
-          <p class="intro">
-            Each agent Workbench starts in a folder leaves a run record in this computer's data folder: plain JSON,
-            no keys. After the folder's profile or instruction files have changed, the record still says what that
-            run used, so you can copy it into an issue or start from it again.
-          </p>
-          <div class="split">
-            <div class="card">
-              <h3>What a summary holds</h3>
-              <ul class="fields">
-                <li>Agent and its version</li>
-                <li>Where it started: terminal dock, own window or resumed session</li>
-                <li>Model source, connection name and API address (scheme, host and port only)</li>
-                <li>Model ID, context size and reasoning effort</li>
-                <li>For a local model: engine and weights file, with its <span class="nowrap">SHA-256</span> when it is in the catalogue</li>
-                <li>Profile and starter kit in use</li>
-                <li>MCP servers the agent received</li>
-                <li>Instruction files, each with its size and <span class="nowrap">SHA-256</span></li>
-                <li>Skills, each with its <span class="nowrap">SHA-256</span></li>
-                <li>The folder prompt, when the agent received it</li>
-                <li>Workbench version</li>
-              </ul>
-            </div>
-            <div class="card">
-              <h3>What you can do with it</h3>
-              <ul class="plain">
-                <li>On the tab of an agent Workbench started, <b class="ui">Run summary</b> in the terminal dock opens that run. <b class="ui">Project setup</b> → <b class="ui">Recent runs</b> lists the folder's newest runs, each with a <b class="ui">Summary…</b> button.</li>
-                <li><b class="ui">Copy summary</b> copies it as Markdown, ready for an issue or your notes. <b class="ui">Copy as JSON</b> copies the full record.</li>
-                <li>The summary ends with <em>Changed since this run</em>: the instruction files and skills that changed, are gone or are new in the folder now.</li>
-                <li><b class="ui">Save as profile</b> writes the run's choices to <code>.agent-workbench/profiles.json</code> under a new name. Apply it from <b class="ui">Project profiles</b>, after the usual review, to run the task again.</li>
-              </ul>
-            </div>
-          </div>
-          <p class="note">
-            No keys are recorded: no API keys, tokens or environment values, and no user name, password, path or query
-            string from an address. A run keeps the hash of each instruction file, not its text; commit those files
-            and the hash tells you which version ran. Codex and runs on an agent's own account do not receive the
-            folder prompt, so their summaries say "No prompt."
-          </p>
-          <p class="small more">
-            Runs stay on this computer: one JSON file per folder in <code>runs/</code> in the data folder, with the
-            newest 100 runs. Agents started on another machine over SSH and from the command line are not recorded.
-            <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/sessions.md#run-summaries">Run summaries in detail</a>
-          </p>
-        </div>
-      </section>
+<section id="runs" aria-labelledby="runs-h">
+<div class="wrap">
+<p class="badge">New in 0.5.0</p>
+<h2 id="runs-h">Run summaries</h2>
+<p class="intro">
+Each agent Workbench starts in a folder leaves a run record in this computer's data folder: plain JSON,
+no keys. After the folder's profile or instruction files have changed, the record still says what that
+run used, so you can copy it into an issue or start from it again.
+</p>
+<div class="split">
+<div class="card">
+<h3>What a summary holds</h3>
+<ul class="fields">
+<li>Agent and its version</li>
+<li>Where it started: terminal dock, own window or resumed session</li>
+<li>Model source, connection name and API address (scheme, host and port only)</li>
+<li>Model ID, context size and reasoning effort</li>
+<li>For a local model: engine and weights file, with its <span class="nowrap">SHA-256</span> when it is in the catalogue</li>
+<li>Profile and starter kit in use</li>
+<li>MCP servers the agent received</li>
+<li>Instruction files, each with its size and <span class="nowrap">SHA-256</span></li>
+<li>Skills, each with its <span class="nowrap">SHA-256</span></li>
+<li>The folder prompt, when the agent received it</li>
+<li>Workbench version</li>
+</ul>
+</div>
+<div class="card">
+<h3>What you can do with it</h3>
+<ul class="plain">
+<li>On the tab of an agent Workbench started, <b class="ui">Run summary</b> in the terminal dock opens that run. <b class="ui">Project setup</b> → <b class="ui">Recent runs</b> lists the folder's newest runs, each with a <b class="ui">Summary…</b> button.</li>
+<li><b class="ui">Copy summary</b> copies it as Markdown, ready for an issue or your notes. <b class="ui">Copy as JSON</b> copies the full record.</li>
+<li>The summary ends with <em>Changed since this run</em>: the instruction files and skills that changed, are gone or are new in the folder now.</li>
+<li><b class="ui">Save as profile</b> writes the run's choices to <code>.agent-workbench/profiles.json</code> under a new name. Apply it from <b class="ui">Project profiles</b>, after the usual review, to run the task again.</li>
+</ul>
+</div>
+</div>
+<div class="split shots">
+<figure class="shot">
+<a class="frame" href="images/recent-runs.png">
+<picture>
+<source srcset="images/recent-runs-dark.png" media="(prefers-color-scheme: dark)" />
+<img src="images/recent-runs.png" width="1320" height="860" decoding="async" loading="lazy"
+alt="Project setup on the Recent runs tab for the storefront folder: three runs, OMP on gpu-box-linux, Claude Code on gpu-box-win through Strata and Codex on Ollama, each with when it started and the buttons Summary… and Remove." />
+</picture>
+</a>
+<figcaption>Recent runs: the newest runs in this folder.</figcaption>
+</figure>
+<figure class="shot">
+<a class="frame" href="images/run-summary.png">
+<picture>
+<source srcset="images/run-summary-dark.png" media="(prefers-color-scheme: dark)" />
+<img src="images/run-summary.png" width="1320" height="860" decoding="async" loading="lazy"
+alt="The Run summary dialog for an OMP run: context, reasoning effort, MCP servers and Workbench version, then AGENTS.md and the skills each with a SHA-256, a field to save the run as a profile, and the buttons Close, Copy as JSON and Copy summary." />
+</picture>
+</a>
+<figcaption>Run summary: copy it, or save the run as a profile.</figcaption>
+</figure>
+</div>
+<p class="note">
+No keys are recorded: no API keys, tokens or environment values, and no user name, password, path or query
+string from an address. A run keeps the hash of each instruction file, not its text; commit those files
+and the hash tells you which version ran. Codex and runs on an agent's own account do not receive the
+folder prompt, so their summaries say "No prompt."
+</p>
+<p class="small more">
+Runs stay on this computer: one JSON file per folder in <code>runs/</code> in the data folder, with the
+newest 100 runs. Agents started on another machine over SSH and from the command line are not recorded.
+<a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/sessions.md#run-summaries">Run summaries in detail</a>
+</p>
+</div>
+</section>
 
-      <section id="portable" aria-labelledby="portable-h">
-        <div class="wrap">
-          <p class="badge">New in the next release · not in the 0.4.0 download</p>
-          <h2 id="portable-h">Settings that travel with the folder</h2>
-          <p class="intro">
-            A folder's setup is kept in plain files you can read, diff and commit. Named profiles live in
-            <code>.agent-workbench/profiles.json</code> inside the project, next to its MCP server list, instructions
-            and skills. The file holds no keys, addresses or machine paths, so it is safe to commit.
-          </p>
-          <h3 class="sub">From one machine to the next</h3>
-          <ol class="moves">
-            <li>On <b class="ui">Launch</b>, <b class="ui">Save as folder default</b> writes the current agent, kind of model source, connection name, model, engine settings and tool switches into that file as the folder default. In <b class="ui">Project profiles</b>, <b class="ui">Make default</b> does the same for a saved profile.</li>
-            <li>Commit <code>.agent-workbench/</code> with the project. The default profile carries the <b class="ui">Folder default</b> label in <b class="ui">Project profiles</b>.</li>
-            <li>Open the folder on a machine that has no setup for it yet. <b class="ui">Launch</b> says "This folder has saved settings" and offers a <b class="ui">Review and apply…</b> button. Nothing changes until you confirm.</li>
-            <li>Connections are matched by name and model files by file name. When one is missing, the review says which connection or model file to add. Keys are entered again on each computer.</li>
-          </ol>
-          <div class="portable-table">
-            <h3>Where settings live</h3>
-            <p class="small">In the app, <b class="ui">Where this folder's settings live</b> in <b class="ui">Project profiles</b> lists these for the open folder, each with <b class="ui">Show in folder</b>.</p>
-            <div class="table">
-              <table class="stack">
-                <thead><tr><th scope="col">Place</th><th scope="col">What it holds</th><th scope="col">Travels with the folder</th></tr></thead>
-                <tbody>
-                  <tr><th scope="row">The project folder</th><td data-label="What it holds">Named profiles and the folder default (<code>.agent-workbench/profiles.json</code>), the project's MCP servers without secrets (<code>.agent-workbench/project.json</code>), instruction files such as <code>AGENTS.md</code>, and skills in <code>.agents/skills</code></td><td data-label="Travels with the folder">Yes, safe to commit</td></tr>
-                  <tr><th scope="row">This computer's data folder</th><td data-label="What it holds">Last choices per folder (<code>projects.json</code>), connections with their addresses but no keys (<code>connections.json</code>), run records (<code>runs/</code>)</td><td data-label="Travels with the folder">No</td></tr>
-                  <tr><th scope="row">The system credential vault</th><td data-label="What it holds">API keys and values for MCP server variables</td><td data-label="Travels with the folder">No, never written to a file</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
+<section id="portable" aria-labelledby="portable-h">
+<div class="wrap">
+<p class="badge">New in 0.5.0</p>
+<h2 id="portable-h">Settings that travel with the folder</h2>
+<p class="intro">
+A folder's setup is kept in plain files you can read, diff and commit. Named profiles live in
+<code>.agent-workbench/profiles.json</code> inside the project, next to its MCP server list, instructions
+and skills. The file holds no keys, addresses or machine paths, so it is safe to commit.
+</p>
+<h3 class="sub">From one machine to the next</h3>
+<ol class="moves">
+<li>On <b class="ui">Launch</b>, <b class="ui">Save as folder default</b> writes the current agent, kind of model source, connection name, model, engine settings and tool switches into that file as the folder default. In <b class="ui">Project profiles</b>, <b class="ui">Make default</b> does the same for a saved profile.</li>
+<li>Commit <code>.agent-workbench/</code> with the project. The default profile carries the <b class="ui">Folder default</b> label in <b class="ui">Project profiles</b>.</li>
+<li>Open the folder on a machine that has no setup for it yet. <b class="ui">Launch</b> says "This folder has saved settings" and offers a <b class="ui">Review and apply…</b> button. Nothing changes until you confirm.</li>
+<li>Connections are matched by name and model files by file name. When one is missing, the review says which connection or model file to add. Keys are entered again on each computer.</li>
+</ol>
+<figure class="shot sub">
+<a class="frame" href="images/folder-default.png">
+<picture>
+<source srcset="images/folder-default-dark.png" media="(prefers-color-scheme: dark)" />
+<img src="images/folder-default.png" width="1320" height="860" decoding="async" loading="lazy"
+alt="The Launch view on a computer that has no setup for the storefront folder yet: a notice saying This folder has saved settings: Folder default, with the buttons Review and apply… and Dismiss, above the project and model fields." />
+</picture>
+</a>
+<figcaption>Another computer opens the folder: Launch offers its default and changes nothing until you review it.</figcaption>
+</figure>
+<div class="portable-table">
+<h3>Where settings live</h3>
+<p class="small">In the app, <b class="ui">Where this folder's settings live</b> in <b class="ui">Project profiles</b> lists these for the open folder, each with <b class="ui">Show in folder</b>.</p>
+<div class="table">
+<table class="stack">
+<thead><tr><th scope="col">Place</th><th scope="col">What it holds</th><th scope="col">Travels with the folder</th></tr></thead>
+<tbody>
+<tr><th scope="row">The project folder</th><td data-label="What it holds">Named profiles and the folder default (<code>.agent-workbench/profiles.json</code>), the project's MCP servers without secrets (<code>.agent-workbench/project.json</code>), instruction files such as <code>AGENTS.md</code>, and skills in <code>.agents/skills</code></td><td data-label="Travels with the folder">Yes, safe to commit</td></tr>
+<tr><th scope="row">This computer's data folder</th><td data-label="What it holds">Last choices per folder (<code>projects.json</code>), connections with their addresses but no keys (<code>connections.json</code>), run records (<code>runs/</code>)</td><td data-label="Travels with the folder">No</td></tr>
+<tr><th scope="row">The system credential vault</th><td data-label="What it holds">API keys and values for MCP server variables</td><td data-label="Travels with the folder">No, never written to a file</td></tr>
+</tbody>
+</table>
+</div>
+<figure class="shot sub">
+<a class="frame" href="images/settings-places.png">
+<picture>
+<source srcset="images/settings-places-dark.png" media="(prefers-color-scheme: dark)" />
+<img src="images/settings-places.png" width="1320" height="860" decoding="async" loading="lazy"
+alt="The Where this folder's settings live panel: under Travels with the folder, the profiles file, the project file, AGENTS.md and the skills folder; under Stays on this computer, the last choices, the connections, the run summaries file and the API keys in the login keychain, each file with a Show in folder button." />
+</picture>
+</a>
+<figcaption>Where this folder's settings live, as the app lists it.</figcaption>
+</figure>
+</div>
+</div>
+</section>
 
-      <section id="privacy" aria-labelledby="privacy-h">
-        <div class="wrap">
-          <p class="kicker">Security and privacy</p>
-          <h2 id="privacy-h">What leaves your computer</h2>
-          <p class="intro">
-            Workbench contacts other computers only to download what you ask for (GitHub, PyPI, Hugging Face and the
-            publishers of agent CLIs and kit servers), for the hosted model you chose, and for web tools you switch on.
-          </p>
-          <ul class="grid">
-            <li>
-              <h3>No telemetry, no account</h3>
-              <p>No analytics, no crash reporting and no automatic update check. The desktop window's content policy blocks every network request.</p>
-            </li>
-            <li>
-              <h3>Keys stay in your credential vault</h3>
-              <p>Keychain, Credential Manager or a Secret Service vault. A key reaches the agent in its process environment, never its command line, a project file or a log.</p>
-            </li>
-            <li>
-              <h3>Checked downloads, per-user install</h3>
-              <p>Kits, engines, Electron and Python packages are checked against pinned SHA-256 values. The install scripts need no sudo or administrator rights.</p>
-            </li>
-            <li>
-              <h3>The agents themselves</h3>
-              <p>The agent CLIs are separate programs with their own data handling. A hosted provider receives what the agent sends, including file contents.</p>
-            </li>
-          </ul>
-          <p class="more">
-            <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/SECURITY.md#outbound-hosts">Every host Workbench can contact, and why</a>
-          </p>
-        </div>
-      </section>
 
-      <section id="fit" aria-labelledby="fit-h">
-        <div class="wrap">
-          <p class="kicker">Scope</p>
-          <h2 id="fit-h">What it is not</h2>
-          <p class="intro">
-            Workbench does one job: one project folder, one model source and one agent, set up correctly and
-            remembered. It does not manage git worktrees, run agents in parallel or review diffs.
-          </p>
-          <div class="split">
-            <div class="card">
-              <h3>Use something else when</h3>
-              <ul class="plain">
-                <li>You want several agents on one repository, each in its own worktree: <a href="https://github.com/generalaction/emdash">Emdash</a> or <a href="https://github.com/smtg-ai/claude-squad">Claude Squad</a>.</li>
-                <li>You want one agent on a model Ollama already serves, and nothing more: <a href="https://docs.ollama.com/cli"><code>ollama launch</code></a> does it in one command.</li>
-                <li>You want providers, MCP servers and skills synced across many agent tools for your whole machine: <a href="https://github.com/farion1231/cc-switch">cc-switch</a>.</li>
-                <li>You want an app for chatting with local models: <a href="https://lmstudio.ai/">LM Studio</a> or <a href="https://www.jan.ai/">Jan</a>. Workbench can attach to either.</li>
-              </ul>
-            </div>
-            <div class="card quiet">
-              <h3>Workbench fits when you want to</h3>
-              <ul class="plain">
-                <li>keep a different model and agent for each project folder;</li>
-                <li>run the model on another machine and reach it over SSH, with no other open port;</li>
-                <li>use the same agents with a local engine, an attached server or a hosted key;</li>
-                <li>see what an agent will read from a folder before it starts.</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      <section id="status" aria-labelledby="status-h">
-        <div class="wrap">
-          <p class="kicker">Honest status</p>
-          <h2 id="status-h">What was run for 0.4.0</h2>
-          <p class="intro">
-            Every entry comes from
-            <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/verification.json">docs/verification.json</a>,
-            which holds the evidence and notes for each check. A check that is not listed for a system was not run on it.
-          </p>
-          <div class="table">
-            <table class="record stack">
-              <thead><tr><th scope="col">System</th><th scope="col">Passed</th><th scope="col">Partly working or failed</th></tr></thead>
-              <tbody>
-                <tr>
-                  <th scope="row">macOS 27.2 on a Mac with Apple M3 Max, 48 GB unified memory (preview)</th>
-                  <td data-label="Passed"><ul class="checks"><li>Unit tests</li><li>Managed llama.cpp install</li><li>Local model start and stop</li><li>OMP session answered</li><li>Claude Code session answered</li><li>Codex session answered</li><li>opencode session answered</li></ul></td>
-                  <td data-label="Partly working or failed"><ul class="checks"><li>Desktop smoke test</li><li>Install with the install script</li><li>Install by hand from a browser download</li><li>First start (Python packages and desktop runtime)</li><li>Attach Ollama</li><li>Attach LM Studio</li></ul></td>
-                </tr>
-                <tr>
-                  <th scope="row">Fedora 44 Workstation, x86_64 with an AMD Radeon RX 9070 series GPU, reached over SSH</th>
-                  <td data-label="Passed"><ul class="checks"><li>Unit tests</li></ul></td>
-                  <td data-label="Partly working or failed"><ul class="checks"><li>Install with the install script</li><li>First start (Python packages and desktop runtime)</li></ul></td>
-                </tr>
-                <tr>
-                  <th scope="row">Fedora 44 Workstation, x86_64 with AMD Radeon 880M graphics (Wayland desktop)</th>
-                  <td data-label="Passed"><ul class="checks"><li>Unit tests</li><li>First start (Python packages and desktop runtime)</li><li>Session with a hosted provider</li><li>Terminal dock: open, type, close</li><li>Doctor</li></ul></td>
-                  <td data-label="Partly working or failed"><ul class="checks"><li>Install with the install script</li></ul></td>
-                </tr>
-                <tr>
-                  <th scope="row">Windows 11 x64 workstation with an NVIDIA GeForce RTX 5090</th>
-                  <td data-label="Passed"><ul class="checks"><li>Install with the install script</li><li>First start (Python packages and desktop runtime)</li><li>Local model start and stop</li><li>OMP session answered</li><li>Terminal dock: open, type, close</li><li>Starter kit applied</li></ul></td>
-                  <td data-label="Partly working or failed"><ul class="checks"><li>Unit tests</li><li>Web search and page crawling</li></ul></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p class="small more">
-            Pi, Hermes and hosted CI were not run. macOS stays a preview until its desktop, install, first-start,
-            terminal and Doctor checks pass on Apple Silicon. The
-            <a href="https://github.com/jamesarslan/local-agent-workbench#tested-configurations">tested-configurations table</a>
-            in the README lists them.
-          </p>
-        </div>
-      </section>
+<section id="tested" aria-labelledby="tested-h">
+<div class="wrap">
+<p class="kicker">Evidence</p>
+<h2 id="tested-h">Tested on real machines</h2>
+<p class="intro">For 0.5.0 the release commit ran on three computers: a Mac with an M3 Max, a Windows 11 workstation with an RTX 5090 and a Fedora 44 machine with a Radeon RX 9070 XT. Every figure below comes from a file in the repository, linked under each chart.</p>
+<ul class="tiles">
+<li><b>0</b><span>failed tests on macOS, Windows 11 and Fedora 44</span></li>
+<li><b>1,373</b><span>Python tests on each system from a fresh checkout, and on Windows and Fedora again through the installed kit</span></li>
+<li><b>94 of 94</b><span>Node tests passed on all three systems</span></li>
+<li><b>10 of 10</b><span>desktop smoke cases passed in the Electron window on macOS</span></li>
+</ul>
+<div class="charts">
+<figure class="chart">
+<h3>Test suites on three systems</h3>
+<svg role="img" aria-labelledby="ct-t ct-d" width="100%" height="272">
+<title id="ct-t">Python test results per system at the 0.5.0 commit</title>
+<desc id="ct-d">Bars of 1,373 tests each. macOS source: 1,369 passed, 4 skipped. Windows 11 source: 1,259 passed, 114 skipped. Windows 11 installed kit: 1,254 passed, 119 skipped. Fedora 44 source: 1,363 passed, 10 skipped. Fedora 44 installed kit: 1,358 passed, 15 skipped. No test failed.</desc>
+<g><text x="0" y="14">macOS 27.2 · checkout</text><text class="c-num" x="100%" y="14" text-anchor="end">4 skipped</text><rect class="c-pass" y="22" width="99.71%" height="22" rx="4"/><rect class="c-skip" x="99.71%" y="22" width="0.29%" height="22"/><text class="c-in" x="8" y="38">1,369 passed</text></g>
+<g transform="translate(0 54)"><text x="0" y="14">Windows 11 · checkout</text><text class="c-num" x="100%" y="14" text-anchor="end">114 skipped</text><rect class="c-pass" y="22" width="91.70%" height="22" rx="4"/><rect class="c-skip" x="91.70%" y="22" width="8.30%" height="22"/><text class="c-in" x="8" y="38">1,259 passed</text></g>
+<g transform="translate(0 108)"><text x="0" y="14">Windows 11 · installed kit</text><text class="c-num" x="100%" y="14" text-anchor="end">119 skipped</text><rect class="c-pass" y="22" width="91.33%" height="22" rx="4"/><rect class="c-skip" x="91.33%" y="22" width="8.67%" height="22"/><text class="c-in" x="8" y="38">1,254 passed</text></g>
+<g transform="translate(0 162)"><text x="0" y="14">Fedora 44 · checkout</text><text class="c-num" x="100%" y="14" text-anchor="end">10 skipped</text><rect class="c-pass" y="22" width="99.27%" height="22" rx="4"/><rect class="c-skip" x="99.27%" y="22" width="0.73%" height="22"/><text class="c-in" x="8" y="38">1,363 passed</text></g>
+<g transform="translate(0 216)"><text x="0" y="14">Fedora 44 · installed kit</text><text class="c-num" x="100%" y="14" text-anchor="end">15 skipped</text><rect class="c-pass" y="22" width="98.91%" height="22" rx="4"/><rect class="c-skip" x="98.91%" y="22" width="1.09%" height="22"/><text class="c-in" x="8" y="38">1,358 passed</text></g>
+</svg>
+<div class="vh"><table><caption>Python tests at the 0.5.0 commit</caption><thead><tr><th scope="col">Run</th><th scope="col">Tests</th><th scope="col">Passed</th><th scope="col">Skipped</th><th scope="col">Failed</th></tr></thead><tbody><tr><th scope="row">macOS, checkout</th><td>1,373</td><td>1,369</td><td>4</td><td>0</td></tr><tr><th scope="row">Windows 11, checkout</th><td>1,373</td><td>1,259</td><td>114</td><td>0</td></tr><tr><th scope="row">Windows 11, installed kit</th><td>1,373</td><td>1,254</td><td>119</td><td>0</td></tr><tr><th scope="row">Fedora 44, checkout</th><td>1,373</td><td>1,363</td><td>10</td><td>0</td></tr><tr><th scope="row">Fedora 44, installed kit</th><td>1,373</td><td>1,358</td><td>15</td><td>0</td></tr></tbody></table></div>
+<figcaption>Each system ran <code>python -m unittest discover -s tests</code> in a fresh clone of the release commit, then installed a kit built from it with the install script and ran the suite again through the installed <code>workbench</code> command. Skipped tests belong to another system (macOS, POSIX or PowerShell features) or need a Git checkout that kits leave out. Hosted CI did not run. <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/verification.json">Record</a></figcaption>
+</figure>
+<figure class="chart">
+<h3>Memory each model used</h3>
+<svg role="img" aria-labelledby="cm-t cm-d" width="100%" height="452">
+<title id="cm-t">Measured memory per model, in GiB</title>
+<desc id="cm-d">On a 48 GB M3 Max at a 32K window: Qwen3.5-4B Q4_K_M 5.9, Qwen3.5-9B Q4_K_M 8.6, Qwen3.8-27B UD-IQ3_XXS 17.8, Inkling 2 Mini UD-Q4_K_XL 20.5, Qwen3.8-27B UD-Q4_K_XL 24.1, Qwen3.8-27B UD-Q6_K_XL 29.5. GPU memory in use on the whole card: Inkling 2 Mini UD-IQ3_XXS at 16K on a 16 GB RX 9070 XT 13.3; Strata SQ-20 at 32K on a 32 GB RTX 5090 24.3; Strata SQ-20 at 64K with an FP8 cache 27.3.</desc>
+<g class="c-grid"><line x1="25%" x2="25%" y1="18" y2="424"/><line x1="50%" x2="50%" y1="18" y2="424"/><line x1="75%" x2="75%" y1="18" y2="424"/><line x1="99.8%" x2="99.8%" y1="18" y2="424"/></g>
+<text class="c-head" x="0" y="12">M3 Max 48 GB, unified memory, 32K window</text>
+<g transform="translate(0 20)"><text x="0" y="14">Qwen3.5-4B Q4_K_M</text><text class="c-num" x="100%" y="14" text-anchor="end">5.9 GiB</text><rect class="c-pass" y="20" width="18.44%" height="14" rx="3"/></g>
+<g transform="translate(0 62)"><text x="0" y="14">Qwen3.5-9B Q4_K_M</text><text class="c-num" x="100%" y="14" text-anchor="end">8.6 GiB</text><rect class="c-pass" y="20" width="26.88%" height="14" rx="3"/></g>
+<g transform="translate(0 104)"><text x="0" y="14">Qwen3.8-27B UD-IQ3_XXS</text><text class="c-num" x="100%" y="14" text-anchor="end">17.8 GiB</text><rect class="c-pass" y="20" width="55.63%" height="14" rx="3"/></g>
+<g transform="translate(0 146)"><text x="0" y="14">Inkling 2 Mini UD-Q4_K_XL</text><text class="c-num" x="100%" y="14" text-anchor="end">20.5 GiB</text><rect class="c-pass" y="20" width="64.06%" height="14" rx="3"/></g>
+<g transform="translate(0 188)"><text x="0" y="14">Qwen3.8-27B UD-Q4_K_XL</text><text class="c-num" x="100%" y="14" text-anchor="end">24.1 GiB</text><rect class="c-pass" y="20" width="75.31%" height="14" rx="3"/></g>
+<g transform="translate(0 230)"><text x="0" y="14">Qwen3.8-27B UD-Q6_K_XL</text><text class="c-num" x="100%" y="14" text-anchor="end">29.5 GiB</text><rect class="c-pass" y="20" width="92.19%" height="14" rx="3"/></g>
+<text class="c-head" x="0" y="296">GPU memory in use on the whole card</text>
+<g transform="translate(0 304)"><text x="0" y="14">Inkling IQ3_XXS 16K · RX 9070 XT 16 GB</text><text class="c-num" x="100%" y="14" text-anchor="end">13.3 GiB</text><rect class="c-gpu" y="20" width="41.56%" height="14" rx="3"/></g>
+<g transform="translate(0 344)"><text x="0" y="14">Strata SQ-20 32K · RTX 5090 32 GB</text><text class="c-num" x="100%" y="14" text-anchor="end">24.3 GiB</text><rect class="c-gpu" y="20" width="75.94%" height="14" rx="3"/></g>
+<g transform="translate(0 384)"><text x="0" y="14">Strata SQ-20 64K FP8 · RTX 5090</text><text class="c-num" x="100%" y="14" text-anchor="end">27.3 GiB</text><rect class="c-gpu" y="20" width="85.38%" height="14" rx="3"/></g>
+<g class="c-axis"><text x="25%" y="444" text-anchor="middle">8</text><text x="50%" y="444" text-anchor="middle">16</text><text x="75%" y="444" text-anchor="middle">24</text><text x="100%" y="444" text-anchor="end">32 GiB</text></g>
+</svg>
+<div class="vh"><table><caption>Measured memory in GiB</caption><thead><tr><th scope="col">Model and machine</th><th scope="col">GiB</th></tr></thead><tbody><tr><th scope="row">Qwen3.5-4B Q4_K_M, M3 Max, 32K</th><td>5.9</td></tr><tr><th scope="row">Qwen3.5-9B Q4_K_M, M3 Max, 32K</th><td>8.6</td></tr><tr><th scope="row">Qwen3.8-27B UD-IQ3_XXS, M3 Max, 32K</th><td>17.8</td></tr><tr><th scope="row">Inkling 2 Mini UD-Q4_K_XL, M3 Max, 32K</th><td>20.5</td></tr><tr><th scope="row">Qwen3.8-27B UD-Q4_K_XL, M3 Max, 32K</th><td>24.1</td></tr><tr><th scope="row">Qwen3.8-27B UD-Q6_K_XL, M3 Max, 32K</th><td>29.5</td></tr><tr><th scope="row">Inkling 2 Mini UD-IQ3_XXS, RX 9070 XT, 16K</th><td>13.3</td></tr><tr><th scope="row">Strata SQ-20, RTX 5090, 32K</th><td>24.3</td></tr><tr><th scope="row">Strata SQ-20, RTX 5090, 64K FP8 cache</th><td>27.3</td></tr></tbody></table></div>
+<figcaption>On the Mac: the peak memory of llama.cpp b12633 with Metal while it loaded the model, answered and made a tool call. On the GPUs: memory in use on the whole card, desktop included, after loading and agent runs (Vulkan llama.cpp on the RX 9070 XT, Strata on the RTX 5090; the 64K figure is a sampled peak). They show what fits, not how fast it runs; speeds are in <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/MEASUREMENTS.md">MEASUREMENTS.md</a>. Sources: <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/model_catalog.json">model catalog</a>, <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/results/strata-rtx5090-windows.json">Strata on the RTX 5090</a>, <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/results/sq20-long-64k.json">SQ-20 at 64K</a>.</figcaption>
+</figure>
+</div>
+<h3 class="sub">Agents that wrote a file</h3>
+<p class="small">Each agent was started headless through Workbench's launch code in an empty folder and asked to create <code>hello.txt</code> with a given text. A tick means the file was there with that text afterwards.</p>
+<div class="table">
+<table class="matrix">
+<thead><tr><th scope="col">Model source</th><th scope="col">OMP</th><th scope="col">Claude Code</th><th scope="col">Codex</th><th scope="col">opencode</th></tr></thead>
+<tbody>
+<tr><th scope="row">Mac: llama.cpp run by Workbench<small>Qwen3.5-9B and Qwen3.8-27B · 0.4.0</small></th><td class="y">✓<span class="vh"> wrote the file</span></td><td class="y">✓<span class="vh"> wrote the file</span></td><td class="y">✓<span class="vh"> wrote the file</span></td><td class="y">✓<span class="vh"> wrote the file</span></td></tr>
+<tr><th scope="row">Mac: Ollama 0.40.8, attached<small>qwen3.8:27b-mlx · 0.4.0</small></th><td class="y">✓<span class="vh"> wrote the file</span></td><td class="y">✓<span class="vh"> wrote the file</span></td><td class="y">✓<span class="vh"> wrote the file</span></td><td class="o">–<span class="vh"> no record</span></td></tr>
+<tr><th scope="row">Windows over SSH: llama.cpp, attached<small>Qwen3.8-27B · RTX 5090</small></th><td class="y">✓<span class="vh"> wrote the file</span></td><td class="n">✕<span class="vh"> stopped</span><sup>1</sup></td><td class="y">✓<span class="vh"> wrote the file</span></td><td class="o">–<span class="vh"> not run</span></td></tr>
+<tr><th scope="row">Windows over SSH: CUDA node run by Workbench<small>Inkling 2 Mini UD-Q8_K_XL</small></th><td class="y">✓<span class="vh"> wrote the file</span></td><td class="y">✓<span class="vh"> wrote the file</span></td><td class="o">–<span class="vh"> not recorded</span></td><td class="o">–<span class="vh"> not run</span></td></tr>
+<tr><th scope="row">Windows over SSH: Strata run by Workbench<small>Inkling 2 Mini SQ-20, key read over SSH</small></th><td class="y">✓<span class="vh"> wrote the file</span></td><td class="y">✓<span class="vh"> wrote the file</span></td><td class="y">✓<span class="vh"> wrote the file</span></td><td class="o">–<span class="vh"> not run</span></td></tr>
+<tr><th scope="row">Fedora over SSH: llama-server in Docker<small>Qwen3.5-9B on port 8081 · RX 9070 XT</small></th><td class="y">✓<span class="vh"> wrote the file</span></td><td class="n">✕<span class="vh"> stopped</span><sup>1</sup></td><td class="n">✕<span class="vh"> stopped</span><sup>1</sup></td><td class="o">–<span class="vh"> not run</span></td></tr>
+<tr><th scope="row">Fedora over SSH: Vulkan node run by Workbench<small>Inkling 2 Mini UD-IQ3_XXS, 16K</small></th><td class="y">✓<span class="vh"> wrote the file</span></td><td class="o">–<span class="vh"> not run</span></td><td class="o">–<span class="vh"> not run</span></td><td class="o">–<span class="vh"> not run</span></td></tr>
+</tbody>
+</table>
+</div>
+<p class="small more">✓ wrote the file · ✕ stopped · – not run or not recorded. 1: the server's own Qwen template refuses a system message after the first turn; Workbench now finds this when you attach such a server and switches Claude Code and Codex off for it with the reason. Sources: <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/results/windows-ssh-machines.json">SSH machines</a>, <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/results/strata-rtx5090-windows.json">Strata over SSH</a>, <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/MEASUREMENTS.md">the 16K Fedora node</a> and <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/verification.json">the Mac runs</a>.</p>
+</div>
+</section>
 
-      <section id="faq" aria-labelledby="faq-h">
-        <div class="wrap">
-          <p class="kicker">FAQ</p>
-          <h2 id="faq-h">Questions</h2>
-          <div class="faq">
-            <details class="q">
-              <summary>What does it cost, and what are you selling?</summary>
-              <p>
-                Nothing. Agent Workbench is free and MIT-licensed. There is no account, no paid tier, no sponsor
-                placement and no resold API access. If you use a hosted model, you pay that provider directly with
-                your own key.
-              </p>
-            </details>
-            <details class="q">
-              <summary>Does it keep per-folder config in plain files?</summary>
-              <p>
-                Yes. What should move with a project is in the project folder:
-                <code>.agent-workbench/profiles.json</code> holds named profiles (the agent, the kind of model source,
-                the model, engine settings, tool switches, a prompt, the connection's name and the model file's name),
-                <code>.agent-workbench/project.json</code> the MCP servers, next to your instruction files and skills. These
-                are plain text files, and Workbench writes no keys, addresses or machine paths into them, so commit
-                them and clone the project on the next machine. There you add the connection under the same name with its key, and the model file;
-                applying the profile tells you which are missing. Last choices, connections and run records stay in
-                this computer's data folder, also plain JSON, and keys stay in the credential vault. Profiles and
-                <b class="ui">Save profile</b> are in 0.4.0. New in the next release: a folder default, which a
-                machine that has not opened the folder yet offers with a <b class="ui">Review and apply…</b> button.
-              </p>
-            </details>
-            <details class="q">
-              <summary>Can I rerun an old task after the folder's setup has changed?</summary>
-              <p>
-                New in the next release. Every agent the app starts in a folder on this computer leaves a run summary: the agent and
-                its version, the model source, connection name and model, the instruction files with their SHA-256,
-                the skills, the MCP servers and the folder prompt if the agent received it. <b class="ui">Copy summary</b>
-                copies it as Markdown and <b class="ui">Copy as JSON</b> as data. Its last part lists the instruction
-                files and skills that changed since. <b class="ui">Save as profile</b> turns the run's choices back
-                into a profile you review and apply. A run keeps file hashes, not file contents, so the old
-                instruction text comes from your Git history. No keys are recorded.
-              </p>
-            </details>
-            <details class="q">
-              <summary>I already use Ollama or LM Studio. What does this add?</summary>
-              <p>
-                If Claude Code, Codex or opencode on one Ollama model is all you need, <code>ollama launch</code> is
-                the shorter way and you should use it. Workbench attaches to the server you already run and adds a
-                setup per folder: which agent, which instructions, skills and MCP tools, and a check that the server
-                speaks the API that agent needs. It can also point the same agents at a GPU machine over SSH or at a
-                hosted key.
-              </p>
-            </details>
-            <details class="q">
-              <summary>Do I need a GPU?</summary>
-              <p>
-                No. You can use a hosted API or a model server on another machine. For local models, Workbench
-                installs the llama.cpp build that matches your hardware (CUDA for NVIDIA, Vulkan for AMD and Intel,
-                Metal on Apple Silicon, CPU otherwise) and suggests a model that fits your memory. Without a GPU it
-                uses the CPU build, which is much slower.
-              </p>
-            </details>
-            <details class="q">
-              <summary>Which agents can it start, and with which models?</summary>
-              <p>
-                OMP, Pi, Claude Code, Codex, Hermes and opencode. Each needs a server that speaks its API: OMP, Pi and
-                opencode use OpenAI Chat Completions, Codex uses OpenAI Responses and Claude Code uses Anthropic
-                Messages. Workbench checks the server, switches off the agents that would not work and says why. Hermes
-                starts with its own account sign-in. For 0.4.0, OMP, opencode, Codex and Claude Code each completed a
-                small file-writing task against a model Workbench served on a Mac; Pi and Hermes were not run.
-              </p>
-            </details>
-            <details class="q">
-              <summary>The download is not signed. How do I know it is the real one?</summary>
-              <p>
-                The 0.4.0 kits are not code-signed or notarised; this is a one-person project without signing
-                certificates. Every release lists SHA-256 checksums in <code>SHA256SUMS</code>, and the install steps
-                check them. A checksum shows that the download is intact, not who made it. The install scripts and
-                launchers are plain shell, PowerShell and batch scripts that you can read before you run them, and you
-                can build the kit from the source yourself.
-              </p>
-            </details>
-            <details class="q">
-              <summary>What does "preview" mean for macOS?</summary>
-              <p>
-                Workbench is built for Apple Silicon and uses llama.cpp with Metal. On a Mac, the engine, the local
-                model and four agents were run from the command line, but the macOS checks listed in the README have
-                not all passed for this release. Strata and vLLM do not run on macOS, and Intel Macs are not
-                supported. Expect rough edges and please report them.
-              </p>
-            </details>
-            <details class="q">
-              <summary>Where do my keys and data live?</summary>
-              <p>
-                Hosted API keys are in the system credential vault. Settings, logs, downloaded models and the local
-                server's key are in Workbench's data folder, and a few files are written where the agent CLIs expect
-                them. The
-                <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/security-and-data.md">security and data guide</a>
-                lists each location and how to remove it.
-              </p>
-            </details>
-            <details class="q">
-              <summary>Why Electron?</summary>
-              <p>
-                One interface for three systems, and a real terminal inside the window. The page that draws the
-                interface runs sandboxed, and its content policy blocks network requests and remote code. There is also
-                a command line for starting agents and for the Doctor checks.
-              </p>
-            </details>
-            <details class="q">
-              <summary>Where are the benchmark numbers?</summary>
-              <p>
-                Not on this page. Speed and quality depend on your hardware, the model file and the settings, so a
-                headline number would mislead.
-                <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/MEASUREMENTS.md">MEASUREMENTS.md</a>
-                has what was measured, on which machine, with the result files and the limits of each run. Workbench
-                can run the same short benchmark on your own setup.
-              </p>
-            </details>
-            <details class="q">
-              <summary>Does it run several agents in parallel or manage git worktrees?</summary>
-              <p>
-                No. It lists the sessions that are running and can resume recent ones, but it does not create
-                worktrees, review diffs or coordinate agents. Emdash and Claude Squad are built for that.
-              </p>
-            </details>
-            <details class="q">
-              <summary>How do I remove it?</summary>
-              <p>
-                Run the install script again with <code>--uninstall</code> (<code>-Uninstall</code> on Windows). It
-                removes the app and the <code>workbench</code> command and keeps your data folder. A kit you unpacked
-                by hand is removed by deleting its folder, which also deletes its data in <code>.local</code>. Keys in
-                the credential vault stay until you delete them. The
-                <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/troubleshooting.md#uninstall">troubleshooting guide</a>
-                lists every location, including what Workbench created for the agent CLIs.
-              </p>
-            </details>
-            <details class="q">
-              <summary>Something does not work. Where do I start?</summary>
-              <p>
-                Open Doctor in the app, or run <code>workbench doctor</code> in a terminal. Each check gives one
-                sentence that says what to fix, and the
-                <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/troubleshooting.md">troubleshooting guide</a>
-                has a section for each check.
-              </p>
-            </details>
-          </div>
-        </div>
-      </section>
-    </main>
-    <footer>
-      <div class="wrap foot">
-        <div>
-          <a class="brand" href="#top"
-            ><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-              <rect class="logo-bg" width="32" height="32" rx="7" />
-              <path class="logo-mark" d="M8 10l4 12 4-9 4 9 4-12" /></svg
-            >Agent Workbench</a
-          >
-          <p>Agent Workbench is MIT-licensed. Created by James Arslan.</p>
-          <p>
-            Product names on this page belong to their owners. Agent Workbench is not affiliated with or endorsed by
-            them.
-          </p>
-        </div>
-        <ul>
-          <li><a href="https://github.com/jamesarslan/local-agent-workbench">Source</a></li>
-          <li><a href="https://github.com/jamesarslan/local-agent-workbench/releases">Releases</a></li>
-          <li><a href="https://github.com/jamesarslan/local-agent-workbench/tree/main/docs">Guides</a></li>
-          <li><a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/LICENSE">MIT licence</a></li>
-          <li><a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/SECURITY.md">Security policy</a></li>
-          <li><a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/CHANGELOG.md">Changelog</a></li>
-          <li><a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/CONTRIBUTING.md">Contributing</a></li>
-          <li><a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/MEASUREMENTS.md">Measurements</a></li>
-        </ul>
-      </div>
-    </footer>
-  </body>
+<section id="status" aria-labelledby="status-h">
+<div class="wrap">
+<p class="kicker">Honest status</p>
+<h2 id="status-h">What was run for 0.5.0</h2>
+<p class="intro">
+Every entry comes from
+<a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/verification.json">docs/verification.json</a>,
+which holds the evidence and notes for each check. A check that is not listed for a system was not run on it, and a note
+"From the 0.4.0 run" marks a check that was not repeated for 0.5.0.
+</p>
+<div class="table">
+<table class="record stack">
+<thead><tr><th scope="col">System</th><th scope="col">Passed</th><th scope="col">Partly working or failed</th></tr></thead>
+<tbody>
+<tr><th scope="row">macOS 27.2 on a Mac with Apple M3 Max, 48 GB unified memory (preview)</th><td data-label="Passed"><ul class="checks"><li>Unit tests</li><li>Desktop smoke test</li><li>Managed llama.cpp install</li><li>Local model start and stop</li><li>Managed model on an SSH machine</li><li>Attach a server on an SSH machine</li><li>OMP session answered</li><li>Claude Code session answered</li><li>Codex session answered</li><li>opencode session answered</li><li>Terminal dock: open, type, close</li><li>Starter kit applied</li></ul></td><td data-label="Partly working or failed"><ul class="checks"><li>Install with the install script</li><li>Install by hand from a browser download</li><li>First start (Python packages and desktop runtime)</li><li>Attach Ollama</li><li>Attach LM Studio</li><li>Pair and check an SSH machine</li></ul></td></tr>
+<tr><th scope="row">Fedora 44 Workstation, x86_64 with an AMD Radeon RX 9070 series GPU, reached over SSH</th><td data-label="Passed"><ul class="checks"><li>Unit tests</li><li>Install with the install script</li><li>Local model start and stop</li><li>Doctor</li></ul></td><td data-label="Partly working or failed"><ul class="checks"><li>First start (Python packages and desktop runtime)</li></ul></td></tr>
+<tr><th scope="row">Fedora 44 Workstation, x86_64 with AMD Radeon 880M graphics (Wayland desktop)</th><td data-label="Passed"><ul class="checks"><li>Unit tests</li><li>First start (Python packages and desktop runtime)</li><li>Session with a hosted provider</li><li>Terminal dock: open, type, close</li><li>Doctor</li></ul></td><td data-label="Partly working or failed"><ul class="checks"><li>Install with the install script</li></ul></td></tr>
+<tr><th scope="row">Windows 11 x64 workstation with an NVIDIA GeForce RTX 5090</th><td data-label="Passed"><ul class="checks"><li>Unit tests</li><li>Install with the install script</li><li>Local model start and stop</li><li>OMP session answered</li><li>Terminal dock: open, type, close</li><li>Starter kit applied</li><li>Doctor</li></ul></td><td data-label="Partly working or failed"><ul class="checks"><li>First start (Python packages and desktop runtime)</li><li>Web search and page crawling</li></ul></td></tr>
+</tbody>
+</table>
+</div>
+<p class="small more">
+Pi, Hermes and hosted CI were not run. macOS stays a preview until its CI job, an install from a published release,
+a browser download, the first start of the desktop runtime, an agent window and Doctor pass on Apple Silicon. The
+<a href="https://github.com/jamesarslan/local-agent-workbench#tested-configurations">tested-configurations table</a>
+in the README lists the same.
+</p>
+</div>
+</section>
+
+<section id="privacy" aria-labelledby="privacy-h">
+<div class="wrap">
+<p class="kicker">Security and privacy</p>
+<h2 id="privacy-h">What leaves your computer</h2>
+<p class="intro">
+Workbench contacts other computers only to download what you ask for (GitHub, PyPI, Hugging Face and the
+publishers of agent CLIs and kit servers), for the hosted model you chose, and for web tools you switch on.
+</p>
+<ul class="grid">
+<li>
+<h3>No telemetry, no account</h3>
+<p>No analytics, no crash reporting and no automatic update check. The desktop window's content policy blocks every network request.</p>
+</li>
+<li>
+<h3>Keys stay in your credential vault</h3>
+<p>Keychain, Credential Manager or a Secret Service vault. A key reaches the agent in its process environment, never its command line, a project file or a log.</p>
+</li>
+<li>
+<h3>Checked downloads, per-user install</h3>
+<p>Kits, engines, Electron and Python packages are checked against pinned SHA-256 values. The install scripts need no sudo or administrator rights.</p>
+</li>
+<li>
+<h3>The agents themselves</h3>
+<p>The agent CLIs are separate programs with their own data handling. A hosted provider receives what the agent sends, including file contents.</p>
+</li>
+</ul>
+<p class="more">
+<a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/SECURITY.md#outbound-hosts">Every host Workbench can contact, and why</a>
+</p>
+</div>
+</section>
+
+<section id="fit" aria-labelledby="fit-h">
+<div class="wrap">
+<p class="kicker">Scope</p>
+<h2 id="fit-h">What it is not</h2>
+<p class="intro">
+Workbench does one job: one project folder, one model source and one agent, set up correctly and
+remembered. It does not manage git worktrees, run agents in parallel or review diffs.
+</p>
+<div class="split">
+<div class="card">
+<h3>Use something else when</h3>
+<ul class="plain">
+<li>You want several agents on one repository, each in its own worktree: <a href="https://github.com/generalaction/emdash">Emdash</a> or <a href="https://github.com/smtg-ai/claude-squad">Claude Squad</a>.</li>
+<li>You want one agent on a model Ollama already serves, and nothing more: <a href="https://docs.ollama.com/cli"><code>ollama launch</code></a> does it in one command.</li>
+<li>You want providers, MCP servers and skills synced across many agent tools for your whole machine: <a href="https://github.com/farion1231/cc-switch">cc-switch</a>.</li>
+<li>You want an app for chatting with local models: <a href="https://lmstudio.ai/">LM Studio</a> or <a href="https://www.jan.ai/">Jan</a>. Workbench can attach to either.</li>
+</ul>
+</div>
+<div class="card quiet">
+<h3>Workbench fits when you want to</h3>
+<ul class="plain">
+<li>keep a different model and agent for each project folder;</li>
+<li>run the model on another machine and reach it over SSH, with no other open port;</li>
+<li>use the same agents with a local engine, an attached server or a hosted key;</li>
+<li>see what an agent will read from a folder before it starts.</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+
+<section id="faq" aria-labelledby="faq-h">
+<div class="wrap">
+<p class="kicker">FAQ</p>
+<h2 id="faq-h">Questions</h2>
+<div class="faq">
+<details class="q">
+<summary>What does it cost, and what are you selling?</summary>
+<p>
+Nothing. Agent Workbench is free and MIT-licensed. There is no account, no paid tier, no sponsor
+placement and no resold API access. If you use a hosted model, you pay that provider directly with
+your own key.
+</p>
+</details>
+<details class="q">
+<summary>Does it keep per-folder config in plain files?</summary>
+<p>
+Yes. What should move with a project is in the project folder:
+<code>.agent-workbench/profiles.json</code> holds named profiles (the agent, the kind of model source,
+the model, engine settings, tool switches, a prompt, the connection's name and the model file's name),
+<code>.agent-workbench/project.json</code> the MCP servers, next to your instruction files and skills. These
+are plain text files, and Workbench writes no keys, addresses or machine paths into them, so commit
+them and clone the project on the next machine. There you add the connection under the same name with its key, and the model file;
+applying the profile tells you which are missing. Last choices, connections and run records stay in
+this computer's data folder, also plain JSON, and keys stay in the credential vault. Profiles and
+<b class="ui">Save profile</b> are in 0.4.0. Since 0.5.0 a folder can also carry a default, which a
+machine that has not opened the folder yet offers with a <b class="ui">Review and apply…</b> button.
+</p>
+</details>
+<details class="q">
+<summary>Can I rerun an old task after the folder's setup has changed?</summary>
+<p>
+Yes, since 0.5.0. Every agent the app starts in a folder on this computer leaves a run summary: the agent and
+its version, the model source, connection name and model, the instruction files with their SHA-256,
+the skills, the MCP servers and the folder prompt if the agent received it. <b class="ui">Copy summary</b>
+copies it as Markdown and <b class="ui">Copy as JSON</b> as data. Its last part lists the instruction
+files and skills that changed since. <b class="ui">Save as profile</b> turns the run's choices back
+into a profile you review and apply. A run keeps file hashes, not file contents, so the old
+instruction text comes from your Git history. No keys are recorded.
+</p>
+</details>
+<details class="q">
+<summary>I already use Ollama or LM Studio. What does this add?</summary>
+<p>
+If Claude Code, Codex or opencode on one Ollama model is all you need, <code>ollama launch</code> is
+the shorter way and you should use it. Workbench attaches to the server you already run and adds a
+setup per folder: which agent, which instructions, skills and MCP tools, and a check that the server
+speaks the API that agent needs. It can also point the same agents at a GPU machine over SSH or at a
+hosted key.
+</p>
+</details>
+<details class="q">
+<summary>Do I need a GPU?</summary>
+<p>
+No. You can use a hosted API or a model server on another machine. For local models, Workbench
+installs the llama.cpp build that matches your hardware (CUDA for NVIDIA, Vulkan for AMD and Intel,
+Metal on Apple Silicon, CPU otherwise) and suggests a model that fits your memory. Without a GPU it
+uses the CPU build, which is much slower.
+</p>
+</details>
+<details class="q">
+<summary>Which agents can it start, and with which models?</summary>
+<p>
+OMP, Pi, Claude Code, Codex, Hermes and opencode. Each needs a server that speaks its API: OMP, Pi and
+opencode use OpenAI Chat Completions, Codex uses OpenAI Responses and Claude Code uses Anthropic
+Messages. Workbench checks the server, switches off the agents that would not work and says why. Hermes
+starts with its own account sign-in. OMP, Claude Code, Codex and opencode each wrote a requested file
+against a model Workbench served on a Mac, and for 0.5.0 OMP, Claude Code and Codex did the same through SSH with
+models on a Windows and a Linux machine. Pi and Hermes were not run.
+</p>
+</details>
+<details class="q">
+<summary>The download is not signed. How do I know it is the real one?</summary>
+<p>
+The 0.5.0 kits are not code-signed or notarised; this is a one-person project without signing
+certificates. Every release lists SHA-256 checksums in <code>SHA256SUMS</code>, and the install steps
+check them. A checksum shows that the download is intact, not who made it. The install scripts and
+launchers are plain shell, PowerShell and batch scripts that you can read before you run them, and you
+can build the kit from the source yourself.
+</p>
+</details>
+<details class="q">
+<summary>What does "preview" mean for macOS?</summary>
+<p>
+Workbench is built for Apple Silicon and uses llama.cpp with Metal. On a Mac, the engine, the local
+model and four agents were run from the command line and the desktop smoke test passed, but the macOS
+checks listed in the README have not all passed for this release. Strata and vLLM do not run on macOS, and Intel Macs are not
+supported. Expect rough edges and please report them.
+</p>
+</details>
+<details class="q">
+<summary>Where do my keys and data live?</summary>
+<p>
+Hosted API keys are in the system credential vault. Settings, logs, downloaded models and the local
+server's key are in Workbench's data folder, and a few files are written where the agent CLIs expect
+them. The
+<a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/security-and-data.md">security and data guide</a>
+lists each location and how to remove it.
+</p>
+</details>
+<details class="q">
+<summary>Why Electron?</summary>
+<p>
+One interface for three systems, and a real terminal inside the window. The page that draws the
+interface runs sandboxed, and its content policy blocks network requests and remote code. There is also
+a command line for starting agents and for the Doctor checks.
+</p>
+</details>
+<details class="q">
+<summary>Where are the benchmark numbers?</summary>
+<p>
+Not on this page. Speed and quality depend on your hardware, the model file and the settings, so a
+headline number would mislead.
+<a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/MEASUREMENTS.md">MEASUREMENTS.md</a>
+has what was measured, on which machine, with the result files and the limits of each run. Workbench
+can run the same short benchmark on your own setup.
+</p>
+</details>
+<details class="q">
+<summary>Does it run several agents in parallel or manage git worktrees?</summary>
+<p>
+No. It lists the sessions that are running and can resume recent ones, but it does not create
+worktrees, review diffs or coordinate agents. Emdash and Claude Squad are built for that.
+</p>
+</details>
+<details class="q">
+<summary>How do I remove it?</summary>
+<p>
+Run the install script again with <code>--uninstall</code> (<code>-Uninstall</code> on Windows). It
+removes the app and the <code>workbench</code> command and keeps your data folder. A kit you unpacked
+by hand is removed by deleting its folder, which also deletes its data in <code>.local</code>. Keys in
+the credential vault stay until you delete them. The
+<a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/troubleshooting.md#uninstall">troubleshooting guide</a>
+lists every location, including what Workbench created for the agent CLIs.
+</p>
+</details>
+<details class="q">
+<summary>Something does not work. Where do I start?</summary>
+<p>
+Open Doctor in the app, or run <code>workbench doctor</code> in a terminal. Each check gives one
+sentence that says what to fix, and the
+<a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/troubleshooting.md">troubleshooting guide</a>
+has a section for each check.
+</p>
+</details>
+</div>
+</div>
+</section>
+</main>
+<footer>
+<div class="wrap foot">
+<div>
+<a class="brand" href="#top"
+><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+<rect class="logo-bg" width="32" height="32" rx="7" />
+<path class="logo-mark" d="M8 10l4 12 4-9 4 9 4-12" /></svg
+>Agent Workbench</a
+>
+<p>Agent Workbench is MIT-licensed. Created by James Arslan.</p>
+<p>
+Product names on this page belong to their owners. Agent Workbench is not affiliated with or endorsed by
+them.
+</p>
+</div>
+<ul>
+<li><a href="https://github.com/jamesarslan/local-agent-workbench">Source</a></li>
+<li><a href="https://github.com/jamesarslan/local-agent-workbench/releases">Releases</a></li>
+<li><a href="https://github.com/jamesarslan/local-agent-workbench/tree/main/docs">Guides</a></li>
+<li><a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/LICENSE">MIT licence</a></li>
+<li><a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/SECURITY.md">Security policy</a></li>
+<li><a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/CHANGELOG.md">Changelog</a></li>
+<li><a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/CONTRIBUTING.md">Contributing</a></li>
+<li><a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/MEASUREMENTS.md">Measurements</a></li>
+</ul>
+</div>
+</footer>
+</body>
 </html>

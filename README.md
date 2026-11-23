@@ -2,7 +2,7 @@
 
 Agent Workbench is a desktop app that lets you pick where a model runs (on this computer, on a GPU machine over SSH, in an Ollama or LM Studio server you already use, or at a hosted API) and which coding-agent CLI to use for a project folder, and keeps that choice with the folder, together with its instructions, skills and MCP tools.
 
-Version 0.4.0 · MIT licence · Windows x64, Linux x64, macOS arm64 (preview) · [Website](https://jamesarslan.github.io/local-agent-workbench/) · [Changelog](CHANGELOG.md)
+Version 0.5.0 · MIT licence · Windows x64, Linux x64, macOS arm64 (preview) · [Website](https://jamesarslan.github.io/local-agent-workbench/) · [Changelog](CHANGELOG.md)
 
 ## Is this for you?
 
@@ -23,13 +23,13 @@ Each kit unpacks to `Agent-Workbench` and includes Python. The first start downl
 
 The downloads are not code-signed or notarised. Your system may warn you before it runs them. Check the SHA-256 first.
 
-The kits are `agent-workbench-windows-x64.zip`, `agent-workbench-linux-x64.tar.gz` and `agent-workbench-macos-arm64.tar.gz` (preview), plus `agent-workbench-source.tar.gz` for any system with your own Python. Check each against `SHA256SUMS` as shown below.
+Kits: `agent-workbench-windows-x64.zip`, `agent-workbench-linux-x64.tar.gz`, `agent-workbench-macos-arm64.tar.gz` (preview) and `agent-workbench-source.tar.gz` for your own Python, each listed in `SHA256SUMS`.
 
-[Download 0.4.0](https://github.com/jamesarslan/local-agent-workbench/releases/tag/v0.4.0). The install scripts check `SHA256SUMS`, install for your user without sudo or administrator rights, and add a `workbench` command; `--uninstall` (`-Uninstall` on Windows) removes the app and keeps your data.
+[Download 0.5.0](https://github.com/jamesarslan/local-agent-workbench/releases/tag/v0.5.0). The install scripts check `SHA256SUMS`, install for your user without sudo or administrator rights, and add a `workbench` command; `--uninstall` (`-Uninstall` on Windows) removes the app and keeps your data.
 
 ### Windows
 
-Status for 0.4.0: some checks were run on Windows. The tested-configurations table says which.
+Status for 0.5.0: some checks were run on Windows. The tested-configurations table says which.
 
 In PowerShell:
 
@@ -57,7 +57,7 @@ Then double-click `Launch Workbench.cmd` in `Agent-Workbench`. If Windows shows 
 
 ### Linux
 
-Status for 0.4.0: some checks were run on Linux. The tested-configurations table says which.
+Status for 0.5.0: some checks were run on Linux. The tested-configurations table says which.
 
 ```sh
 curl -fsSL https://github.com/jamesarslan/local-agent-workbench/releases/latest/download/install.sh | sh
@@ -85,7 +85,7 @@ Later starts: `sh Agent-Workbench/workbench.sh`.
 
 ### macOS (preview)
 
-Status for 0.4.0: preview. The macOS checks listed in the README have not all passed. Intel Macs are not supported.
+Status for 0.5.0: preview. The macOS checks listed in the README have not all passed. Intel Macs are not supported.
 
 ```sh
 curl -fsSL https://github.com/jamesarslan/local-agent-workbench/releases/latest/download/install.sh | sh
@@ -108,7 +108,7 @@ tar -xzf agent-workbench-macos-arm64.tar.gz
 sh Agent-Workbench/"Launch Workbench.command"
 ```
 
-The script and the launcher remove the download mark (quarantine) so the bundled Python can start. If macOS refuses the unnotarised launcher when you double-click it in Finder, allow it with Open Anyway in System Settings, Privacy & Security ([Apple's steps](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac)). For agent windows, macOS asks once whether Workbench may control Terminal.
+The script and the launcher remove the download mark (quarantine) so the bundled Python can start. If macOS refuses the unnotarised launcher when you double-click it in Finder, allow it with Open Anyway in System Settings, Privacy & Security ([Apple's steps](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac)).
 
 ## What leaves your computer
 
@@ -126,18 +126,16 @@ From [docs/verification.json](docs/verification.json).
 
 | System | Passed | Failed or partly working | Not run |
 | --- | --- | --- | --- |
-| macOS 27.2 on a Mac with Apple M3 Max, 48 GB unified memory (preview) | Unit tests; Managed llama.cpp install; Local model start and stop; OMP session answered; Claude Code session answered; Codex session answered; opencode session answered | Desktop smoke test; Install with the install script; Install by hand from a browser download; First start (Python packages and desktop runtime); Attach Ollama; Attach LM Studio | Every other check |
-| Fedora 44 Workstation, x86_64 with an AMD Radeon RX 9070 series GPU, reached over SSH | Unit tests | Install with the install script; First start (Python packages and desktop runtime) | Every other check |
+| macOS 27.2 on a Mac with Apple M3 Max, 48 GB unified memory (preview) | Unit tests; Desktop smoke test; Managed llama.cpp install; Local model start and stop; Managed model on an SSH machine; Attach a server on an SSH machine; OMP session answered; Claude Code session answered; Codex session answered; opencode session answered; Terminal dock: open, type, close; Starter kit applied | Install with the install script; Install by hand from a browser download; First start (Python packages and desktop runtime); Attach Ollama; Attach LM Studio; Pair and check an SSH machine | Every other check |
+| Fedora 44 Workstation, x86_64 with an AMD Radeon RX 9070 series GPU, reached over SSH | Unit tests; Install with the install script; Local model start and stop; Doctor | First start (Python packages and desktop runtime) | Every other check |
 | Fedora 44 Workstation, x86_64 with AMD Radeon 880M graphics (Wayland desktop) | Unit tests; First start (Python packages and desktop runtime); Session with a hosted provider; Terminal dock: open, type, close; Doctor | Install with the install script | Every other check |
-| Windows 11 x64 workstation with an NVIDIA GeForce RTX 5090 | Install with the install script; First start (Python packages and desktop runtime); Local model start and stop; OMP session answered; Terminal dock: open, type, close; Starter kit applied | Unit tests; Web search and page crawling | Every other check |
+| Windows 11 x64 workstation with an NVIDIA GeForce RTX 5090 | Unit tests; Install with the install script; Local model start and stop; OMP session answered; Terminal dock: open, type, close; Starter kit applied; Doctor | First start (Python packages and desktop runtime); Web search and page crawling | Every other check |
 
-Full notes per check: [docs/verification.json](docs/verification.json). On the Mac, OMP, Claude Code, Codex and opencode each wrote a requested file in an empty folder through Workbench's launch code (managed model and Ollama 0.40.8). Pi, Hermes and hosted CI were not run.
+Notes per check: [docs/verification.json](docs/verification.json); "From the 0.4.0 run" marks a check not repeated. At the 0.5.0 commit 1,373 Python tests ran with no failure and 94 Node tests passed on all three systems. Over SSH from the Mac, OMP, Claude Code and Codex wrote a file with models on the Windows machine, OMP also on Fedora ([SSH machines](results/windows-ssh-machines.json), [Strata](results/strata-rtx5090-windows.json)). Pi, Hermes and hosted CI were not run.
 
-macOS stays a preview until these checks pass on Apple Silicon: Unit tests; Desktop smoke test; Continuous integration job on this system; Install with the install script; Install by hand from a browser download; First start (Python packages and desktop runtime); Managed llama.cpp install; Local model start and stop; Agent in a native terminal window; Terminal dock: open, type, close; Doctor.
+macOS stays a preview until its CI job, an install from a published release, a browser download, the first start of the desktop runtime, an agent window and Doctor pass on Apple Silicon.
 
-Checks that are not listed for a system were not run on it for 0.4.0.
-
-Earlier measurements on other hardware: [MEASUREMENTS.md](MEASUREMENTS.md).
+Checks that are not listed for a system were not run on it for 0.5.0.
 
 ## First run
 
@@ -151,11 +149,11 @@ The **Setup guide** opens on the first start; skip it or reopen it from the side
 
 ## Run summaries
 
-New in the next release. Each launch from the app leaves a run record without keys: agent and version, model source and model, hashed instruction files and skills, MCP servers and the folder prompt it received. **Copy summary** copies it as Markdown; **Save as profile** makes it a profile to rerun an old task. [More](docs/sessions.md#run-summaries)
+New in 0.5.0. Each launch from the app leaves a run record without keys: agent and version, model source and model, hashed instruction files and skills, MCP servers and folder prompt. **Copy summary** copies it as Markdown; **Save as profile** makes it a profile to rerun an old task. [More](docs/sessions.md#run-summaries)
 
 ## Where settings live
 
-In plain files. `.agent-workbench/profiles.json` (agent, model source, connection and model names, settings) and `project.json` (MCP servers) sit in the project beside `AGENTS.md` and skills, with no keys or machine paths: commit them to move the setup. Connections, last choices, runs and keys stay on this computer. New in the next release: a folder default that another computer offers after review. [More](docs/project-setup.md#settings-that-travel-with-the-folder)
+In plain files. `.agent-workbench/profiles.json` (agent, model source, connection and model names, settings) and `project.json` (MCP servers) sit in the project beside `AGENTS.md` and skills, with no keys or machine paths: commit them to move the setup. Connections, last choices, runs and keys stay on this computer. New in 0.5.0: a folder default that another computer offers after review. [More](docs/project-setup.md#settings-that-travel-with-the-folder)
 
 ## Guides
 

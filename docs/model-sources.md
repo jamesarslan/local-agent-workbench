@@ -207,7 +207,7 @@ vLLM, MLX Omni Server, KoboldCpp, LocalAI and llama-swap listen on every network
 
 ### Ollama
 
-These steps were not run for 0.4.0 in the desktop window. Ollama 0.40.8 answered the scan, was attached, and served OMP, Claude Code, Codex and opencode through the same code from the command line on a Mac.
+These steps were not run for 0.5.0 in the desktop window. For 0.4.0, Ollama 0.40.8 answered the scan, was attached, and served OMP, Claude Code, Codex and opencode through the same code from the command line on a Mac.
 
 1. Start Ollama. Pull or load the model you want.
 2. In the setup guide's Model step choose **Use a server that is already running**, or in **Connections** choose **Add**, then **Attach a running server…**.
@@ -219,7 +219,7 @@ If you use Claude Code, Codex or opencode with Ollama, [`ollama launch`](https:/
 
 ### LM Studio
 
-These steps were not run for 0.4.0. LM Studio answered the scan's probes; attaching it was not run.
+These steps were not run for 0.5.0. LM Studio answered the scan's probes; attaching it was not run.
 
 1. In LM Studio, open Developer and start the server, or run `lms server start`. Load a model.
 2. Attach it as for Ollama: pick LM Studio on port 1234.
@@ -264,7 +264,7 @@ On the machine:
 
 ### Add and pair a machine
 
-These steps were not run for 0.4.0.
+Pairing was not run for 0.5.0. **Check connection** was run from a Mac against a Windows machine and a Linux machine that already accepted its key.
 
 1. Open **Machines** and choose **Add machine…**. Enter a name and an SSH alias from your SSH config or `user@hostname`, then **Save**.
 2. Open **Pairing and removal** and choose **Pair through SSH**. A terminal opens: confirm the host key and sign in once. Workbench adds its own key for this machine to `~/.ssh/authorized_keys` there. **Show pairing command** gives you the command to run on the machine yourself instead.
@@ -300,6 +300,11 @@ Remote agent sessions on a machine are covered in [Sessions and terminals](sessi
 
 Workbench works with the OpenSSH server that Windows includes, whether its SSH shell is Command Prompt (the default) or PowerShell. **Check connection** finds out which system the machine runs each time, and the machine's row then says Windows.
 
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="images/machines-dark.png">
+<img src="images/machines.png" alt="The Machines view with two machines, gpu-box-linux on Linux and gpu-box-win on Windows, both connected. The Windows machine shows an RTX 5090 with 31.8 GiB of GPU memory and Windows PowerShell, a Strata server on port 10532 that is attached and a llama.cpp server on port 8080, an open tunnel, and the Workbench-managed Inkling 2 Mini model serving on port 10542.">
+</picture>
+
 - Finding servers: the probe runs in Windows PowerShell, so the machine needs no Python for it. It checks the same ports and answers the same way as on Linux. Attaching and tunnels work as above.
 - Remote sessions: Windows has no tmux, so a session opens PowerShell (PowerShell 7 when it is installed) in the folder you chose and starts the agent there. A folder that starts with `~` is under your user folder, and the agent is found the way PowerShell finds it, including `.cmd` and `.ps1` installs. The session ends when its tab or window closes; there is nothing to reattach, so **End** in the dock ends it.
 - Pairing: the Workbench key goes into `.ssh\authorized_keys` in your user folder, or into `administrators_authorized_keys` under `C:\ProgramData\ssh` for an administrator account, as the Windows OpenSSH server expects.
@@ -308,7 +313,7 @@ The Workbench-managed model on Windows needs Python 3.8 or newer for your user a
 
 ## Hosted providers
 
-These steps were not run for 0.4.0.
+These steps were not run for 0.5.0.
 
 To add a provider, use **Use a hosted API** in the setup guide, or **Add** then **Hosted API** in **Connections**. Then:
 
@@ -317,7 +322,7 @@ To add a provider, use **Use a hosted API** in the setup guide, or **Add** then 
 3. Enter the model under **Default model**, or choose **Browse models** to pick from the provider's list.
 4. Choose **Save**.
 
-| Provider | Key variable | Chat Completions | Responses | Anthropic Messages | Status for 0.4.0 |
+| Provider | Key variable | Chat Completions | Responses | Anthropic Messages | Status for 0.5.0 |
 | --- | --- | --- | --- | --- | --- |
 | OpenAI | `OPENAI_API_KEY` | Yes | Yes | No | Carried over from earlier versions; not exercised for this release |
 | OpenRouter | `OPENROUTER_API_KEY` | Yes | Yes | Yes | Carried over from earlier versions; not exercised for this release |

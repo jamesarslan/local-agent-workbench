@@ -2,7 +2,7 @@
 
 All notable changes to Agent Workbench are listed here. Versions follow semantic versioning.
 
-## [Unreleased]
+## [0.5.0] - 2026-11-23
 
 ### Added
 
@@ -10,7 +10,7 @@ All notable changes to Agent Workbench are listed here. Versions follow semantic
 - Settings that travel with the folder. **Save as folder default** on **Launch** writes the current choices to `.agent-workbench/profiles.json` as the folder default, plain JSON with no keys that is safe to commit. On **Project profiles**, **Make default** marks the folder default, which then carries the **Folder default** label, and **Clear default** removes the mark; **Make it the folder default** does the same as you save a profile. On a computer that has no setup for the folder yet, **Launch** shows "This folder has saved settings" with **Review and apply…** and never applies the profile on its own. Connections are matched by name and model files by file name, and the review says what to add when one is missing. **Where this folder's settings live** lists what travels with the folder and what stays on this computer, with **Show in folder** ([Settings that travel with the folder](docs/project-setup.md#settings-that-travel-with-the-folder)).
 - Unsloth's llama.cpp build as a third **Engine release** (**Unsloth**, beside **Tested** and **Updated**), pinned to `b12649-mix-c7059d6` by SHA-256 for each platform and installed beside the default build. With Inkling 2 Mini it adds Unsloth's DSpark drafter (`dspark-Inkling-2-Mini-Q8_0.gguf`, checked by SHA-256) when drafting is on; otherwise the model starts without it and says why. Opt-in; **Tested** stays the default ([Inkling 2 Mini with Unsloth's build](docs/model-sources.md)).
 - Roblox Studio in the Game development kit. When Roblox Studio is installed, the kit turns on Studio's built-in MCP server with the command Roblox documents for macOS and Windows, detects Roblox and Rojo projects, and adds the `workbench-game-project-for-roblox` skill. A kit server can now give a command per system and name the file that shows the app is installed; Windows user names with spaces work.
-
+- Windows machines over SSH. **Check connection** learns whether a machine answers SSH with Windows or a POSIX shell, and the machine list says which. On Windows, the search for model servers runs in Windows PowerShell, so the machine needs no Python for it; remote sessions open PowerShell in the chosen folder and start the agent there, without tmux; and the Workbench-managed model runs the CUDA build of llama.cpp b12633 with an Inkling 2 Mini file picked from the catalog by GPU memory, reusing a file already on the machine when its SHA-256 matches. **Other ports** adds ports to the search on any machine ([Windows machines](docs/model-sources.md#windows-machines)).
 - A model that Agent Workbench serves on an SSH machine can be used from this computer. The search on a paired machine also looks at port 10532, where a Workbench there serves its local model, and recognises Strata servers by their health answer (Strata's own port 8095 is in the scan too). When the process on that port is the one a Workbench data folder there recorded, the list shows `local-agent` and its context, and **Attach…** reads that server's key through SSH into the key vault, so nothing is pasted. The APIs such a server leaves unconfirmed to the probe are taken from its engine, because Strata answers an empty Anthropic Messages request by generating a reply ([Use a server that runs there](docs/model-sources.md#use-a-server-that-runs-there)).
 
 ### Changed
@@ -19,7 +19,26 @@ All notable changes to Agent Workbench are listed here. Versions follow semantic
 - The scan also looks at port 8081, where a second llama.cpp server is often run.
 - Attached servers whose chat template refuses a system message after the first turn. When you attach a server or choose **Check**, Workbench asks the model once with a one-token chat in that shape (and a Responses request with a late developer message when the server offers that API). When the server refuses it, Claude Code and Codex are blocked for that connection with the reason, and OMP, Pi and opencode stay available ([Chat templates for Claude Code and Codex](docs/model-sources.md#chat-templates-for-claude-code-and-codex)).
 - Windows: the suite passes on Windows 11. The SSH public key sent during pairing ends in LF, the `profiles.json` lock lives in the data folder instead of the project's `.agent-workbench/` folder, npm shims run only when they point into their own `node_modules`, and `workbench doctor` prints ASCII punctuation when the console is not UTF-8.
-- Redesigned project site. The first screen has the install command for each system; the page shows one setup per folder, the three setup steps with screenshots, the two features above marked as new in the next release, and a status table built from `docs/verification.json`.
+- Redesigned project site. The first screen has the install command for each system; the page shows one setup per folder, the three setup steps with screenshots, charts of the test runs, of the agent and model-source pairs that wrote a file and of the measured memory of each model, and a status table built from `docs/verification.json`.
+
+### Fixed
+
+- On macOS, a vault call no longer opens the dialog that offers to reset a missing login keychain. When the login keychain is missing, the vault reports itself unavailable and keys stay in memory with a plain message.
+- OMP refused a managed model on an SSH machine because its model entry had an empty name; the entry now names the model the node serves.
+- Run summaries: the run file of a folder is capped at 4 MiB by dropping the oldest runs, focus returns to **Summary…** when the dialog closes, and a slow summary no longer replaces the one you opened since. **Save as folder default** asks before it replaces a profile of the same name.
+
+### Known issues
+
+- macOS is a preview. These macOS checks have not passed yet: a CI job, an install from a published release, a browser download with the Gatekeeper dialog, the first start of the desktop runtime, an agent in a native terminal window, and Doctor.
+- Hosted CI has not run for this release. The suites, the Node tests and the kit installs were run by hand on macOS, Windows 11 and Fedora 44 at the release commit.
+- The kits are not code-signed or notarised. The release workflow is set up to record build attestations but has not run, so 0.5.0 may ship without them.
+- Pairing a machine through SSH and revoking its key were not run against the Windows and Fedora machines, which already accepted this computer's key; the PowerShell scripts for them are covered by unit tests only.
+- Workbench corrects the chat template only for models it serves. Against an attached server whose template refuses a late system message, Claude Code and Codex are blocked with the reason; OMP, Pi and opencode stay available.
+- opencode was not run against an SSH machine, and Pi and Hermes were not run.
+- The setup guide has not been run end to end to a working agent, and attaching Ollama or LM Studio has not been run from the desktop window.
+- The desktop window was not opened from the 0.5.0 kits on Windows or Linux; the kits were installed and their suites run from the command line.
+
+What was run for this release: see [Tested configurations](README.md#tested-configurations).
 
 ## [0.4.0] - 2026-11-23
 

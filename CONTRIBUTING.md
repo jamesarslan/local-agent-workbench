@@ -39,7 +39,7 @@ node --test tests/bridge-client.test.cjs tests/ui-static.test.cjs tests/ui-readi
 
 The desktop smoke test starts the real Electron app. Install Electron with `npm ci --prefix desktop` followed by `node desktop/node_modules/electron/install.js` (newer npm releases skip Electron's own download step), point `WORKBENCH_PYTHON` at the project's Python and run `node tests/desktop-smoke.cjs`. On a Linux machine without a display, prefix it with `xvfb-run -a`.
 
-`.github/workflows/test.yml` defines these jobs: `test` on `windows-latest`, `ubuntu-latest` and `macos-latest` with Python 3.12 (unit tests, Node tests and the desktop smoke test); `lock` on the same three systems with Python 3.13 and 3.14; `kit`, which builds the kit for each system and installs it with `install.sh` or `install.ps1`; and `lint` for the shell scripts, the workflow files and the PowerShell scripts. These workflows have not run on GitHub for 0.4.0, so run the commands above on your own machine before you open a pull request.
+`.github/workflows/test.yml` defines these jobs: `test` on `windows-latest`, `ubuntu-latest` and `macos-latest` with Python 3.12 (unit tests, Node tests and the desktop smoke test); `lock` on the same three systems with Python 3.13 and 3.14; `kit`, which builds the kit for each system and installs it with `install.sh` or `install.ps1`; and `lint` for the shell scripts, the workflow files and the PowerShell scripts. These workflows have not run on GitHub for 0.5.0, so run the commands above on your own machine before you open a pull request.
 
 ## Rules for code
 
@@ -68,7 +68,7 @@ In short:
 1. Behaviour statements never use the words tested, verified, validated, confirmed, works on or supported on. Those belong to evidence, which appears in the README's tested-configurations table, `CHANGELOG.md` and `MEASUREMENTS.md`.
 2. Speed, quality and cost numbers of model runs appear in `MEASUREMENTS.md` and nowhere else. Other pages link to it.
 3. No superlatives, and no claim that the project is first or unique. Say what it does, and name the better tool for neighbouring jobs.
-4. Steps that were not run on a system for this release carry the sentence `These steps were not run for 0.4.0.` above them.
+4. Steps that were not run on a system for this release carry the sentence `These steps were not run for 0.5.0.` above them.
 5. macOS is called a preview until every macOS check listed in `tests/test_docs.py` (`MAC_GATE`) has passed.
 6. Interface labels are written in bold and must exist in the interface source.
 7. Public addresses of this project come from `docs/site.json`. Screenshots are the files under `docs/images/` named in `tests/test_docs.py`.
@@ -95,6 +95,6 @@ Publication is a manual step. Nothing in this list runs automatically.
 2. Set `repo` and `site` in `docs/site.json` to the final repository and run `python -m unittest tests.test_docs`. Change the name everywhere the failures list.
 3. Recompute the status sentences and the tested-configurations table from `docs/verification.json`.
 4. In the public repository: turn on private vulnerability reporting, turn on Pages from `main` and `/docs`, turn on release immutability, and import `.github/main-ruleset.json` after the three `test (...)` checks have each reported once on a pull request.
-5. Push the tag `v0.4.0`. The `Release kits` workflow builds the four archives, `SHA256SUMS`, `install.sh` and `install.ps1` into a draft release. Check the files, paste the `SHA256SUMS` content and the `CHANGELOG.md` entry into the release notes, and publish the draft.
+5. Push the tag `v0.5.0`. The `Release kits` workflow builds the four archives, `SHA256SUMS`, `install.sh` and `install.ps1` into a draft release. Check the files, paste the `SHA256SUMS` content and the `CHANGELOG.md` entry into the release notes, and publish the draft.
 6. Open the Pages address and every link on it once. Re-open the pages of the other projects the landing page names and check that what it says about them still holds.
 7. Set the release date in `CHANGELOG.md`.

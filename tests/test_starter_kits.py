@@ -95,6 +95,10 @@ def write(path, text):
     return path
 
 
+# A kit's version moves when its own content changes: Game development gained Roblox Studio in 0.5.0.
+KIT_VERSIONS = {"gamedev": "0.5.0"}
+
+
 def shipped(kit_id):
     return json.loads((REAL / kit_id / "kit.json").read_text(encoding="utf8"))
 
@@ -134,7 +138,7 @@ class ShippedKits(unittest.TestCase):
                 kit = kits.load_kit(kit_id, REAL)
                 self.assertEqual(
                     (kit["id"], kit["label"], kit["priority"], kit["version"]),
-                    (kit_id, label, priority, "0.4.0"),
+                    (kit_id, label, priority, KIT_VERSIONS.get(kit_id, "0.4.0")),
                 )
                 self.assertLessEqual(len(kit["skills"]), kits.MAX_SKILLS)
                 for entry in kit["mcp"]:

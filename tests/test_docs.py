@@ -21,7 +21,7 @@ NOTES = "docs/launch-posts.md"
 # Files written by later documentation packages: a link to one of them may point ahead until it exists.
 PENDING = {"CHANGELOG.md", *GUIDE_FILES}
 
-IMAGES = ("guide-computer", "guide-model", "launch", "project-setup", "overview", "attach", "terminal")
+IMAGES = ("guide-computer", "guide-model", "launch", "project-setup", "overview", "attach", "terminal", "run-summary", "recent-runs", "folder-default", "settings-places", "machines")
 IMAGE_FILES = {f"docs/images/{name}{theme}.png" for name in IMAGES for theme in ("", "-dark")}
 OLD_IMAGES = ("launcher.png", "launcher-light.png", "workbench.png", "project-launch.png", "project-terminal.png", "ssh-machine.png")
 IMAGE_BUDGET = 400 * 1024
@@ -64,7 +64,7 @@ CHECKS = {
 MAC_GATE = ("unit-tests", "desktop-smoke", "ci", "install-script", "install-manual", "first-start", "engine-install", "model-serve", "agent-window", "terminal-dock", "doctor")
 PLATFORM_NAMES = {"linux": "Linux", "macos": "macOS", "windows": "Windows"}
 
-SECTIONS = ["install", "folders", "how", "features", "kits", "runs", "portable", "privacy", "fit", "status", "faq"]
+SECTIONS = ["install", "folders", "how", "features", "kits", "runs", "portable", "tested", "status", "privacy", "fit", "faq"]
 HEADINGS = [
     ("h1", "Pick where your model runs and which coding agent you use, remembered per project folder."),
     ("h2", "Install"),
@@ -101,6 +101,11 @@ HEADINGS = [
     ("h2", "Settings that travel with the folder"),
     ("h3", "From one machine to the next"),
     ("h3", "Where settings live"),
+    ("h2", "Tested on real machines"),
+    ("h3", "Test suites on three systems"),
+    ("h3", "Memory each model used"),
+    ("h3", "Agents that wrote a file"),
+    ("h2", "What was run for 0.5.0"),
     ("h2", "What leaves your computer"),
     ("h3", "No telemetry, no account"),
     ("h3", "Keys stay in your credential vault"),
@@ -109,7 +114,6 @@ HEADINGS = [
     ("h2", "What it is not"),
     ("h3", "Use something else when"),
     ("h3", "Workbench fits when you want to"),
-    ("h2", "What was run for 0.4.0"),
     ("h2", "Questions"),
 ]
 QUESTIONS = [
@@ -593,7 +597,7 @@ class RecordTests(unittest.TestCase):
     def test_site_file(self):
         data = site()
         self.assertEqual(set(data), {"version", "tag", "repo", "branch", "site"}, msg="docs/site.json must hold exactly version, tag, repo, branch and site.")
-        self.assertEqual(data["version"], "0.4.0", msg="docs/site.json version must be 0.4.0 (D19).")
+        self.assertEqual(data["version"], "0.5.0", msg="docs/site.json version must be 0.5.0.")
         self.assertEqual(data["tag"], "v" + data["version"], msg="docs/site.json tag must be v plus the version.")
         self.assertRegex(data["repo"], r"^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$", msg="docs/site.json repo must be owner/name.")
         self.assertTrue(data["site"].startswith("https://") and data["site"].endswith("/"), msg="docs/site.json site must be an https address ending in /.")
@@ -942,7 +946,7 @@ class SecurityTests(unittest.TestCase):
         self.assertIn(repo_url() + "/security/advisories/new", text, msg="SECURITY.md must give the private advisory address built from docs/site.json.")
         for word in ("vulnerability", "disclosure"):
             self.assertIn(word, text.lower(), msg=f"SECURITY.md must contain the word {word}.")
-        self.assertIn("0.4", section(text, "Supported versions") or "", msg="SECURITY.md: the Supported versions table must name 0.4.")
+        self.assertIn("0.5", section(text, "Supported versions") or "", msg="SECURITY.md: the Supported versions table must name 0.5.")
         self.assertNotIn("if the repository has it enabled", text, msg="SECURITY.md must state the reporting route flatly.")
         self.assertIsNone(re.search(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}", text), msg="SECURITY.md must not publish an email address; the advisory form is the route.")
 
@@ -1174,13 +1178,13 @@ class ChangelogTests(unittest.TestCase):
             found = [t for level, t in headings(entries.pop(0)) if level == 3]
             self.assertEqual(found, [h for h in CHANGELOG_HEADINGS if h in found], msg="CHANGELOG.md: the Unreleased headings must keep the order Added, Changed, Fixed, Security, Removed, Known issues.")
         first = next((t for level, t in headings(self.text) if level == 2 and t != "[Unreleased]"), "")
-        self.assertRegex(first, r"^\[" + re.escape(site()["version"]) + r"\] - (unreleased|\d{4}-\d{2}-\d{2})$", msg="CHANGELOG.md: the first version entry must be ## [0.4.0] - unreleased or a date, after an optional ## [Unreleased].")
+        self.assertRegex(first, r"^\[" + re.escape(site()["version"]) + r"\] - (unreleased|\d{4}-\d{2}-\d{2})$", msg="CHANGELOG.md: the first version entry must be ## [<version>] - unreleased or a date, after an optional ## [Unreleased].")
         entry = entries[0] if entries else ""
         found = [t for level, t in headings(entry) if level == 3]
-        self.assertEqual(found, [h for h in CHANGELOG_HEADINGS if h in found], msg="CHANGELOG.md: the 0.4.0 headings must keep the order Added, Changed, Fixed, Security, Removed, Known issues.")
+        self.assertEqual(found, [h for h in CHANGELOG_HEADINGS if h in found], msg="CHANGELOG.md: the release headings must keep the order Added, Changed, Fixed, Security, Removed, Known issues.")
         for needed in ("Added", "Known issues"):
-            self.assertIn(needed, found, msg=f"CHANGELOG.md: the 0.4.0 entry needs ### {needed}.")
-        self.assertIn("README.md#tested-configurations", entry, msg="CHANGELOG.md: the 0.4.0 entry must link README.md#tested-configurations.")
+            self.assertIn(needed, found, msg=f"CHANGELOG.md: the release entry needs ### {needed}.")
+        self.assertIn("README.md#tested-configurations", entry, msg="CHANGELOG.md: the release entry must link README.md#tested-configurations.")
         if not mac_gate_met():
             known = section(entry, "Known issues", level=3) or ""
             self.assertTrue(any("macOS" in line and "preview" in line for line in known.splitlines()), msg="CHANGELOG.md: Known issues must say macOS is a preview.")

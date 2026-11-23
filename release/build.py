@@ -20,7 +20,7 @@ import zlib
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = "release/public-files.txt"
-VERSION = "0.4.0"
+VERSION = "0.5.0"
 REPOSITORY = "jamesarslan/local-agent-workbench"
 INSTALLERS = ("install.sh", "install.ps1")
 EXCLUDED = ("private/", "docs/launch-posts.md", "docs/.nojekyll")

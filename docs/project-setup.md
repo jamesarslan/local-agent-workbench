@@ -136,7 +136,7 @@ The **MCP tools** tab also lists the agent's own MCP files in the folder and how
 
 ## Consent
 
-These steps were not run for 0.4.0.
+These steps were not run for 0.5.0.
 
 A project folder can carry configuration that makes an agent start programs: MCP server lists, hooks and settings. Before the first launch in a folder that has such files for the chosen agent, Workbench asks you to review them. It never runs them unasked.
 
@@ -173,7 +173,7 @@ Updates show a diff. Untick any file you do not want, then choose **Write files*
 
 ## Starter kits
 
-These steps were not run for 0.4.0.
+These steps were not run for 0.5.0 in the desktop window. Through the same code on a Mac, the Game development kit was suggested for a Rojo project and applied with Roblox Studio's MCP server.
 
 A starter kit gives a folder three things in one step: an `AGENTS.md` written for that kind of project, up to six skills, and a short list of MCP servers to choose from. All kit text was written for Agent Workbench and is under the MIT licence.
 
@@ -249,7 +249,7 @@ Applying a profile is never silent. **Review and apply…** opens **Apply profil
 
 ## Settings that travel with the folder
 
-New in the next release; the 0.4.0 download does not have it. Named profiles and **Save profile** are in 0.4.0; the folder default, the offer on another computer and the panel below are new.
+New in 0.5.0. Named profiles and **Save profile** were already in 0.4.0; the folder default, the offer on another computer and the panel below are new.
 
 A folder's setup is kept in plain files. What moves with the project is in the project folder: `.agent-workbench/profiles.json` with the named profiles, `.agent-workbench/project.json` with the project's MCP servers, and the instruction files and skills the agents read. Workbench writes no keys, tokens, addresses or machine paths into these files, so you can commit them with the project. What stays behind is listed in [Where this folder's settings live](#where-this-folders-settings-live).
 
@@ -258,6 +258,11 @@ One profile can be the folder default, which is what another computer offers fir
 - On **Launch**, **Save as folder default** writes the current choices to `.agent-workbench/profiles.json` as the folder default: the agent, the kind of model source, the connection's name, the model, the engine settings, the tool switches and a folder prompt, if there is one. The profile is named "Folder default"; when the folder already has a default, Workbench asks before it replaces that profile with the current choices. The choices are also remembered on this computer, as with **Save for this folder**.
 - On **Project setup** → **Project profiles**, tick **Make it the folder default** before **Save profile**, or use **Make default** on a saved profile. The default shows the **Folder default** label, and **Clear default** takes the mark away. Only one profile is the default; the file stores it as `"default": true` on that profile.
 - Commit `.agent-workbench/` with the project, and open the folder on another computer. When that computer has no setup remembered for the folder, **Launch** shows "This folder has saved settings: Folder default." (with the default's name) and a **Review and apply…** button. It never applies the profile on its own: **Apply profile** lists every setting it would change, and nothing changes until you confirm. When you close the notice, Workbench does not show it again for that default on this computer.
+
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="images/folder-default-dark.png">
+<img src="images/folder-default.png" alt="The Launch view on a computer that has no setup for the storefront folder yet: a notice that says This folder has saved settings: Folder default, with the buttons Review and apply… and Dismiss above the project and model fields.">
+</picture>
 
 A profile names things instead of storing them, so Workbench matches them on the computer you are on:
 
@@ -269,6 +274,11 @@ A run can also become a profile: **Save as profile** in a run summary ([Run summ
 ### Where this folder's settings live
 
 **Where this folder's settings live**, on the **Project profiles** tab, lists for the open folder what travels with it and what stays on this computer, with the path of each file and **Show in folder**:
+
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="images/settings-places-dark.png">
+<img src="images/settings-places.png" alt="The Where this folder's settings live panel: under Travels with the folder, the profiles file, the project file, AGENTS.md and the skills folder; under Stays on this computer, the last choices, the connections, the run summaries file and the API keys in the login keychain, each file with a Show in folder button.">
+</picture>
 
 | Where | What | Travels with the folder |
 | --- | --- | --- |

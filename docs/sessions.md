@@ -2,7 +2,7 @@
 
 This guide covers where an agent runs once you launch it: the terminal dock inside the window, a terminal window of your system, sessions on an SSH machine and in the Docker sandbox, how to see what is running, how to resume earlier sessions, and the run summary of each launch.
 
-The terminal dock, agent windows, resuming and the sandbox were not run for 0.4.0 in the finished desktop window; see [Tested configurations](../README.md#tested-configurations). The steps below carry that status.
+Agent windows, resuming and the sandbox were not run for 0.5.0 in the finished desktop window, and of the terminal dock only a shell was run, by the desktop smoke test; see [Tested configurations](../README.md#tested-configurations). The steps below carry that status.
 
 ## Two ways to run an agent
 
@@ -15,14 +15,14 @@ What closing Agent Workbench ends:
 
 | What | When Workbench closes |
 | --- | --- |
-| Local terminals in the dock (shells and agents) | They end. Workbench closes them before it exits; this was not checked in a full desktop run for 0.4.0 |
+| Local terminals in the dock (shells and agents) | They end. Workbench closes them before it exits; this was not checked in a full desktop run for 0.5.0 |
 | Remote sessions shown in the dock | The dock detaches from them; the tmux session keeps running on the machine |
 | Agents in their own terminal windows | They keep running. Close the window to end one |
 | The local model server | It keeps running. Stop it with **Stop** in the status bar or `workbench stop` |
 
 ## The terminal dock
 
-These steps were not run for 0.4.0.
+For 0.5.0 the desktop smoke test opened a shell in the dock, ran a command in it, switched projects and closed the tab. Starting an agent in the dock was not run.
 
 <picture>
 <source media="(prefers-color-scheme: dark)" srcset="images/terminal-dark.png">
@@ -72,7 +72,7 @@ Workbench keeps one list of everything it started that is still running:
 
 ## Recent sessions and resume
 
-These steps were not run for 0.4.0.
+These steps were not run for 0.5.0.
 
 Workbench reads each agent's own session history to list recent sessions for a folder. It reads only the start of each session file, where the agent records the folder and title; for opencode it reads the session list in opencode's database.
 
@@ -93,7 +93,7 @@ A session stays with the account it was started with. A session started with the
 
 ## Run summaries
 
-New in the next release; the 0.4.0 download does not have it.
+New in 0.5.0.
 
 Each time the app starts an agent in a folder on this computer, in the terminal dock, as a resumed session or in its own terminal window, Workbench keeps a record of that run. A run answers "what exactly ran here?" after the folder's profile or instruction files have changed. Agents started on another machine over SSH, and agents started with `workbench agent` on the command line, are not recorded.
 
@@ -113,10 +113,20 @@ A run never holds a key: no API keys, tokens or environment values, and no user 
 
 Where to find runs:
 
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="images/recent-runs-dark.png">
+<img src="images/recent-runs.png" alt="Project setup on the Recent runs tab for the storefront folder: three runs, OMP on gpu-box-linux, Claude Code on gpu-box-win through Strata and Codex on Ollama, each with the time it started and the buttons Summary… and Remove.">
+</picture>
+
 - **Run summary** in the terminal dock opens the run of the selected tab. It shows for tabs of agents Workbench started.
 - **Project setup** → **Recent runs** lists the folder's newest runs, newest first, with the agent, the model, the model source and when it started. **Summary…** opens one, **Remove** deletes one and **Clear runs…** deletes them all for this folder.
 
 In the summary:
+
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="images/run-summary-dark.png">
+<img src="images/run-summary.png" alt="The Run summary dialog for an OMP run: the context, reasoning effort, MCP servers and Workbench version, then the instruction file AGENTS.md and the skills, each with a SHA-256, a field to save the run as a profile, and the buttons Close, Copy as JSON and Copy summary.">
+</picture>
 
 - **Copy summary** copies it as Markdown, ready to paste into an issue, a pull request or your notes.
 - **Copy as JSON** copies the full record as JSON.
@@ -127,7 +137,7 @@ Runs stay on this computer and do not travel with the folder. They are kept in `
 
 ## Remote sessions
 
-These steps were not run for 0.4.0.
+For 0.5.0, from a Mac, a remote session on a Windows machine opened PowerShell in a chosen folder and started Codex there. The other steps were not run.
 
 On **Machines**, choose a machine and use **New remote session**:
 
@@ -150,13 +160,13 @@ Then choose one of:
 
 ## Trace
 
-These steps were not run for 0.4.0.
+These steps were not run for 0.5.0.
 
 **Advanced → Trace** runs OMP on one task in the folder chosen on **Launch** and records each step: the tools it calls, their results and its answer. With **Allow file edits** off, OMP can read and search the folder but not change it. **Run trace** starts it and **Cancel trace** stops it. Traces are kept in the `traces` folder of the data folder and can contain your project's content.
 
 ## Isolated workspaces
 
-These steps were not run for 0.4.0.
+These steps were not run for 0.5.0.
 
 **Advanced → Sandbox** runs OMP inside a Docker container instead of on your computer:
 
