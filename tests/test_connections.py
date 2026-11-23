@@ -1211,7 +1211,10 @@ class VaultTests(Case):
             ),
         ]
         for vault, available, name in cases:
-            with patch("keyring.get_keyring", return_value=vault):
+            # The login keychain may be absent here (CI runs with a scratch HOME); that case has its own test.
+            with patch("keyring.get_keyring", return_value=vault), patch.object(
+                connections, "_keychain_missing", return_value=False
+            ):
                 status = VAULT_STATUS()
             self.assertEqual(
                 (status["available"], status["backend"]), (available, name)
