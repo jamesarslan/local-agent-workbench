@@ -18,6 +18,7 @@ EXTRA = (
     "host",
     "remote_port",
     "probed",
+    "late_system",
 )
 CONTEXT_RANGE = "Enter a context size between 1,024 and 10,000,000 tokens."
 
@@ -53,6 +54,8 @@ def _checked(name, value):
         return machines.target(value) if isinstance(value, str) and value else None
     if name == "remote_port":
         return value if _whole(value, 1, 65535) else None
+    if name == "late_system":
+        return value if isinstance(value, bool) else None
     return value if _whole(value, 0, 10**12) else None
 
 
@@ -73,6 +76,9 @@ def _extras(old, data, model, trusted, legacy):
     out = {name: old[name] for name in EXTRA if name in old}
     if out.get("context_source") == "server" and old.get("remote_model") != model:
         out.pop("context_window", None)
+    if old.get("remote_model") != model:
+        # The template answer belongs to the model it was asked of.
+        out.pop("late_system", None)
     if trusted:
         for name in EXTRA:
             if name in data:

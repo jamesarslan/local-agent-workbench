@@ -686,6 +686,17 @@ def _protocols(base, token=""):
         return None
 
 
+def _late_system(addr, model, token, protocols, models):
+    """Ask the server through the forward whether it takes a system message after the first turn."""
+    try:
+        import endpoints
+
+        chosen = next((m for m in models if m.get("id") == model), None)
+        return endpoints._late(addr, model, endpoints._auth(token), protocols, chosen)
+    except Exception:
+        return None
+
+
 def _harness(protocols):
     names = dict(zip(PROTOCOLS, ("OMP", "Codex", "Claude Code")))
     if not protocols:
@@ -842,8 +853,13 @@ def _endpoint_row(row):
         if ident:
             size = item.get("context") if isinstance(item, dict) else None
             whole = isinstance(size, int) and not isinstance(size, bool)
+            loaded = item.get("loaded") if isinstance(item, dict) else None
             models.append(
-                dict(id=ident, context=size if whole and 0 < size <= 4000000 else None)
+                dict(
+                    id=ident,
+                    context=size if whole and 0 < size <= 4000000 else None,
+                    loaded=loaded if isinstance(loaded, bool) else None,
+                )
             )
     kind = _text(row.get("kind"), 40)
     return dict(
@@ -952,6 +968,7 @@ def attach(host, port, model="", name="", key=None):
             f"The server on port {port} of {host} stopped answering; start it there, then search again."
         )
     protocols = row["protocols"] or _protocols(addr, key or "")
+    late = _late_system(addr, model, key or "", protocols, row["models"])
     label = labels().get(host, host)
     saved = entries().get(ident) or {}
     size = known.get(model)
@@ -976,6 +993,8 @@ def attach(host, port, model="", name="", key=None):
         account.update(context_window=size, context_source="server" if size else None)
     if protocols:
         account["protocols"] = protocols
+    if late is not None:
+        account["late_system"] = late
     try:
         _publish(account, key)
     except Exception:

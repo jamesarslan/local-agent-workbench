@@ -345,6 +345,9 @@ def forget_key(s):
         return not vault_status()["available"]
 
 
+LATE_MESSAGE = {"Claude Code": "system message", "Codex": "developer message"}
+
+
 def _any(names):
     return ", ".join(names[:-1]) + " or " + names[-1] if len(names) > 1 else names[0]
 
@@ -365,6 +368,10 @@ def compat(provider, row=None):
         for h in providers.HARNESSES
         if not h["native_only"] and flags[h["protocol"]] is not False
     ]
+    # A server whose template refuses a late system message fails these two mid-conversation.
+    late = provider == "Attached endpoint" and (row or {}).get("late_system") is False
+    if late:
+        usable = [name for name in usable if name not in LATE_MESSAGE]
     out = {}
     for h in providers.HARNESSES:
         api = providers.PROTOCOL_LABEL[h["protocol"]]
@@ -391,6 +398,14 @@ def compat(provider, row=None):
             reason = (
                 f"{subject} is not confirmed to offer the {api} API, so {h['id']} "
                 "may fail to connect."
+            )
+        if ok and late and h["id"] in LATE_MESSAGE:
+            ok = False
+            others = f"use {_any(usable)}" if usable else "choose another source"
+            reason = (
+                f"This server's chat template rejects the {LATE_MESSAGE[h['id']]} "
+                f"{h['id']} sends mid-conversation. Serve the model with Workbench, "
+                f"which fixes the template, or {others}."
             )
         out[h["id"]] = {"ok": ok, "reason": reason}
     return out

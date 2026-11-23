@@ -807,9 +807,9 @@ class MachinesTest(Base):
                 kind="ollama",
                 label="Ollama 0.40",
                 models=[
-                    {"id": "qwen3:14b", "context": 32768},
-                    {"id": "gemma3", "context": None},
-                    {"id": "huge", "context": None},
+                    {"id": "qwen3:14b", "context": 32768, "loaded": True},
+                    {"id": "gemma3", "context": None, "loaded": None},
+                    {"id": "huge", "context": None, "loaded": None},
                 ],
                 protocols=ALL,
                 needs_key=False,
@@ -1053,6 +1053,50 @@ class MachinesTest(Base):
             (row["context_window"], row["context_source"]), (32768, "server")
         )
 
+    def test_attach_asks_the_server_about_a_late_system_message(self):
+        import endpoints
+
+        late = MagicMock(return_value=False)
+        real = endpoints._late
+
+        def asked(*args):
+            with patch.object(endpoints, "late_system", late):
+                return real(*args)
+
+        self.found(_late=asked, _auth=endpoints._auth)
+        self.http({})
+        self.use(patch.object(machines, "forward", return_value=40333))
+        ident = machines.attach("box", 11434, key="sk")["connection_id"]
+        self.assertEqual(
+            late.call_args.args,
+            (
+                "http://127.0.0.1:40333/v1",
+                "qwen3:14b",
+                {"Authorization": "Bearer sk", "x-api-key": "sk"},
+                ALL,
+            ),
+        )
+        row = account_book.entries()[ident]
+        self.assertIs(row["late_system"], False)
+        verdicts = connections.compat("Attached endpoint", row)
+        self.assertIn("rejects the system message", verdicts["Claude Code"]["reason"])
+        self.assertTrue(verdicts["OMP"]["ok"])
+        late.return_value = None
+        machines.attach("box", 11434, key="sk")
+        self.assertIs(account_book.entries()[ident]["late_system"], False)
+        late.side_effect = OSError("gone")
+        machines.attach("box", 11434, key="sk")
+        self.assertIs(account_book.entries()[ident]["late_system"], False)
+        late.side_effect, late.return_value = None, True
+        machines.attach("box", 11434, key="sk")
+        self.assertIs(account_book.entries()[ident]["late_system"], True)
+        late.reset_mock()
+        rows = machines.discover("box")
+        rows[0]["models"][0]["loaded"] = False
+        with patch.object(machines, "discover", return_value=rows):
+            machines.attach("box", 11434, key="sk")
+        late.assert_not_called()
+
     def test_ids_and_reply_shape_match_the_endpoints_module(self):
         import endpoints
 
@@ -1109,7 +1153,7 @@ class MachinesTest(Base):
                     port=11434,
                     kind="ollama",
                     label=LABEL("ollama"),
-                    models=[{"id": "qwen3:14b", "context": 32768}],
+                    models=[{"id": "qwen3:14b", "context": 32768, "loaded": True}],
                     protocols={"chat": True, "responses": True, "messages": None},
                     needs_key=False,
                     base_path="/v1",

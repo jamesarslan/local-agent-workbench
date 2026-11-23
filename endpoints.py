@@ -19,6 +19,15 @@ from runtime import PORT
 
 SWEEP_TIMEOUT = 1.0
 PROBE_TIMEOUT = 5.0
+LATE_TIMEOUT = 20.0
+# Claude Code sends a system message after the first turn and Codex a developer message; some
+# chat templates refuse both. The probe replays that shape with a one-token answer.
+LATE_TURNS = [
+    ("user", "Hi."),
+    ("assistant", "Hello."),
+    ("system", "Answer in one word."),
+    ("user", "Say OK."),
+]
 AUTH = ("none", "required", "accepted", "rejected")
 HINTS = {
     "lmstudio-server-off": "LM Studio is running, but its local server is off. "
@@ -206,6 +215,50 @@ def _protocols(base, prefix, get, headers, timeout):
         else:
             out[name] = None
     return out
+
+
+def _late_answer(code, body):
+    if 200 <= code < 300:
+        return True
+    text = body.lower()
+    if code >= 400 and (b"system" in text or b"developer" in text):
+        return False
+    return None
+
+
+def late_system(base, model, headers, protocols, get=None, timeout=LATE_TIMEOUT):
+    """Whether the server accepts a system or developer message after the first turn.
+
+    True or False when the server answered the question, None when it could not be asked."""
+    get = get or _fetch
+    protocols = protocols if isinstance(protocols, dict) else {}
+    sent = dict(headers or {})
+    sent["Content-Type"] = "application/json"
+    asks = []
+    if protocols.get("chat") is not False:
+        doc = dict(
+            model=model,
+            messages=[dict(role=r, content=c) for r, c in LATE_TURNS],
+            max_tokens=1,
+            stream=False,
+        )
+        asks.append((base + "/chat/completions", doc))
+    if protocols.get("responses") is True:
+        turns = [("developer" if r == "system" else r, c) for r, c in LATE_TURNS]
+        doc = dict(
+            model=model,
+            input=[dict(type="message", role=r, content=c) for r, c in turns],
+            max_output_tokens=16,
+            stream=False,
+        )
+        asks.append((base + "/responses", doc))
+    seen = []
+    for url, doc in asks:
+        code, _, body = get("POST", url, sent, json.dumps(doc).encode(), timeout)
+        seen.append(_late_answer(code, body))
+        if seen[-1] is False:
+            return False
+    return True if True in seen else None
 
 
 def _probe_base(base, kinds, identity, get, headers, timeout):
@@ -397,7 +450,12 @@ def describe(record, model="", local=True):
     out = dict(record)
     out["label"] = label
     out["compat"] = connections.compat(
-        "Attached endpoint", {"protocols": record["protocols"], "name": label}
+        "Attached endpoint",
+        {
+            "protocols": record["protocols"],
+            "name": label,
+            "late_system": record.get("late_system"),
+        },
     )
     out["warnings"] = _warnings(record, label, model)
     out["connection_id"] = _saved(record["base"]) if local else ""
@@ -479,6 +537,16 @@ def _reported(models, model):
     return next((m["context"] for m in models if m["id"] == model), None)
 
 
+def _late(base, model, headers, protocols, chosen=None):
+    """The late-system answer for one model, without loading a model the server has unloaded."""
+    if not model or (chosen and chosen.get("loaded") is False):
+        return None
+    try:
+        return late_system(base, model, headers, protocols)
+    except (ValueError, OSError, http.client.HTTPException):
+        return None
+
+
 def remote_ident(host, remote_port):
     return hashlib.sha256(f"{host}:{int(remote_port)}".encode()).hexdigest()[:16]
 
@@ -518,6 +586,8 @@ def attach(
         raise ValueError(
             "This server has no model available. Load a model there, then attach again."
         )
+    chosen = next((m for m in models if m["id"] == model), None)
+    late = _late(found["base"], model, _auth(key), found["protocols"], chosen)
     if context is not None:
         if _size(context) is None:
             raise ValueError(
@@ -546,6 +616,7 @@ def attach(
             probed=int(time.time()),
             context_window=window,
             context_source=origin,
+            late_system=late,
             **({"host": host, "remote_port": int(remote_port)} if host else {}),
         ),
         allow_endpoint_change=True,
@@ -595,6 +666,10 @@ def refresh(connection_id):
     user = row.get("context_source") == "user"
     if answered:
         fresh["protocols"] = record["protocols"]
+        chosen = next((m for m in record["models"] if m["id"] == model), None)
+        late = _late(base, model, _auth(token), record["protocols"], chosen)
+        if late is not None:
+            fresh["late_system"] = late
         if not user and not row.get("context"):
             window = _size(_reported(record["models"], model))
             fresh["context_window"] = window
