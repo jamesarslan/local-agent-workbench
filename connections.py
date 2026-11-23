@@ -566,8 +566,9 @@ def _lead(harness, argv, tools):
     return [*argv, *tools]
 
 
-def prepare(s, harness=None, sent=None):
-    """sent, when given, collects the names of the MCP servers the harness receives."""
+def prepare(s, harness=None, sent=None, facts=None):
+    """sent, when given, collects the names of the MCP servers the harness receives.
+    facts, when given, receives the settings the session runs with, its API address and model ID."""
     harness = harness or s.get("harness", "OMP")
     if harness not in HARNESS:
         raise ValueError("Unknown harness")
@@ -601,6 +602,8 @@ def prepare(s, harness=None, sent=None):
             argv += ["--model", choice]
         if harness == "Codex":
             argv += ["--sandbox", "workspace-write"]
+        if facts is not None:
+            facts.update(settings=dict(s), base="", model=choice, prompt=False)
         return _checked(harness, argv, [choice, auth]), env, cwd
     gate = compat(provider, row)[harness]
     if not gate["ok"]:
@@ -619,6 +622,9 @@ def prepare(s, harness=None, sent=None):
     home.mkdir(parents=True, exist_ok=True)
     tools = _tools(s, harness, home, env, sent)
     env["WORKBENCH_SESSION_KEY"] = token or "local"
+    if facts is not None:
+        # Codex is the one agent here that is not handed the folder prompt.
+        facts.update(settings=dict(s), base=base, model=model, prompt=harness != "Codex")
     if harness in ("OMP", "Pi") and provider != "Managed local":
         from visual_routes import route
 
@@ -784,9 +790,11 @@ def prepare(s, harness=None, sent=None):
     raise ValueError("Unknown harness")
 
 
-def ready_session(s):
+def ready_session(s, facts=None):
     sent = []
-    argv, env, cwd = prepare(s, sent=sent)
+    argv, env, cwd = prepare(s, sent=sent, facts=facts)
+    if facts is not None:
+        facts["sent"] = list(sent)
     if s["firecrawl"] and "firecrawl" in sent:
         from cli import web
 
@@ -804,8 +812,8 @@ def ready_session(s):
     return argv, env, cwd
 
 
-def launch(s):
-    argv, env, cwd = ready_session(s)
+def launch(s, facts=None):
+    argv, env, cwd = ready_session(s, facts)
     import secrets
     import time
     from runtime import ROOT

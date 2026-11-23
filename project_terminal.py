@@ -89,6 +89,8 @@ def stable_end(text, idle):
 
 
 class Session:
+    run = ""
+
     def __init__(
         self, argv, env, project, title, harness=None, kind="embedded", host="", name=""
     ):
@@ -407,6 +409,18 @@ def admit():
         pass
 
 
+def note_run(harness, kind, facts):
+    """The id of the run summary kept for an agent the dock started; '' when none was kept."""
+    try:
+        import desktop_bridge
+
+        return desktop_bridge.note_run(
+            harness, "resume" if kind == "resume" else "embedded", facts
+        )
+    except Exception:
+        return ""
+
+
 def dispatch(action, p):
     project = sessions.project_dir(p.get("workspace"))
     if action == "term-history":
@@ -435,6 +449,7 @@ def dispatch(action, p):
                     watch=isinstance(s, Conversation),
                     kind=getattr(s, "kind", "watch"),
                     harness=getattr(s, "harness", None) or "",
+                    run=getattr(s, "run", "") or "",
                 )
                 for k, s in SESSIONS.items()
                 if s.project == project
@@ -512,7 +527,8 @@ def dispatch(action, p):
                 raise ValueError(
                     "This session is no longer available in this project; pick another one."
                 )
-            argv, env, _ = connections.ready_session(s)
+            facts = {}
+            argv, env, _ = connections.ready_session(s, facts=facts)
             if p.get("kind") == "resume":
                 argv, env = sessions.resume(s["harness"], argv, env, row)
             title = (
@@ -527,7 +543,9 @@ def dispatch(action, p):
         ident = secrets.token_hex(12)
         with LOCK:
             admit()
-            SESSIONS[ident] = Session(argv, env, project, title, agent, **where)
+            SESSIONS[ident] = session = Session(argv, env, project, title, agent, **where)
+        if action == "term-open" and agent:
+            session.run = note_run(agent, p.get("kind"), facts)
         if action == "term-remote":
             # The terminal is open; a failed registry write must not lose its id.
             try:

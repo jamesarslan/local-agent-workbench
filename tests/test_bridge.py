@@ -833,7 +833,7 @@ class LaunchTest(BridgeCase):
     def test_launch_remembers_folder_and_keeps_saved_toggles(self):
         self.neighbours(provider="OpenRouter", search=True, plugins="art")
         launched = []
-        launch = self.use(connections, "launch", side_effect=lambda s: launched.append(dict(s)))
+        launch = self.use(connections, "launch", side_effect=lambda s, **_: launched.append(dict(s)))
         write = self.use(runtime, "write_json")
         remember = self.use(bridge, "remember")
         self.which.return_value = "/bin/omp"
