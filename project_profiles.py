@@ -332,10 +332,31 @@ def validate_profile(item, name=""):
     return out
 
 
-def save_project(s, name):
-    name = name.strip()
+def _profile_name(name):
+    name = name.strip() if isinstance(name, str) else ""
     if not name or len(name) > 80 or any(ord(c) < 32 for c in name):
         raise ValueError("Give this profile a name of 1–80 characters.")
+    return name
+
+
+def save_item(workspace, name, item, replace=True):
+    """Write one checked profile into the folder's profiles.json; returns the file's path."""
+    name = _profile_name(name)
+    item = validate_profile(item, name)
+    path = profile_file(workspace)
+    with _editing(path, create=True):
+        profiles = _read_profiles(path)
+        if not replace and name in profiles:
+            raise ValueError(
+                f"This folder already has a profile named {name}. Choose another name."
+            )
+        profiles[name] = item
+        write_json(path, profiles)
+    return str(path)
+
+
+def save_project(s, name):
+    name = _profile_name(name)
     connection = (
         next(
             (
@@ -349,21 +370,13 @@ def save_project(s, name):
         if s.get("connection_id")
         else None
     )
-    path = profile_file(s["workspace"])
     used = launch_settings(s)
-    item = validate_profile(
-        {
-            **{k: used[k] for k in PORTABLE if k in used},
-            **({"connection_name": connection["name"]} if connection else {}),
-            "weight": Path(s["model"]).name,
-        },
-        name,
-    )
-    with _editing(path, create=True):
-        profiles = _read_profiles(path)
-        profiles[name] = item
-        write_json(path, profiles)
-    return str(path)
+    item = {
+        **{k: used[k] for k in PORTABLE if k in used},
+        **({"connection_name": connection["name"]} if connection else {}),
+        "weight": Path(s["model"]).name,
+    }
+    return save_item(s["workspace"], name, item)
 
 
 def _resolve(s, item, paths):

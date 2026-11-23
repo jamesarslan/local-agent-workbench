@@ -37,13 +37,13 @@ const NEW_IDS = [
   "nav-overview", "nav-guide", "machine-label", "command-open", "launch-target", "launch-quick",
   "strip-model", "strip-sessions", "strip-tasks", "strip-service", "strip-keys", "project-list",
   "overview-view", "guide-view", "guide-steps", "launch-project", "source-health", "model-context", "agent-cards", "launch-readiness",
-  "launch-needs", "launch-needs-dock", "where-dock", "where-window", "save-state", "launch-recent", "term-tabs", "dock-resize", "session-agent",
-  "plan-review", "profile-dialog", "consent-dialog", "attach-dialog", "secret-dialog", "server-dialog", "file-dialog", "confirm-dialog", "keys-dialog", "palette",
+  "launch-needs", "launch-needs-dock", "where-dock", "where-window", "save-state", "launch-recent", "term-tabs", "term-run", "dock-resize", "session-agent",
+  "plan-review", "profile-dialog", "consent-dialog", "attach-dialog", "secret-dialog", "server-dialog", "run-dialog", "file-dialog", "confirm-dialog", "keys-dialog", "palette",
 ];
 const SCRIPT_ORDER = [
   "core", "components", "feedback", "router", "store", "form", "jobs", "readiness", "rail", "header", "project-switch", "strip", "sessions", "terminal",
   "gallery", "launch", "view-launch", "view-overview", "guide", "guide-model", "guide-steps", "plan-review", "consent", "kit-preview", "view-project",
-  "project-instructions", "project-skills", "project-mcp", "project-kit", "project-profiles", "source-forms", "attach", "model-picker", "view-connections",
+  "project-instructions", "project-skills", "project-mcp", "project-kit", "project-profiles", "project-runs", "source-forms", "attach", "model-picker", "view-connections",
   "view-machines", "tools", "model-install", "view-advanced", "adv-setup", "adv-models", "adv-agent", "adv-hub", "adv-bench", "adv-trace", "adv-sandbox",
   "adv-appearance", "palette", "compat", "boot",
 ];

@@ -561,3 +561,24 @@
     flex-wrap: wrap;
   }
 }
+
+/* Run summaries: the read-only summary in its dialog and the Recent runs list */
+.run-summary {
+  max-height: 34vh;
+  overflow: auto;
+  margin-bottom: var(--space-6);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+.run-save-note {
+  margin-top: var(--space-3);
+}
+.run-row-text {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}

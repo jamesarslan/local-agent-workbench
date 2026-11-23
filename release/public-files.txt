@@ -84,6 +84,7 @@ desktop/ui/project-instructions.js
 desktop/ui/project-kit.js
 desktop/ui/project-mcp.js
 desktop/ui/project-profiles.js
+desktop/ui/project-runs.js
 desktop/ui/project-skills.js
 desktop/ui/project-switch.js
 desktop/ui/rail.js
@@ -259,6 +260,7 @@ results/sq20.json
 results/tool-load.json
 results/web-plugin-cost.json
 results/weights.json
+run_log.py
 runtime.py
 sandbox/Dockerfile
 session_window.py
@@ -333,6 +335,7 @@ tests/test_project_terminal.py
 tests/test_providers.py
 tests/test_recommend.py
 tests/test_release.py
+tests/test_run_log.py
 tests/test_runtime.py
 tests/test_session_window.py
 tests/test_sessions.py

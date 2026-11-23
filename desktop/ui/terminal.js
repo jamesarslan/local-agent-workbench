@@ -88,7 +88,7 @@
 
   function make(row, workspace) {
     const rec = {
-      id: row.id, workspace, title: "", kind: "", harness: "", watch: false, ended: false, closed: false, done: false, stopped: false,
+      id: row.id, workspace, title: "", kind: "", harness: "", run: "", watch: false, ended: false, closed: false, done: false, stopped: false,
       detached: false, offset: 0, idle: 0, timer: null, reading: false, queue: Promise.resolve(), sized: "", opened: false,
       box: el("div", { class: "term-box", hidden: true }), term: null, fit: null,
     };
@@ -105,6 +105,7 @@
     rec.title = typeof row.title === "string" && row.title.trim() ? row.title.trim() : "Terminal";
     rec.kind = typeof row.kind === "string" ? row.kind : "";
     rec.harness = typeof row.harness === "string" ? row.harness : "";
+    if (typeof row.run === "string") rec.run = row.run;
     rec.watch = Boolean(row.watch);
     if (row.ended) rec.ended = true;
     rec.detached = false;
@@ -428,6 +429,7 @@
     if (rec) close.removeAttribute("aria-disabled");
     else close.setAttribute("aria-disabled", "true");
     close.textContent = rec && rec.kind === "remote" && live(rec) ? "Detach" : "End";
+    AW.$("term-run").hidden = !(rec && rec.run);
     AW.$("term-quit-hint").hidden = ![...sessions.values()].some((other) => live(other) && !other.watch);
     dock().classList.toggle("term-empty", !rec);
     info();
@@ -767,6 +769,10 @@
     onClick("term-agent", startAgent);
     onClick("term-resume", () => AW.sessions.picker("resume"));
     onClick("term-watch", () => AW.sessions.picker("watch"));
+    onClick("term-run", (button) => {
+      const rec = current();
+      return rec && rec.run ? AW.runs.open({ workspace: rec.workspace, id: rec.run, origin: button }) : null;
+    });
     onClick("term-close", (button) => (button.getAttribute("aria-disabled") === "true" ? false : end(currentId)));
     AW.$("terminal-list").addEventListener("change", (event) => select(event.currentTarget.value));
     wireResize();

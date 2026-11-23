@@ -245,6 +245,7 @@
           <span id="launch-needs-dock" class="sr-only"></span>
           <button type="button" class="btn sm" id="term-resume">Resume…</button>
           <button type="button" class="btn sm" id="term-watch">Watch…</button>
+          <button type="button" class="btn sm" id="term-run" hidden>Run summary</button>
           <button type="button" class="btn sm" id="term-close">End</button>
           <button type="button" class="btn sm" id="term-hide" aria-label="Hide terminal">Hide</button>
         </div>
@@ -343,6 +344,14 @@
       <div class="dialog-body" id="server-dialog-body"></div>
     </dialog>
 
+    <dialog id="run-dialog" class="dialog w-760" aria-labelledby="run-dialog-title">
+      <div class="dialog-head">
+        <h2 class="dialog-title" id="run-dialog-title">Run summary</h2>
+        <button type="button" class="btn sm" data-close>Close</button>
+      </div>
+      <div class="dialog-body" id="run-dialog-body"></div>
+    </dialog>
+
     <dialog id="file-dialog" class="dialog w-760" aria-labelledby="file-dialog-title">
       <div class="dialog-head">
         <h2 class="dialog-title" id="file-dialog-title">File</h2>
@@ -404,6 +413,7 @@
     <script src="ui/project-mcp.js"></script>
     <script src="ui/project-kit.js"></script>
     <script src="ui/project-profiles.js"></script>
+    <script src="ui/project-runs.js"></script>
     <script src="ui/source-forms.js"></script>
     <script src="ui/attach.js"></script>
     <script src="ui/model-picker.js"></script>

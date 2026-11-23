@@ -71,6 +71,7 @@ ROUTES = (
     ("kit-", "starter_kits"),
     ("model-", "catalog"),
     ("onboarding-", "onboarding"),
+    ("run-", "run_log"),
 )
 PLUGIN_AREA = frozenset(("plugin-describe", "plugin-remove", "plugin-update"))
 INLINE = frozenset(
@@ -465,6 +466,19 @@ def installed_version(harness):
     return value
 
 
+def note_run(harness, kind, facts):
+    """Keep the run summary of a launch that has started; a failure here never fails the launch."""
+    if not isinstance(facts, dict) or not facts.get("settings"):
+        return ""
+    try:
+        import run_log
+
+        return run_log.note(facts, harness, kind, installed_version(harness))
+    except Exception:
+        traceback.print_exc()
+        return ""
+
+
 def dispatch(action, payload, progress=None, cancel=None):
     action = ALIASES.get(action, action)
     payload = payload if isinstance(payload, dict) else {}
@@ -619,7 +633,9 @@ def dispatch(action, payload, progress=None, cancel=None):
             raise ValueError(
                 f"{out['harness']} is missing. Open Advanced → Setup to install it."
             )
-        connections.launch(out)
+        facts = {}
+        connections.launch(out, facts=facts)
+        note_run(out["harness"], "window", facts)
     if action in ("launch-start", "launch-save"):
         remember(out["workspace"], {**out, "preset": payload.get("preset", "")})
     if action == "launch-start":
