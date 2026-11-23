@@ -166,11 +166,13 @@
         style(chips, { display: "inline-flex", gap: "var(--space-3)", marginLeft: "var(--space-4)" });
         if (builtin) chips.append(ui.chip("Built into Agent Workbench"));
         if (server.checked === "registry") chips.append(ui.chip("Not launched by this project's tests"));
+        if (server.runs_code === true) chips.append(ui.chip("Runs code", "warn"));
         const title = el("span", null, el("span", { class: "wrap", text: text(server.label) || id }), chips.childNodes.length ? chips : null);
         const info = el("div", { class: "stack", id: infoId });
         style(info, { gap: "var(--space-1)", paddingLeft: "var(--space-8)" });
         const missing = Array.isArray(server.missing) ? server.missing : [];
         for (const program of Array.isArray(server.requires) ? server.requires : []) info.append(requirement(program, missing.includes(program)));
+        if (text(server.note)) info.append(style(line(server.note), { color: "var(--warn-text)" }));
         if (text(server.warning)) info.append(line(server.warning));
         if (text(server.network)) info.append(line("Network: " + server.network));
         for (const name of Array.isArray(server.needs) ? server.needs : [])

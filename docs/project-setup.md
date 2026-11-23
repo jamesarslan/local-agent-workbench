@@ -92,6 +92,21 @@ A project list looks like this:
 
 A server is either `stdio` (a program on this computer, with `command`, `args`, fixed non-secret `env` values and `env_from` names) or `http` (an `https://` address, or `http://` on this computer, with `header_env` and `bearer_env` names). The file never holds a secret: an `env` entry whose name looks like a key or token is refused, and you name the variable under `env_from` instead. Workbench checks every field of this file before it uses it, because the file comes from the folder and could have been written by anyone.
 
+A `stdio` server that each system installs in its own place lists a command per system under `platforms` instead of `command` and `args`, with the keys `darwin`, `linux` and `win32`. There the command may be a full path, and a path may start with `~/`, `%LOCALAPPDATA%`, `%APPDATA%` or `%USERPROFILE%`. The file keeps those as written, so it names no user folder; Workbench expands them on this computer when it starts a session. On a system the entry does not list, the server is skipped and the panel says why. On Windows, a server started through `cmd.exe` is skipped when the expanded path holds a character `cmd.exe` would read again, such as `&` or `(`. The Game development kit writes Roblox Studio's server this way:
+
+```json
+"roblox-studio": {
+  "transport": "stdio",
+  "platforms": {
+    "darwin": {"command": "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP"},
+    "win32": {"command": "cmd.exe", "args": ["/c", "%LOCALAPPDATA%\\Roblox\\mcp.bat"]}
+  },
+  "enabled": true
+}
+```
+
+For such a server, **Export to the agent's project file…** writes the command for the system you export on, with `%LOCALAPPDATA%` and the like left as written.
+
 ### Values for variables
 
 A project server that names a variable needs its value at launch. Workbench takes it from your environment when the variable is set there. Otherwise choose **Add value…** next to the variable: the value goes to your system's credential vault under the service `Agent Workbench` and is handed to the server's process when a session starts. **Forget value** deletes it. Without a vault, Workbench does not save the value; set the variable in your environment before you start Workbench.
@@ -160,7 +175,7 @@ Updates show a diff. Untick any file you do not want, then choose **Write files*
 
 These steps were not run for 0.4.0.
 
-A starter kit gives a folder three things in one step: an `AGENTS.md` written for that kind of project, up to five skills, and a short list of MCP servers to choose from. All kit text was written for Agent Workbench and is under the MIT licence.
+A starter kit gives a folder three things in one step: an `AGENTS.md` written for that kind of project, up to six skills, and a short list of MCP servers to choose from. All kit text was written for Agent Workbench and is under the MIT licence.
 
 | Kit | For | Skills |
 | --- | --- | --- |
@@ -170,12 +185,12 @@ A starter kit gives a folder three things in one step: an `AGENTS.md` written fo
 | 3D scenes and assets | Blender | `workbench-scripting-for-blender`, `workbench-scene-inspect`, `workbench-3d-export`, `workbench-headless-render`, `workbench-asset-provenance` |
 | Research and writing | Markdown, LaTeX, Quarto, Typst | `workbench-source-research`, `workbench-citations`, `workbench-outline-draft-revise`, `workbench-fact-check`, `workbench-document-convert` |
 | DevOps and infrastructure | Terraform, OpenTofu, Docker, Kubernetes | `workbench-iac-plan-review`, `workbench-container-build`, `workbench-ci-failure-triage`, `workbench-cluster-inspect`, `workbench-secrets-hygiene` |
-| Game development | Godot, Unity, Unreal Engine | `workbench-game-project-for-godot`, `workbench-game-project-for-unity` or `workbench-game-project-for-unreal` (the one that matches the folder), `workbench-gameplay-debug`, `workbench-game-assets` |
+| Game development | Godot, Unity, Unreal Engine, Roblox | `workbench-game-project-for-godot`, `workbench-game-project-for-unity`, `workbench-game-project-for-unreal` or `workbench-game-project-for-roblox` (the one that matches the folder), `workbench-gameplay-debug`, `workbench-game-assets` |
 | Blank | Any folder | None. A short `AGENTS.md` with the headings every agent reads, and no tools |
 
 ### How a kit is suggested
 
-Workbench reads the names of the files in the folder and two levels below it, without opening them except `package.json`, and matches them against each kit's rules, for example `Cargo.toml` or `go.mod` for General software, a React or Vue dependency for Web front end, `pyproject.toml` or a notebook for Python and data, a `.blend` file for 3D scenes and assets, a folder that is mostly Markdown or LaTeX with no build file for Research and writing, Terraform or Helm files for DevOps and infrastructure, and a Godot, Unity or Unreal project for Game development. The suggestion names the files that led to it. In a large folder, only part is read, and the suggestion says so.
+Workbench reads the names of the files in the folder and two levels below it, without opening them except `package.json`, and matches them against each kit's rules, for example `Cargo.toml` or `go.mod` for General software, a React or Vue dependency for Web front end, `pyproject.toml` or a notebook for Python and data, a `.blend` file for 3D scenes and assets, a folder that is mostly Markdown or LaTeX with no build file for Research and writing, Terraform or Helm files for DevOps and infrastructure, and a Godot, Unity, Unreal or Roblox project for Game development. A Roblox project is a Rojo `default.project.json`, a `.rbxl` or `.rbxlx` place file, or at least two of `*.project.json`, `.luau` scripts, `aftman.toml`, `rokit.toml`, `wally.toml`, `selene.toml` and `sourcemap.json`. The suggestion names the files that led to it. In a large folder, only part is read, and the suggestion says so.
 
 ### Applying a kit
 
@@ -190,7 +205,7 @@ A kit's built-in tools (web search, page crawling, Blender) are switched on for 
 
 ### Kit MCP servers
 
-Kit servers are not bundled with Workbench. Each is fetched from its publisher (with `npx`, `uvx` or `docker`) the first time an agent starts it, or is a hosted service. Every server below is listed from its package registry; none was started for this release. A server whose launch tool is missing is marked in the preview.
+Kit servers are not bundled with Workbench. Each is fetched from its publisher (with `npx`, `uvx` or `docker`) the first time an agent starts it, is a hosted service, or is part of an application you install yourself. Every server below except Roblox Studio MCP is listed from its package registry; none of those was started for this release. Roblox Studio MCP ships inside Roblox Studio: it was started from a Roblox Studio install and listed its tools. A server whose launch tool or application is missing is marked in the preview.
 
 | Kit | Server | Publisher | Licence | Version | How it runs | Contacts | Before you switch it on |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -216,6 +231,7 @@ Kit servers are not bundled with Workbench. Each is fetched from its publisher (
 | Game development | [Godot MCP](https://github.com/Coding-Solo/godot-mcp) | Coding-Solo (community) | MIT | 0.1.1 | `npx` | Nothing documented; it drives your local Godot editor | Community project. Starts the editor and runs project code. Off by default: this npm build predates a security fix made upstream in April 2026 |
 | Game development | [Unreal MCP](https://dev.epicgames.com/documentation/unreal-engine/unreal-mcp-in-unreal-editor) | Epic Games | Unreal Engine licence | ships with the editor (5.9 docs) | `http://127.0.0.1:8000/mcp`; preselected with a `*.uproject` file | This computer only: the editor at `127.0.0.1:8000` | Experimental engine feature with no authentication; keep it on this computer |
 | Game development | [MCP for Unity](https://github.com/CoplayDev/unity-mcp) | CoplayDev (community) | MIT | 10.3.0 | `uvx`; preselected in a Unity project | A local bridge to the Unity Editor; usage telemetry is switched off | Community project, not affiliated with Unity. Edits scripts and assets in the editor |
+| Game development | [Roblox Studio MCP](https://create.roblox.com/docs/studio/mcp) | Roblox | [Roblox Terms of Use](https://www.roblox.com/info/terms) | ships with Studio | Roblox Studio's `StudioMCP` program on macOS, `cmd.exe /c %LOCALAPPDATA%\Roblox\mcp.bat` on Windows; listed but off on Linux. Preselected when Roblox Studio is installed and the folder is not a Godot, Unity or Unreal project | This computer: the open Roblox Studio. Some tools call Roblox services (asset generation, Open Cloud) | MCP clients can read and modify content in your open Roblox places; connect only clients you trust. Runs Luau code in Studio. First turn on "Enable Studio as MCP server" in Studio's Assistant, under Manage MCP Servers |
 
 Kits that offer built-in tools instead of, or as well as, servers: General software offers web search; 3D scenes and assets switches on the Blender tool; Research and writing switches on web search and page crawling; Game development offers the Blender tool.
 

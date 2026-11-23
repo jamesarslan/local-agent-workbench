@@ -1,0 +1,79 @@
+{
+  "date": "2026-11-23",
+  "server": "roblox-studio, the Game development kit's Roblox Studio MCP entry",
+  "only_read_only_calls": [
+    "initialize",
+    "tools/list",
+    "list_roblox_studios",
+    "get_studio_state"
+  ],
+  "mac": {
+    "system": "mac-m3max",
+    "studio_version": "0.748.0.7481526",
+    "kit_flow": {
+      "folder": "temporary Rojo project: default.project.json and src/server/main.server.luau",
+      "data_folder": "throwaway WORKBENCH_DATA",
+      "suggested_kit": "gamedev",
+      "evidence": [
+        "found default.project.json",
+        "1 file matches *.project.json",
+        "1 file matches *.luau"
+      ],
+      "server_listed": true,
+      "server_selected_by_default": true,
+      "skill_selected": "workbench-game-project-for-roblox",
+      "applied_without_consent_prompt": true,
+      "project_json_keeps_both_systems": true,
+      "launch_panel_status": "sent"
+    },
+    "claude_code_config": {
+      "type": "stdio",
+      "command": "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP"
+    },
+    "codex_override": "mcp_servers.roblox-studio.command=\"/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP\"",
+    "probe_with_that_command": {
+      "server_info": {
+        "name": "RobloxStudio",
+        "version": "1.0.0"
+      },
+      "protocol": "2025-06-18",
+      "tools": 37,
+      "list_roblox_studios": "1 place open, mode Edit"
+    },
+    "claude_code_headless": {
+      "version": "2.1.330",
+      "flags": "-p --mcp-config <the file Workbench wrote> --strict-mcp-config --tools \"\" --allowedTools mcp__roblox-studio__list_roblox_studios mcp__roblox-studio__get_studio_state, every other Roblox tool disallowed",
+      "is_error": false,
+      "turns": 3,
+      "permission_denials": 0,
+      "answer": "Named the one open place, saved to the cloud, in Edit mode with no play session running."
+    },
+    "passed": true
+  },
+  "windows": {
+    "system": "win-rtx5090",
+    "reached_over": "SSH session (session 0); Roblox Studio not running in the desktop session",
+    "mcp_bat_present": true,
+    "mcp_bat_runs": "StudioMCP.exe from the current Roblox version folder, passing its arguments on",
+    "probe_literal": {
+      "command": "the documented form: cmd.exe /c and Roblox's mcp.bat under the per-user local application folder variable, left for cmd.exe to expand",
+      "server_info": {
+        "name": "RobloxStudio",
+        "version": "1.0.0"
+      },
+      "tools": 37,
+      "list_roblox_studios": "no studios"
+    },
+    "probe_expanded": {
+      "command": "the launch form: cmd.exe /c and the same mcp.bat with that folder expanded by Workbench",
+      "server_info": {
+        "name": "RobloxStudio",
+        "version": "1.0.0"
+      },
+      "tools": 37,
+      "list_roblox_studios": "no studios"
+    },
+    "passed": "partial",
+    "not_run": "A place open in Studio, and an agent session on Windows"
+  }
+}

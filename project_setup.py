@@ -10,6 +10,7 @@ import secrets
 import shlex
 import shutil
 import stat
+import sys
 import tomllib
 import unicodedata
 from urllib.parse import urlsplit
@@ -65,7 +66,17 @@ SERVER_KEYS = (
     "url",
     "header_env",
     "bearer_env",
+    "platforms",
 )
+PLATFORMS = {"darwin": "macOS", "linux": "Linux", "win32": "Windows"}
+# A program installed at a fixed place, named per system: a full path, a path in the home
+# folder, or one under a per-user Windows folder. Only these variables are ever expanded.
+LOCAL_VARS = ("LOCALAPPDATA", "APPDATA", "USERPROFILE")
+LOCAL_PATH = (
+    r"(?:/|~/|%(?:" + "|".join(LOCAL_VARS) + r")%\\|[A-Za-z]:\\)[A-Za-z0-9 _.+\\/-]{1,250}"
+)
+# Characters cmd.exe re-reads inside an argument it runs; an expanded path with one is refused.
+CMD_SPECIAL = '&|<>^%"()@!'
 MAX_SERVERS = 32
 MAX_PROJECT = 256 * 1024
 MAX_TEXT = 1 << 20
@@ -305,6 +316,7 @@ def _neutral(name, origin, transport, **fields):
         "headers": {},
         "header_env": {},
         "bearer_env": "",
+        "platforms": {},
     } | fields
 
 
@@ -350,19 +362,90 @@ def _project_url(url):
     )
 
 
+def _program(command):
+    return (
+        isinstance(command, str)
+        and re.fullmatch(COMMAND, command) is not None
+        and not command.startswith("-")
+        and bool(command.strip("."))
+    )
+
+
+def is_local_path(value):
+    """A full path to an installed program or file, with no .. part."""
+    return (
+        isinstance(value, str)
+        and re.fullmatch(LOCAL_PATH, value) is not None
+        and ".." not in re.split(r"[\\/]", value)
+    )
+
+
+def local_path(value, environ=None, home=None):
+    """A local path with ~ or a %LOCALAPPDATA%-style prefix expanded, no shell; None if unset."""
+    if not is_local_path(value):
+        return None
+    environ = os.environ if environ is None else environ
+    if value.startswith("~/"):
+        base = str(Path.home() if home is None else home)
+        return base.rstrip("/\\") + "/" + value[2:]
+    found = re.match(r"%([A-Z]+)%\\", value)
+    if not found:
+        return value
+    base = environ.get(found.group(1), "")
+    if not re.fullmatch(r"[^\0\r\n%\"]+", base):
+        return None
+    return base.rstrip("\\") + value[found.end() - 1 :]
+
+
+def _platform():
+    return sys.platform
+
+
+def _variants(name, value):
+    """Per-system command and arguments: {"darwin": {"command": …, "args": […]}, …}."""
+    wrong = (
+        "platforms must map darwin, linux or win32 to a command and its arguments; "
+        "a command is a program name or a full path."
+    )
+    if not isinstance(value, dict) or not value or not set(value) <= set(PLATFORMS):
+        raise _fail(name, wrong)
+    found = {}
+    for system in sorted(value):
+        entry = value[system]
+        if not isinstance(entry, dict) or not set(entry) <= {"command", "args"}:
+            raise _fail(name, wrong)
+        command = entry.get("command")
+        if not (_program(command) or is_local_path(command)):
+            raise _fail(name, wrong)
+        args = [] if entry.get("args") is None else entry["args"]
+        if (
+            not isinstance(args, list)
+            or len(args) > 32
+            or not all(
+                isinstance(a, str) and (re.fullmatch(ARG, a) or is_local_path(a)) for a in args
+            )
+        ):
+            raise _fail(name, "an argument has characters a shared project file cannot carry.")
+        found[system] = {"command": command} | ({"args": list(args)} if args else {})
+    return found
+
+
 def _stdio_fields(name, raw):
-    command = raw.get("command")
-    if (
-        not isinstance(command, str)
-        or not re.fullmatch(COMMAND, command)
-        or command.startswith("-")
-        or not command.strip(".")
-    ):
-        raise _fail(
-            name, "the command must be a program name such as npx, uvx or docker."
-        )
-    args = [] if raw.get("args") is None else raw["args"]
-    if (
+    platforms = {}
+    if not _unset(raw.get("platforms")):
+        if not _unset(raw.get("command")) or not _unset(raw.get("args")):
+            raise _fail(name, "give either a command or platforms, not both.")
+        platforms = _variants(name, raw["platforms"])
+        here = platforms.get(_platform(), {"command": ""})
+        command, args = here["command"], here.get("args", [])
+    else:
+        command = raw.get("command")
+        if not _program(command):
+            raise _fail(
+                name, "the command must be a program name such as npx, uvx or docker."
+            )
+        args = [] if raw.get("args") is None else raw["args"]
+    if not platforms and (
         not isinstance(args, list)
         or len(args) > 32
         or not all(isinstance(a, str) and re.fullmatch(ARG, a) for a in args)
@@ -398,6 +481,7 @@ def _stdio_fields(name, raw):
         "args": list(args),
         "env": dict(env),
         "env_from": list(passed),
+        "platforms": platforms,
     }
 
 
@@ -438,7 +522,8 @@ def clean_server(name, raw):
     if not isinstance(transport, str) or transport not in ("stdio", "http"):
         raise _fail(name, "the transport must be stdio or http.")
     stdio = transport == "stdio"
-    for field in ("url", "header_env", "bearer_env") if stdio else SERVER_KEYS[1:5]:
+    wrong = ("url", "header_env", "bearer_env") if stdio else (*SERVER_KEYS[1:5], "platforms")
+    for field in wrong:
         if not _unset(raw.get(field)):
             raise _fail(
                 name,
@@ -491,9 +576,53 @@ def from_mcp_json(name, conf, origin):
     return None
 
 
+def _systems(platforms):
+    return " and ".join(PLATFORMS[name] for name in PLATFORMS if name in platforms)
+
+
+def unavailable(server):
+    """Why a server defined per system has no command on this one, or ''."""
+    if not server.get("platforms") or server["command"]:
+        return ""
+    here = PLATFORMS.get(_platform(), "this system")
+    return (
+        f"{_clean_text(server['name'], 48)} is not available on {here}; "
+        f"it runs on {_systems(server['platforms'])}."
+    )
+
+
 def summary(server):
+    if server.get("platforms") and not server["command"]:
+        return f"Only on {_systems(server['platforms'])}"
     text = " ".join([server["command"], *server["args"]]) if server["command"] else server["url"]
     return _clean_text(text, 120)
+
+
+def _localized(server):
+    """(server with ~ and %LOCALAPPDATA% expanded for this computer, reason it cannot run)."""
+    if not server.get("platforms") or not server["command"]:
+        return server, ""
+    name = _clean_text(server["name"], 48)
+    found = []
+    for value in [server["command"], *server["args"]]:
+        if not is_local_path(value):
+            found.append(value)
+            continue
+        path = local_path(value)
+        if path is None:
+            return server, f"{name} needs a folder variable this computer does not set."
+        if (
+            _platform() == "win32"
+            and found
+            and Path(found[0].replace("\\", "/")).name.lower() in ("cmd", "cmd.exe")
+            and any(c in CMD_SPECIAL for c in path)
+        ):
+            return server, (
+                f"{name} is started through cmd.exe, which cannot safely receive "
+                "the folder path on this computer."
+            )
+        found.append(path)
+    return server | {"command": found[0], "args": found[1:]}, ""
 
 
 def _load_project(root):
@@ -545,7 +674,12 @@ def project_text(servers, extra=None):
     mcp = {}
     for name in sorted(servers):
         server = servers[name]
-        mcp[name] = {key: server[key] for key in SERVER_KEYS if server.get(key)} | {
+        keys = [
+            key
+            for key in SERVER_KEYS
+            if not (server.get("platforms") and key in ("command", "args"))
+        ]
+        mcp[name] = {key: server[key] for key in keys if server.get(key)} | {
             "enabled": bool(server.get("enabled"))
         }
     kept = {k: v for k, v in (extra or {}).items() if k not in ("version", "mcp")}
@@ -1016,8 +1150,11 @@ def _project_rows(root, harness, taken, deliver=True):
     for server in servers:
         name = server["name"]
         row = _row(server)
+        local, problem = _localized(server)
         if not server["enabled"]:
             row["status"] = "off"
+        elif unavailable(server) or problem:
+            row |= {"status": "skipped", "reason": unavailable(server) or problem}
         elif name in taken:
             row |= {
                 "status": "skipped",
@@ -1029,6 +1166,7 @@ def _project_rows(root, harness, taken, deliver=True):
                 "reason": f"Allow this folder's tools in Project setup to use {name}.",
             }
         elif deliver:
+            row["server"] = local
             for variable in _receives(server):
                 if os.environ.get(variable):
                     continue
@@ -2111,7 +2249,11 @@ def export_plan(workspace, harness):
     if not isinstance(harness, str) or harness not in HARNESSES:
         raise ValueError(BAD_AGENT)
     root = paths.canonical(workspace)
-    servers = [server for server in _project_servers(root) if server["enabled"]]
+    servers = [
+        server
+        for server in _project_servers(root)
+        if server["enabled"] and not unavailable(server)
+    ]
     if not servers:
         raise ValueError("Turn on at least one project server before exporting.")
     if harness == "Hermes":

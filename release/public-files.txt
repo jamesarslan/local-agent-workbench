@@ -167,6 +167,7 @@ kits/gamedev/AGENTS.md
 kits/gamedev/kit.json
 kits/gamedev/skills/workbench-game-assets/SKILL.md
 kits/gamedev/skills/workbench-game-project-for-godot/SKILL.md
+kits/gamedev/skills/workbench-game-project-for-roblox/SKILL.md
 kits/gamedev/skills/workbench-game-project-for-unity/SKILL.md
 kits/gamedev/skills/workbench-game-project-for-unreal/SKILL.md
 kits/gamedev/skills/workbench-gameplay-debug/SKILL.md
@@ -250,6 +251,7 @@ results/omp-inkling.json
 results/omp-web.json
 results/qwen-pi-acceptance.json
 results/qwen-pi.json
+results/roblox-studio-mcp.json
 results/sq20-128k.json
 results/sq20-32k-acceptance.json
 results/sq20-acceptance.json

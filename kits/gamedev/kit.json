@@ -3,7 +3,7 @@
   "id": "gamedev",
   "label": "Game development",
   "summary": "For game projects: follow the engine's layout, leave serialised assets to the editor and test from the command line.",
-  "works_with": "Godot, Unity, Unreal Engine",
+  "works_with": "Godot, Unity, Unreal Engine, Roblox",
   "version": "0.4.0",
   "priority": 70,
   "detect": {
@@ -16,7 +16,10 @@
           {"dir": "Assets"},
           {"file": "Packages/manifest.json"}
         ]
-      }
+      },
+      {"file": "default.project.json"},
+      {"glob": "*.rbxl"},
+      {"glob": "*.rbxlx"}
     ],
     "weak": [
       {"glob": "*.gd"},
@@ -28,13 +31,34 @@
       {"glob": "*.asmdef"},
       {"glob": "Source/*.Target.cs"},
       {"file": "Config/DefaultEngine.ini"},
-      {"dir": "Content"}
+      {"dir": "Content"},
+      {"glob": "*.project.json"},
+      {"glob": "*.luau"},
+      {"file": "aftman.toml"},
+      {"file": "rokit.toml"},
+      {"file": "wally.toml"},
+      {"file": "selene.toml"},
+      {"file": "sourcemap.json"}
     ]
   },
   "skills": [
     {"name": "workbench-game-project-for-godot", "when": {"file": "project.godot"}},
     {"name": "workbench-game-project-for-unity", "when": {"file": "ProjectSettings/ProjectVersion.txt"}},
     {"name": "workbench-game-project-for-unreal", "when": {"glob": "*.uproject"}},
+    {
+      "name": "workbench-game-project-for-roblox",
+      "when": {
+        "any": [
+          {"glob": "*.project.json"},
+          {"glob": "*.rbxl"},
+          {"glob": "*.rbxlx"},
+          {"glob": "*.luau"},
+          {"file": "wally.toml"},
+          {"file": "rokit.toml"},
+          {"file": "aftman.toml"}
+        ]
+      }
+    },
     {"name": "workbench-gameplay-debug"},
     {"name": "workbench-game-assets"}
   ],
@@ -88,6 +112,37 @@
       "when": {"file": "ProjectSettings/ProjectVersion.txt"},
       "network": "A local bridge to the Unity Editor. Usage telemetry is switched off here.",
       "warning": "Community project, not affiliated with Unity. Edits scripts and assets in the editor."
+    },
+    {
+      "name": "roblox-studio",
+      "label": "Roblox Studio MCP",
+      "publisher": "Roblox",
+      "source": "https://create.roblox.com/docs/studio/mcp",
+      "license": "Roblox Terms of Use",
+      "version": "ships with Studio",
+      "checked": "launched",
+      "transport": "stdio",
+      "platforms": {
+        "darwin": {"command": "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP"},
+        "win32": {"command": "cmd.exe", "args": ["/c", "%LOCALAPPDATA%\\Roblox\\mcp.bat"]}
+      },
+      "installed": {
+        "app": "Roblox Studio",
+        "darwin": "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP",
+        "win32": "%LOCALAPPDATA%\\Roblox\\mcp.bat"
+      },
+      "requires": [],
+      "default": true,
+      "when": {
+        "none": [
+          {"file": "project.godot"},
+          {"glob": "*.uproject"},
+          {"file": "ProjectSettings/ProjectVersion.txt"}
+        ]
+      },
+      "runs_code": true,
+      "network": "This computer: the open Roblox Studio. Some tools call Roblox services (asset generation, Open Cloud).",
+      "warning": "MCP clients can read and modify content in your open Roblox places. Make sure to only connect clients you trust. Turn on Enable Studio as MCP server in Studio's Assistant first."
     },
     {
       "builtin": "blender",

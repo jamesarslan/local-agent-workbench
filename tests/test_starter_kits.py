@@ -136,7 +136,7 @@ class ShippedKits(unittest.TestCase):
                     (kit["id"], kit["label"], kit["priority"], kit["version"]),
                     (kit_id, label, priority, "0.4.0"),
                 )
-                self.assertLessEqual(len(kit["skills"]), 5)
+                self.assertLessEqual(len(kit["skills"]), kits.MAX_SKILLS)
                 for entry in kit["mcp"]:
                     if "builtin" in entry:
                         self.assertIn(entry["builtin"], projects.CAPS)
@@ -175,8 +175,26 @@ class ShippedKits(unittest.TestCase):
         self.assertIn("security fix", found["godot"][1]["warning"])
         for name in ("chrome-devtools", "next-devtools", "mcp-for-unity"):
             self.assertTrue(found[name][1]["env"], name)
+        roblox = found["roblox-studio"][1]
+        self.assertEqual(roblox["source"], "https://create.roblox.com/docs/studio/mcp")
+        self.assertEqual(
+            roblox["platforms"],
+            {
+                "darwin": {"command": "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP"},
+                "win32": {"command": "cmd.exe", "args": ["/c", "%LOCALAPPDATA%\\Roblox\\mcp.bat"]},
+            },
+        )
+        self.assertTrue(roblox["warning"].startswith(
+            "MCP clients can read and modify content in your open Roblox places. "
+            "Make sure to only connect clients you trust."
+        ))
+        self.assertTrue(roblox["runs_code"])
         for name, (kit_id, entry) in found.items():
             with self.subTest(server=name):
+                if "platforms" in entry:
+                    # Shipped with the application it drives: started on a real install.
+                    self.assertEqual((entry["checked"], entry["requires"]), ("launched", []))
+                    continue
                 self.assertEqual(entry["checked"], "registry")
                 if entry["transport"] == "http":
                     self.assertEqual(entry["requires"], [])
@@ -219,7 +237,7 @@ class ShippedKits(unittest.TestCase):
     def test_skills_follow_the_common_subset(self):
         for kit_id in kits.ORDER:
             listed = shipped(kit_id)["skills"]
-            self.assertLessEqual(len(listed), 5, kit_id)
+            self.assertLessEqual(len(listed), kits.MAX_SKILLS, kit_id)
             for skill in listed:
                 name = skill["name"]
                 with self.subTest(kit=kit_id, skill=name):
@@ -318,6 +336,7 @@ class KitCase(unittest.TestCase):
             patch.object(projects, "DATA", self.data),
             patch.object(setup, "_ancestors", side_effect=bounded),
             patch.object(kits, "KITS_DIR", self.staged),
+            patch.object(kits, "_on_disk", return_value=False),
         ):
             item.start()
             self.addCleanup(item.stop)
@@ -362,7 +381,7 @@ class Loader(KitCase):
             "priority": {"priority": 101},
             "version": {"version": "0.4"},
             "long label": {"label": "x" * 61},
-            "six skills": {"skills": [{"name": f"workbench-s{n}"} for n in range(6)]},
+            "seven skills": {"skills": [{"name": f"workbench-s{n}"} for n in range(7)]},
             "skill name": {"skills": [{"name": "verify-change"}]},
             "skill twice": {"skills": [{"name": "workbench-demo"}] * 2},
             "skill key": {"skills": [{"name": "workbench-demo", "default": True}]},
@@ -650,6 +669,8 @@ class Loader(KitCase):
             "warning",
             "source",
             "needs",
+            "note",
+            "runs_code",
         }
         for row in rows:
             for entry in row["mcp"]:
@@ -694,6 +715,174 @@ class Loader(KitCase):
                     hidden = "other" if shown == "notes" else "notes"
                     with self.assertRaisesRegex(ValueError, f"That kit does not include {hidden}."):
                         kits.plan(self.work, "demo", "Codex", servers=[hidden])
+
+
+MAC_MCP = "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP"
+ROJO = {
+    "default.project.json": {"name": "obby", "tree": {"$className": "DataModel"}},
+    "src/server/main.server.luau": 'print("hello")\n',
+}
+
+
+class PerSystemEntries(KitCase):
+    """Entries with a command per system and an installed program, such as Roblox Studio's server."""
+
+    def roblox(self):
+        return next(entry for entry in shipped("gamedev")["mcp"] if entry.get("name") == "roblox-studio")
+
+    def on(self, system, installed, **env):
+        for item in (
+            patch.object(setup, "_platform", return_value=system),
+            patch.object(kits, "_on_disk", side_effect=lambda path: path in self.seen(path) and installed),
+            patch.dict(os.environ, env),
+        ):
+            item.start()
+            self.addCleanup(item.stop)
+        if "LOCALAPPDATA" not in env:
+            os.environ.pop("LOCALAPPDATA", None)
+
+    def seen(self, path):
+        self.checked.append(path)
+        return [path]
+
+    def setUp(self):
+        super().setUp()
+        self.checked = []
+
+    def test_schema(self):
+        server = self.roblox()
+        good = self.demo(mcp=[server])
+        self.assertEqual(kits.load_kit("demo", self.root)["mcp"][0]["platforms"], server["platforms"])
+        shutil.rmtree(good)
+        cases = {
+            "unknown system": server | {"platforms": {"macos": {"command": "x"}}},
+            "platforms and command": server | {"command": "npx"},
+            "relative command": server | {"platforms": {"darwin": {"command": "./StudioMCP"}}},
+            "installed without app": server | {"installed": {"darwin": MAC_MCP}},
+            "installed only app": server | {"installed": {"app": "Roblox Studio"}},
+            "installed unknown system": server | {"installed": {"app": "x", "macos": MAC_MCP}},
+            "installed relative": server | {"installed": {"app": "x", "darwin": "StudioMCP"}},
+            "installed other variable": server
+            | {"installed": {"app": "x", "win32": "%TEMP%\\Roblox\\mcp.bat"}},
+            "runs_code text": server | {"runs_code": "yes"},
+        }
+        for label, entry in cases.items():
+            with self.subTest(case=label):
+                shutil.rmtree(self.root / "demo", ignore_errors=True)
+                self.demo(mcp=[entry])
+                with self.bad():
+                    kits.load_kit("demo", self.root)
+
+    def test_default_on_only_when_installed(self):
+        rojo = self.folder("rojo", **ROJO)
+        rows = {}
+        for system, installed in (("darwin", True), ("darwin", False), ("win32", True), ("win32", False)):
+            with self.subTest(system=system, installed=installed):
+                self.checked = []
+                env = {"LOCALAPPDATA": "C:\\Users\\Ann Lee\\AppData\\Local"} if system == "win32" else {}
+                self.on(system, installed, **env)
+                plan = kits.plan(rojo, "gamedev", "Claude Code")
+                row = next(row for row in plan["servers"] if row.get("name") == "roblox-studio")
+                rows[system, installed] = row
+                self.assertEqual(row["selected"], installed)
+                self.assertEqual("roblox-studio" in self.selected(plan), installed)
+                self.assertTrue(row["runs_code"])
+                self.assertEqual(row["note"], "" if installed else "Install Roblox Studio to use this.")
+                expected = (
+                    MAC_MCP
+                    if system == "darwin"
+                    else "C:\\Users\\Ann Lee\\AppData\\Local\\Roblox\\mcp.bat"
+                )
+                self.assertEqual(self.checked, [expected] * len(self.checked))
+                self.assertTrue(self.checked)
+                if installed:
+                    project = next(i for i in plan["items"] if i["path"] == setup.PROJECT_FILE)
+                    written = json.loads(project["content"])["mcp"]["roblox-studio"]
+                    self.assertEqual(
+                        written,
+                        {"transport": "stdio", "platforms": self.roblox()["platforms"], "enabled": True},
+                    )
+        self.assertEqual(rows["darwin", True]["summary"], MAC_MCP)
+        self.assertEqual(rows["win32", True]["summary"], "cmd.exe /c %LOCALAPPDATA%\\Roblox\\mcp.bat")
+
+    def test_unset_folder_variable_counts_as_not_installed(self):
+        self.on("win32", True)
+        plan = kits.plan(self.folder("rojo", **ROJO), "gamedev", "Codex")
+        row = next(row for row in plan["servers"] if row.get("name") == "roblox-studio")
+        self.assertEqual((row["selected"], row["note"]), (False, "Install Roblox Studio to use this."))
+        self.assertEqual(self.checked, [])
+
+    def test_other_systems_list_it_off_with_a_note(self):
+        for system, here in (("linux", "Linux"), ("sunos5", "this system")):
+            with self.subTest(system=system):
+                self.on(system, True)
+                rojo = self.folder("rojo-" + system, **ROJO)
+                plan = kits.plan(rojo, "gamedev", "Codex")
+                row = next(row for row in plan["servers"] if row.get("name") == "roblox-studio")
+                self.assertEqual(
+                    (row["selected"], row["note"], row["summary"]),
+                    (False, f"Not available on {here}; it runs on macOS and Windows.", "Only on macOS and Windows"),
+                )
+                listed = next(kit for kit in kits.kits() if kit["id"] == "gamedev")["mcp"]
+                self.assertIn("roblox-studio", [row.get("name") for row in listed])
+                chosen = kits.plan(rojo, "gamedev", "Codex", servers=["roblox-studio"])
+                self.assertEqual(self.selected(chosen), {"roblox-studio"})
+
+    def test_other_engines_keep_it_off(self):
+        self.on("darwin", True)
+        for name, files in (
+            ("godot", {"project.godot": ""}),
+            ("unreal", {"Game.uproject": "{}"}),
+            ("unity", {"ProjectSettings/ProjectVersion.txt": ""}),
+        ):
+            with self.subTest(engine=name):
+                plan = kits.plan(self.folder(name, **files), "gamedev", "Codex")
+                self.assertNotIn("roblox-studio", self.selected(plan))
+        empty = kits.plan(self.folder("new-game"), "gamedev", "Codex")
+        self.assertEqual(self.selected(empty), {"roblox-studio"})
+
+    def test_roblox_skill_follows_detection(self):
+        engines = {
+            "workbench-game-project-for-godot",
+            "workbench-game-project-for-unity",
+            "workbench-game-project-for-unreal",
+            "workbench-game-project-for-roblox",
+        }
+        for name, files in (
+            ("rojo", ROJO),
+            ("place", {"Obby.rbxl": ""}),
+            ("place-xml", {"Obby.rbxlx": ""}),
+            ("wally", {"wally.toml": "", "src/shared/util.luau": ""}),
+        ):
+            with self.subTest(folder=name):
+                plan = kits.plan(self.folder(name, **files), "gamedev", "Codex")
+                self.assertEqual(
+                    self.selected(plan, "skills") & engines, {"workbench-game-project-for-roblox"}
+                )
+        godot = kits.plan(self.folder("godot", **{"project.godot": ""}), "gamedev", "Codex")
+        self.assertNotIn("workbench-game-project-for-roblox", self.selected(godot, "skills"))
+
+    def test_apply_writes_every_system_and_each_agent_receives_it(self):
+        self.on("darwin", True)
+        rojo = self.folder("rojo", **ROJO)
+        plan = kits.plan(rojo, "gamedev", "Claude Code")
+        done = kits.apply(rojo, "gamedev", "Claude Code", plan["id"], [i["path"] for i in plan["items"]])
+        self.assertEqual((done["failed"], done["consent"]["needed"]), ([], False))
+        self.assertTrue((rojo / ".claude/skills/workbench-game-project-for-roblox/SKILL.md").is_file())
+        self.assertIn("## Roblox Studio", (REAL / "gamedev" / "AGENTS.md").read_text(encoding="utf8"))
+        self.assertEqual(projects.project_mcp(rojo), {"roblox-studio": True})
+        session = dict(workspace=str(rojo), prompt="")
+        with patch.object(setup, "_own_servers", return_value=({}, set())):
+            claude = setup.launch_mcp(session, "Claude Code", self.tmp / "home")
+            servers = json.loads(Path(claude["argv"][1]).read_text(encoding="utf8"))["mcpServers"]
+            self.assertEqual(servers, {"roblox-studio": {"type": "stdio", "command": MAC_MCP}})
+            codex = setup.launch_mcp(session, "Codex", self.tmp / "home")
+            self.assertEqual(codex["argv"], ["-c", f"mcp_servers.roblox-studio.command={json.dumps(MAC_MCP)}"])
+            pi = setup.launch_mcp(session, "Pi", self.tmp / "home")
+            self.assertEqual(pi["servers"], ["roblox-studio"])
+            self.assertEqual(setup.omp_entries(session, set()), {"roblox-studio": {"type": "stdio", "command": MAC_MCP}})
+            for harness in ("Hermes", "opencode"):
+                self.assertEqual(setup.launch_mcp(session, harness, self.tmp / "home")["servers"], [])
 
 
 class Detection(KitCase):
@@ -766,6 +955,24 @@ class Detection(KitCase):
         for bad in ("", "relative", None, 5, str(self.tmp / "missing")):
             with self.subTest(folder=bad), self.assertRaises(ValueError):
                 kits.detect(bad)
+
+    def test_detect_roblox(self):
+        found = self.suggested("rojo", **ROJO)
+        self.assertEqual(found["suggested"], "gamedev")
+        self.assertEqual(
+            found["evidence"]["gamedev"],
+            ["found default.project.json", "1 file matches *.project.json", "1 file matches *.luau"],
+        )
+        for name, files in (("rbxl", {"Obby.rbxl": ""}), ("rbxlx", {"Obby.rbxlx": ""})):
+            with self.subTest(place=name):
+                self.assertEqual(self.suggested(name, **files)["suggested"], "gamedev")
+        weak = self.suggested("tools", **{"rokit.toml": "", "selene.toml": "", "src/a.luau": ""})
+        self.assertEqual(weak["suggested"], "gamedev")
+        self.assertEqual(self.suggested("one-luau", **{"a.luau": ""})["suggested"], "blank")
+        self.assertEqual(
+            self.suggested("named", **{"game.project.json": "{}", "sourcemap.json": "{}"})["suggested"],
+            "gamedev",
+        )
 
     def test_detect_priority_and_bounds(self):
         react = {"devDependencies": {"react": "19.0.0"}}
