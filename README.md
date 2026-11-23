@@ -151,11 +151,11 @@ The **Setup guide** opens on the first start; skip it or reopen it from the side
 
 ## Run summaries
 
-Next release, not in 0.4.0. Each agent launch is saved without keys as plain JSON in the data folder. From a terminal tab or Recent runs, copy what ran (agent and version, model and connection, instruction files with hashes, skills, MCP servers and more) as Markdown or JSON, see what changed since, or save it as a profile to run again. [More](docs/sessions.md#run-summaries)
+New in the next release. Each launch from the app leaves a run record without keys: agent and version, model source and model, hashed instruction files and skills, MCP servers and the folder prompt it received. **Copy summary** copies it as Markdown; **Save as profile** makes it a profile to rerun an old task. [More](docs/sessions.md#run-summaries)
 
 ## Where settings live
 
-Next release, not in 0.4.0. Named profiles live in `.agent-workbench/profiles.json` in the project: plain JSON without keys, safe to commit, with an optional folder default that another machine offers to apply after review. Last choices, connections and run records stay in this machine's data folder; keys stay in the credential vault. [More](docs/project-setup.md#settings-that-travel-with-the-folder)
+In plain files. `.agent-workbench/profiles.json` (agent, model source, connection and model names, settings) and `project.json` (MCP servers) sit in the project beside `AGENTS.md` and skills, with no keys or machine paths: commit them to move the setup. Connections, last choices, runs and keys stay on this computer. New in the next release: a folder default that another computer offers after review. [More](docs/project-setup.md#settings-that-travel-with-the-folder)
 
 ## Guides
 

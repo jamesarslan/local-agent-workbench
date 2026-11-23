@@ -93,36 +93,37 @@ A session stays with the account it was started with. A session started with the
 
 ## Run summaries
 
-Coming in the next release; the 0.4.0 kits do not have it.
+New in the next release; the 0.4.0 download does not have it.
 
-Each time Workbench starts an agent, it records the launch as a run: a plain JSON file, `runs/<id>.json`, in the data folder ([Security and your data](security-and-data.md#where-workbench-keeps-data)). A run answers "what exactly ran here?" after the folder's setup has changed. It holds:
+Each time the app starts an agent in a folder on this computer, in the terminal dock, as a resumed session or in its own terminal window, Workbench keeps a record of that run. A run answers "what exactly ran here?" after the folder's profile or instruction files have changed. Agents started on another machine over SSH, and agents started with `workbench agent` on the command line, are not recorded.
 
 | Part | What it records |
 | --- | --- |
-| Agent | The agent and its version |
-| Model source | The kind of source and the connection's name, not its address or key |
-| Model | The model, the context size, the reasoning setting and, for a local model, the name of the weights file |
+| Agent | The agent and its version, and where it started: terminal dock, own window or resumed session |
+| Model source | The kind of source, the connection's name and the API address as scheme, host and port only; for an agent's own account, the account provider |
+| Model | The model ID, the context size and the reasoning effort; for a local model, the engine and the weights file name, with its SHA-256 when the file is in Workbench's model catalogue |
 | Profile and kit | The profile and the starter kit in use, when there were any |
 | MCP servers | The servers the agent received at launch |
-| Instruction files | Each instruction file the agent reads, with a hash of its contents |
-| Skills | The skills the agent reads |
-| Folder prompt | The prompt for this folder, when one is set |
+| Instruction files | Each instruction file the agent reads, with its size and the SHA-256 of its first 1 MiB |
+| Skills | Each skill the agent reads, with its path and SHA-256 |
+| Folder prompt | The folder prompt, when the agent received it, up to 8,000 characters. Codex, and agents started with their own account, do not receive the folder prompt, so their summaries say "No prompt." |
+| Workbench | The Workbench version and the time the run started |
 
-A run never holds a key: no API keys, tokens or environment values, and no user name, password or query string from an address.
+A run never holds a key: no API keys, tokens or environment values, and no user name, password, path or query string from an address. It keeps the hash of each instruction file and skill, not its text. If you commit those files, the hash tells you which version a run used, and your Git history has the text.
 
 Where to find runs:
 
-- Run summary on a terminal tab shows the run that tab started.
-- Recent runs lists earlier launches in the folder.
+- **Run summary** in the terminal dock opens the run of the selected tab. It shows for tabs of agents Workbench started.
+- **Project setup** → **Recent runs** lists the folder's newest runs, newest first, with the agent, the model, the model source and when it started. **Summary…** opens one, **Remove** deletes one and **Clear runs…** deletes them all for this folder.
 
-What you can do with a run:
+In the summary:
 
-- Copy summary copies a Markdown summary, ready to paste into an issue, a pull request or your notes.
-- Copy as JSON copies the same record as JSON.
-- See what changed since that run: Workbench compares the run with the folder's current setup and lists each difference, such as a newer agent version, another model or a changed instruction file.
-- Save as profile turns the run into a named profile. Applying it goes through the usual review: **Apply profile** lists every setting it would change, and nothing changes until you confirm.
+- **Copy summary** copies it as Markdown, ready to paste into an issue, a pull request or your notes.
+- **Copy as JSON** copies the full record as JSON.
+- The summary ends with "Changed since this run". Workbench compares the run's instruction files and skills with the folder now and lists each one that changed, is no longer there or is new. When there are any, a notice above the summary says how many.
+- **Save as profile** writes the run's choices to `.agent-workbench/profiles.json` under the name in **Save as a profile named**, by default "Run" with the date and time. It does not replace a profile of the same name, and it carries the folder prompt only when the whole prompt was kept. Applying it goes through the usual review in **Project profiles**: **Apply profile** lists every setting it would change, and nothing changes until you confirm.
 
-Runs stay on this computer and do not travel with the folder. To remove them, delete the `runs` folder in the data folder.
+Runs stay on this computer and do not travel with the folder. They are kept in `runs/` in the data folder ([Security and your data](security-and-data.md#where-workbench-keeps-data)): one JSON file per folder, named after a hash of the folder's path, with the newest 100 runs. **Recent runs** shows the newest 30.
 
 ## Remote sessions
 
