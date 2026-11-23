@@ -129,8 +129,16 @@ async function until(fn, label) {
 // One DevTools connection to the page of an Electron started with `userDir`; onClose runs when the socket closes unexpectedly.
 async function connect(userDir, onClose) {
   const portFile = path.join(userDir, "DevToolsActivePort");
-  await until(() => fs.existsSync(portFile), "Electron startup");
-  const port = fs.readFileSync(portFile, "utf8").split("\n")[0];
+  // Chromium may still hold the file open while it writes it (EBUSY on Windows), or have written it only partly.
+  let port = "";
+  await until(() => {
+    try {
+      port = fs.readFileSync(portFile, "utf8").split("\n")[0].trim();
+    } catch {
+      return false;
+    }
+    return /^\d+$/.test(port);
+  }, "Electron startup");
   let tabs = [];
   await until(async () => {
     tabs = (
