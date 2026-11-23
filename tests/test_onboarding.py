@@ -179,7 +179,8 @@ class StateTests(Base):
         self.assertEqual(out["quick"], {"ok": True, "value": 1})
         self.assertEqual(out["other"], {"ok": True, "value": "two"})
         self.assertLess(spent, 0.6)
-        self.assertGreaterEqual(spent, 0.2)
+        # Windows timers wait on a clock that ticks about every 15.6 ms, so allow one tick early.
+        self.assertGreaterEqual(spent, 0.2 - 0.02)
         self.assertEqual(onboarding.gather({}), {})
 
     def test_missing_provider_is_unavailable(self):
