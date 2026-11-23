@@ -35,6 +35,11 @@
   const plural = (n, one, many) => n + " " + (n === 1 ? one : many);
   // What the last connection check learned: Windows machines have no tmux and run PowerShell.
   const isWindows = (host) => Boolean(systems[host] && systems[host].os === "windows");
+  function osLabel(host) {
+    if (isWindows(host)) return "Windows";
+    const p = cache.has(host) ? cache.get(host).probe : null;
+    return p && p.system === "Linux" ? "Linux" : p && p.system === "Darwin" ? "macOS" : "";
+  }
   const jobKey = (action, host) => action + ":" + host;
   const running = (action, host) => (AW.jobs ? AW.jobs.find(jobKey(action, host)) : null);
 
@@ -208,7 +213,7 @@
     for (const host of hosts) {
       const node = listApi.get(host);
       const status = statusOf(host);
-      node._update({ mark: status.mark, title: labelOf(host), meta: [host, isWindows(host) ? "Windows" : "", status.word].filter(Boolean).join(" · ") });
+      node._update({ mark: status.mark, title: labelOf(host), meta: [host, osLabel(host), status.word].filter(Boolean).join(" · ") });
       const main = node.querySelector(".row-main");
       if (host === selected && adding === null) {
         node.dataset.selected = "true";
@@ -370,8 +375,17 @@
     const typed = () => (entry(host).ports === undefined && !ports.value.trim() ? undefined : ports.value);
     const again = ui.button("Look again", { small: true, onClick: () => findServers(host, typed()) });
     const b = block("Servers running there", { actions: [again], id: blockId("servers") });
-    const ports = el("input", { type: "text", class: "mono machines-ports", value: entry(host).ports || "", attrs: { autocomplete: "off", spellcheck: "false", inputmode: "numeric", placeholder: "8081" } });
-    const portsField = ui.field("Other ports", ports, { hint: "Workbench checks the usual model server ports. Add others, separated by commas, then choose Look again." });
+    const portsId = blockId("ports");
+    const ports = el("input", { type: "text", class: "mono", id: portsId, value: entry(host).ports || "", attrs: { autocomplete: "off", spellcheck: "false", inputmode: "numeric", placeholder: "8081", "aria-describedby": portsId + "-hint" } });
+    const portsField = {
+      el: el(
+        "div",
+        { class: "machines-ports" },
+        el("label", { for: portsId, text: "Other ports" }),
+        ports,
+        el("span", { class: "hint", id: portsId + "-hint", text: "Beyond the usual ones; separate with commas, then Look again." }),
+      ),
+    };
     ports.addEventListener("keydown", (event) => {
       if (event.key !== "Enter") return;
       event.preventDefault();
@@ -777,7 +791,7 @@
       const text = notes.join(" ");
       if (hint.textContent !== text) hint.textContent = text;
       label(dock, win ? "Open in terminal dock" : "Open in terminal dock · tmux");
-      folder.placeholder = win ? "~\\project or C:\\work\\project" : "~/project";
+      folder.placeholder = win ? "~\\project" : "~/project";
       lock(dock, noTmux || noFolder);
       if (noTmux || noFolder) dock.setAttribute("aria-describedby", hint.id || (hint.id = blockId("hint")));
       else dock.removeAttribute("aria-describedby");
