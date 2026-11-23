@@ -1,0 +1,334 @@
+{
+ "what": "Windows and Linux SSH machines driven end to end from a Mac through desktop_bridge.dispatch with a throwaway data folder",
+ "date": "2026-11-23",
+ "mac": "macOS on an Apple M3 Max; agents ran headless on the Mac against the SSH forward (OMP, Codex exec, Claude Code -p)",
+ "keys": "Real checks used an in-memory keyring backend after the first runs; see the report for the runs that did not",
+ "machines": {
+  "windows-rtx5090": {
+   "label": "Windows 11 25H2, RTX 5090 32 GB, OpenSSH for Windows 9.5 with cmd.exe as its SSH shell",
+   "probe_parity": "PowerShell sweep and Python sweep gave identical JSON against 9 fake servers on the Windows loopback (Ollama, llama.cpp, LM Studio with an embedding model, vLLM, mlx-lm, locked, AirTunes, malformed lists, non-ASCII model id) and on the LM Studio server-off hint",
+   "hostile_folder": "it's $x `y; & u-umlaut right-quote q [1] %OS% under %TEMP%: PowerShell opened it and Codex showed it as its working folder",
+   "attached_server": "llama.cpp b12633 CUDA on port 8080 with Qwen3.8-27B UD-Q4_K_XL, started for the check and stopped afterwards",
+   "end_to_end": {
+    "check": {
+     "os": "windows",
+     "system": "Windows 11",
+     "release": "25H2 build 26200",
+     "arch": "x86_64",
+     "python": "3.12.10",
+     "ram_gib": 61.4,
+     "gpu_gib": 31.8,
+     "gpu_vendor": "nvidia",
+     "gpu_name": "NVIDIA GeForce RTX 5090",
+     "shell": "pwsh",
+     "tmux": false,
+     "managed": true,
+     "reason": "",
+     "installed": true,
+     "running": false,
+     "serving": false,
+     "model": "Inkling 2 Mini UD-Q8_K_XL",
+     "context": 32768,
+     "plan": {
+      "label": "Inkling 2 Mini UD-Q8_K_XL",
+      "name": "Inkling-2-Mini-UD-Q8_K_XL.gguf_file",
+      "bytes": 22867452896,
+      "context": 32768
+     }
+    },
+    "discover": [
+     {
+      "port": 8080,
+      "kind": "llamacpp",
+      "label": "llama.cpp server",
+      "models": [
+       {
+        "id": "C:\\Users\\<x>\\testai\\models\\Qwen3.8-27B-UD-Q4_K_XL.gguf",
+        "context": 32768
+       }
+      ],
+      "protocols": {
+       "chat": true,
+       "responses": true,
+       "messages": null
+      }
+     }
+    ],
+    "extra_ports": [],
+    "attach": {
+     "kind": "llamacpp",
+     "protocols": {
+      "chat": true,
+      "responses": true,
+      "messages": null
+     },
+     "context": 32768
+    },
+    "forwards": [
+     {
+      "remote_port": 8080,
+      "alive": true,
+      "managed": false,
+      "kind": "llamacpp"
+     }
+    ],
+    "agents": {
+     "OMP": {
+      "exit": 0,
+      "seconds": 19.4,
+      "file_text": "workbench ok"
+     },
+     "Codex": {
+      "exit": 0,
+      "seconds": 11.0,
+      "file_text": "workbench ok"
+     },
+     "Claude Code": {
+      "exit": 1,
+      "seconds": 179.6,
+      "file_text": null,
+      "note": ". This is a server-side issue, usually temporary — try again in a moment. If it persists, check your inference gateway (<ip>:60071).\n\n[claude-code:unrecognized_model] {\"model\":\"C:\\\\Users\\\\<x>\\\\testai\\\\models\\\\Qwen3.8-27B-UD-Q4_K_XL.gguf\",\"query_source\":\"sdk\"}\n"
+     }
+    },
+    "terminal": {
+     "opened": true,
+     "lasting": false,
+     "folder_shown_on_screen": true,
+     "cleanup": [],
+     "screen_excerpt": " commands:/init - create an AGENTS.md file with instructions for Codex/status - show current session configuration/permissions - choose what Codex is allowed to do/model - choose what model and reasoning effort to use/review - review any changes and find issues ›Ask Codex to do anything GPT-6.2-Astra high fast·~\\AppData\\Local\\Temp\\awb-term-2g0n89zt\\it's $x `y; & ü’q [1] %OS%←agens · ?forshortcuts⚠2 warnings·f2toview3"
+    },
+    "detach_ok": true
+   },
+   "managed_model": {
+    "check": {
+     "os": "windows",
+     "managed": true,
+     "installed": true,
+     "running": true,
+     "model": "Inkling 2 Mini UD-Q8_K_XL",
+     "context": 32768
+    },
+    "connect": {
+     "endpoint": "http://<ip>:55667/v1",
+     "model": "local-agent",
+     "machine": "windows-rtx",
+     "connection_id": "0942fb93f12c06b3"
+    },
+    "answer": {
+     "content": "pong",
+     "key_in_vault": true,
+     "context": 32768,
+     "unauthenticated": 401
+    },
+    "tool_call": {
+     "finish": "tool_calls",
+     "calls": [
+      [
+       "write_file",
+       "{\"path\":\"hello.txt\",\"text\":\"workbench ok\"}"
+      ]
+     ]
+    },
+    "agent OMP": {
+     "exit": 0,
+     "seconds": 100.3,
+     "file_text": "workbench ok"
+    },
+    "agent Claude Code": {
+     "exit": 0,
+     "seconds": 59.0,
+     "file_text": "workbench ok"
+    },
+    "stop": {
+     "installed": true,
+     "model": "Inkling 2 Mini UD-Q8_K_XL",
+     "running": false
+    },
+    "after": {
+     "installed": true,
+     "running": false,
+     "serving": false
+    }
+   },
+   "managed_install": {
+    "plan": "Inkling 2 Mini UD-Q8_K_XL, 32768 context, picked by recommend.py for 31.8 GiB",
+    "engine": "llama-b12633-bin-win-cuda-13.5-x64.zip and cudart-llama-bin-win-cuda-13.5-x64.zip, SHA-256 pinned from setup_engines.PINNED",
+    "model_source": "linked: an existing 22.9 GB file the user pointed to matched the catalog SHA-256 and was hard-linked, no download",
+    "seconds": 27.2,
+    "start_seconds": 11.2,
+    "survives_ssh_session": true,
+    "no_key_reply": 401
+   }
+  },
+  "linux-fedora-rx9070xt": {
+   "label": "Fedora 44, RX 9070 XT 16 GB, tmux 3.8",
+   "attached_server": "the owner's Docker llama-server on port 8081 (Qwen3.5-9B), found after adding 8081 under Other ports",
+   "end_to_end": {
+    "check": {
+     "system": "Linux",
+     "arch": "x86_64",
+     "python": "3.14.10",
+     "ram_gib": 30.9,
+     "gpu_gib": 15.9,
+     "gpu_vendor": "amd",
+     "managed": true,
+     "reason": "",
+     "tmux": true,
+     "installed": true,
+     "running": false,
+     "serving": false,
+     "os": "posix"
+    },
+    "discover": [
+     {
+      "port": 8081,
+      "kind": "llamacpp",
+      "label": "llama.cpp server",
+      "models": [
+       {
+        "id": "Qwen3.5-9B",
+        "context": 65536
+       }
+      ],
+      "protocols": {
+       "chat": true,
+       "responses": true,
+       "messages": null
+      }
+     }
+    ],
+    "extra_ports": [
+     8081
+    ],
+    "attach": {
+     "kind": "llamacpp",
+     "protocols": {
+      "chat": true,
+      "responses": true,
+      "messages": null
+     },
+     "context": 65536
+    },
+    "forwards": [
+     {
+      "remote_port": 8081,
+      "alive": true,
+      "managed": false,
+      "kind": "llamacpp"
+     }
+    ],
+    "agents": {
+     "OMP": {
+      "exit": 0,
+      "seconds": 7.4,
+      "file_text": "workbench ok"
+     },
+     "Codex": {
+      "exit": 1,
+      "seconds": 25.2,
+      "file_text": null,
+      "note": "cting... 2/5\nERROR: Reconnecting... 3/5\nERROR: Reconnecting... 4/5\nERROR: Reconnecting... 5/5\nERROR: We’re currently experiencing high demand, which may cause temporary errors.\nERROR: We’re currently experiencing high demand, which may cause temporary errors.\n"
+     },
+     "Claude Code": {
+      "exit": 1,
+      "seconds": 179.6,
+      "file_text": null,
+      "note": "xception: System message must be at the beginning. This is a server-side issue, usually temporary — try again in a moment. If it persists, check your inference gateway (<ip>:59986).\n\n[claude-code:unrecognized_model] {\"model\":\"Qwen3.5-9B\",\"query_source\":\"sdk\"}\n"
+     }
+    },
+    "terminal": {
+     "opened": true,
+     "lasting": true,
+     "folder_shown_on_screen": true,
+     "cleanup": [
+      "tmux session ended"
+     ],
+     "screen_excerpt": ": /tmp/awb-e2e.1Ubtis Quick safety check: Is this a project you created or one you trust? (Like your own code, a well-known open source project, or work from your team). If not, take a moment to review what's in this folder first. Claude Code'll be able to read, edit, and execute files here. Security guide ❯ No, exit Yes, I trust this folder Enter to confirm · Esc to cancel [awb-1e0ac0:claude*\"fedora\" 18:26 23-Nov-26"
+    },
+    "detach_ok": true
+   },
+   "managed_model": {
+    "check": {
+     "managed": true,
+     "installed": true,
+     "running": false,
+     "os": "posix"
+    },
+    "connect": {
+     "endpoint": "http://<ip>:60519/v1",
+     "model": "local-agent",
+     "machine": "fedora-amd",
+     "connection_id": "0848b155341878a7"
+    },
+    "answer": {
+     "content": "pong",
+     "key_in_vault": true,
+     "context": 8192,
+     "unauthenticated": 401
+    },
+    "tool_call": {
+     "finish": "tool_calls",
+     "calls": [
+      [
+       "write_file",
+       "{\"path\":\"hello.txt\",\"text\":\"workbench ok\"}"
+      ]
+     ]
+    },
+    "agent OMP (before the fix)": {
+     "exit": 1,
+     "seconds": null,
+     "file_text": null,
+     "note": ""
+    },
+    "stop": {
+     "installed": true,
+     "running": false
+    },
+    "after": {
+     "installed": true,
+     "running": false,
+     "serving": false
+    },
+    "agent OMP": {
+     "exit": 1,
+     "seconds": 35.3,
+     "file_text": null,
+     "note": "t (13415 tokens) exceeds the available context size (8192 tokens), try increasing it (type=exceed_context_size_error)\nraw-http-request=/Users/<user>/.omp/profiles/workbench-acbd822f03b1-3eae58bdbcbc/logs/http-400-requests/1795455403395-273vienzpsauf.json\n"
+    }
+   }
+  }
+ },
+ "not_done": [
+  "LM Studio on the Windows machine was not started; its models folder is empty",
+  "Pair through SSH and Revoke were not run against either machine, to leave their authorized_keys untouched; the PowerShell scripts are unit-tested only",
+  "Claude Code and Codex against the attached Qwen servers stopped at the servers' own chat templates, which refuse a system message after the first turn; Workbench fixes that only for models it serves"
+ ],
+ "verification_rows_for_docs": [
+  {
+   "system": "mac-m3max",
+   "check": "ssh-pair",
+   "status": "partial",
+   "date": "2026-11-23",
+   "evidence": "Check connection learned Windows (cmd.exe shell) and Fedora, read GPU, memory, Python and the managed node through desktop_bridge",
+   "note": "Pair through SSH and Revoke were not run; both machines already accepted the Mac's own key"
+  },
+  {
+   "system": "mac-m3max",
+   "check": "ssh-attach",
+   "status": "passed",
+   "date": "2026-11-23",
+   "evidence": "Found llama.cpp on a Windows RTX 5090 (PowerShell probe) and on Fedora port 8081; OMP and Codex wrote hello.txt through the SSH forward",
+   "note": "Claude Code stopped at those servers' Qwen chat templates, which refuse a late system message"
+  },
+  {
+   "system": "mac-m3max",
+   "check": "ssh-managed",
+   "status": "passed",
+   "date": "2026-11-23",
+   "evidence": "Windows CUDA node with Inkling UD-Q8_K_XL: start, answer, tool call, OMP, Codex and Claude Code wrote hello.txt, stop. Fedora Vulkan node: start, answer, tool call, stop",
+   "note": "OMP on the Fedora node's 8,192-token window needs 13,415 tokens"
+  }
+ ],
+ "verification_note": "Not added to docs/verification.json: any new row changes the status tables in docs/index.html and README.md, which this change does not edit."
+}

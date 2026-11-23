@@ -263,6 +263,7 @@ results/sq20.json
 results/tool-load.json
 results/web-plugin-cost.json
 results/weights.json
+results/windows-ssh-machines.json
 run_log.py
 runtime.py
 sandbox/Dockerfile
