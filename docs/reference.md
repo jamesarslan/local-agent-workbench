@@ -106,7 +106,7 @@ Workbench keeps these files in plain JSON. You can read them without Workbench, 
 | --- | --- | --- |
 | `.agent-workbench/profiles.json` | The project folder | Named profiles: an object from each profile name to its settings ([Project setup](project-setup.md#what-is-remembered)). From the next release, one profile can carry `"default": true`, which makes it the folder default ([Settings that travel with the folder](project-setup.md#settings-that-travel-with-the-folder)). Safe to commit |
 | `.agent-workbench/project.json` | The project folder | The project's MCP servers, with variable names instead of values ([MCP servers](project-setup.md#mcp-servers)). Safe to commit |
-| `runs/<id>.json` | The data folder | From the next release: one run record per agent launch ([Run summaries](sessions.md#run-summaries)). It stays on this computer |
+| `runs/<folder hash>.json` | The data folder | From the next release: the run records of one folder, one per agent launch, newest 100 ([Run summaries](sessions.md#run-summaries)). It stays on this computer |
 | `projects.json` | The data folder | The last choices for each folder and your consent answers. It stays on this computer |
 
 ## Ports

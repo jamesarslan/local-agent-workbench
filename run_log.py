@@ -28,6 +28,11 @@ GONE = "This run is no longer in the list. Refresh Recent runs, then try again."
 DAMAGED = (
     "The run list for this folder could not be read. Choose Clear runs to start a new list."
 )
+# Workbench reads the folder's files; with the agent account the agent also reads its own settings folder.
+NATIVE_FILES = (
+    "This run used the agent account, so the agent may also have read personal instruction files "
+    "in your home folder. They are not listed here."
+)
 _VERSION = []
 
 
@@ -187,13 +192,20 @@ def build(facts, harness, kind, cli_version=""):
     }
 
 
-def run_file(workspace):
+def file_name(workspace):
+    """runs/<this name> in the data folder holds the folder's runs: the first 16 hex digits of a hash of its path."""
     key = paths.project_key(workspace)
-    return runtime.DATA / "runs" / (hashlib.sha256(key.encode("utf8")).hexdigest()[:16] + ".json")
+    return hashlib.sha256(key.encode("utf8")).hexdigest()[:16] + ".json"
+
+
+def run_file(workspace):
+    return runtime.DATA / "runs" / file_name(workspace)
 
 
 def _read(file):
     try:
+        if file.stat().st_size > MAX_FILE:
+            raise ValueError(DAMAGED)
         data = json.loads(file.read_text(encoding="utf8"))
     except FileNotFoundError:
         return []
@@ -205,6 +217,17 @@ def _read(file):
     return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
 
 
+def _fitting(rows):
+    """The newest runs that fit in a file _read still accepts; the oldest go first."""
+    kept, used = [], 65536
+    for row in rows:
+        used += len(json.dumps({"runs": [row]}, indent=2).encode("utf8"))
+        if kept and used > MAX_FILE:
+            break
+        kept.append(row)
+    return kept
+
+
 def _edit(workspace, change):
     file = run_file(workspace)
     file.parent.mkdir(parents=True, exist_ok=True)
@@ -214,10 +237,10 @@ def _edit(workspace, change):
         except ValueError:
             rows = []
         rows, result = change(rows)
+        rows = _fitting(rows[:MAX_RUNS])
         if rows:
             runtime.write_json(
-                file,
-                {"version": VERSION, "project": str(paths.canonical(workspace)), "runs": rows[:MAX_RUNS]},
+                file, {"version": VERSION, "project": str(paths.canonical(workspace)), "runs": rows}
             )
         else:
             file.unlink(missing_ok=True)
@@ -311,7 +334,7 @@ def drift(run, workspace):
                 out.append({"kind": kind, "path": row["path"], "change": "changed"})
     try:
         now = project_setup.resolve(root, run.get("harness"), run.get("harness_version", ""))
-    except ValueError:
+    except (ValueError, OSError):
         return out
     seen = {
         key: {row.get("path") for row in run.get(key, []) if isinstance(row, dict)}
@@ -401,6 +424,8 @@ def summary_markdown(run, workspace, changes=None):
         + ("" if row.get("status", "read") == "read" else f" · {row['status']}")
         for row in files
     ] or ["- none"]
+    if run.get("source") == "Native login":
+        lines += ["", NATIVE_FILES]
     lines += ["", "## Skills", ""]
     lines += [
         f"- {row['name']} · {row['path']} · {_short(row.get('sha256'))}"

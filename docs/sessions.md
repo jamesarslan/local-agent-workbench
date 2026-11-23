@@ -95,7 +95,7 @@ A session stays with the account it was started with. A session started with the
 
 Coming in the next release; the 0.4.0 kits do not have it.
 
-Each time Workbench starts an agent, it records the launch as a run: a plain JSON file, `runs/<id>.json`, in the data folder ([Security and your data](security-and-data.md#where-workbench-keeps-data)). A run answers "what exactly ran here?" after the folder's setup has changed. It holds:
+Each time you start an agent from the Workbench window, in the terminal dock or in its own terminal window, Workbench records the launch as a run. The runs of a folder are kept in one plain JSON file in the `runs` folder of the data folder, newest first, up to 100 per folder ([Security and your data](security-and-data.md#where-workbench-keeps-data)). A run answers "what exactly ran here?" after the folder's setup has changed. It holds:
 
 | Part | What it records |
 | --- | --- |
@@ -104,7 +104,7 @@ Each time Workbench starts an agent, it records the launch as a run: a plain JSO
 | Model | The model, the context size, the reasoning setting and, for a local model, the name of the weights file |
 | Profile and kit | The profile and the starter kit in use, when there were any |
 | MCP servers | The servers the agent received at launch |
-| Instruction files | Each instruction file the agent reads, with a hash of its contents |
+| Instruction files | Each instruction file in the project the agent reads, with a hash of its contents. With your agent account, the agent can also read personal instruction files in your home folder; those are not listed |
 | Skills | The skills the agent reads |
 | Folder prompt | The prompt for this folder, when one is set |
 
@@ -119,10 +119,10 @@ What you can do with a run:
 
 - Copy summary copies a Markdown summary, ready to paste into an issue, a pull request or your notes.
 - Copy as JSON copies the same record as JSON.
-- See what changed since that run: Workbench compares the run with the folder's current setup and lists each difference, such as a newer agent version, another model or a changed instruction file.
+- See what changed since that run: Workbench compares the run's instruction files and skills with the folder as it is now and lists each one that changed, is new or is gone.
 - Save as profile turns the run into a named profile. Applying it goes through the usual review: **Apply profile** lists every setting it would change, and nothing changes until you confirm.
 
-Runs stay on this computer and do not travel with the folder. To remove them, delete the `runs` folder in the data folder.
+Runs stay on this computer and do not travel with the folder. Remove one run with Remove in Recent runs, or all runs of the folder with Clear runs. Sessions on an SSH machine and agents started with the `workbench` command are not recorded.
 
 ## Remote sessions
 

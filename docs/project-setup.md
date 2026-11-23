@@ -258,7 +258,7 @@ The panel Where this folder's settings live shows, for the open folder, what is 
 | `.agent-workbench/project.json` in the project | The project's MCP servers, without secrets | Yes |
 | `projects.json` in the data folder | The last choices for this folder and your consent answer | No |
 | `connections.json` in the data folder | Connections: name, provider, address and model | No |
-| `runs/` in the data folder | One record per agent launch | No |
+| `runs/` in the data folder | One record per agent launch, kept per folder | No |
 | The system credential vault | API keys and values for MCP server variables | No |
 
 ## Built-in tools
