@@ -792,6 +792,49 @@ class SweepTests(Case):
             any(h[2].get("Authorization") or h[2].get("x-api-key") for h in hits)
         )
 
+    def test_a_locked_strata_server_is_kept_and_read_with_its_key(self):
+        # As Strata serve answers: /health is open and names the service; /v1/* needs the key.
+        def models(headers, body):
+            if headers.get("Authorization") == "Bearer right":
+                return 200, {}, listing("local-agent", context_length=32768)
+            return 401, {}, {"error": {"type": "authentication_error"}}
+
+        health = {"status": "ok", "model": "local-agent", "service": "strata"}
+        strata, hits = serve(
+            self,
+            api(
+                None,
+                routes={
+                    ("GET", "/v1/models"): models,
+                    ("GET", "/health"): (200, {}, health),
+                },
+            ),
+            server="BaseHTTP/0.6 Python/3.12.10",
+        )
+        raw = endpoints._sweep(
+            [strata], [], providers.KINDS, providers.IDENTITY, endpoints._http, 1.0
+        )
+        self.assertEqual(
+            [(r["port"], r["kind"], r["auth"]) for r in raw["endpoints"]],
+            [(strata, "strata", "required")],
+        )
+        self.assertFalse(any(h[2].get("Authorization") for h in hits))
+        found = endpoints._probe_base(
+            base(strata),
+            providers.KINDS,
+            providers.IDENTITY,
+            endpoints._http,
+            {"Authorization": "Bearer right"},
+            1.0,
+        )
+        self.assertEqual(found["auth"], "accepted")
+        self.assertEqual(
+            found["models"], [{"id": "local-agent", "context": 32768, "loaded": None}]
+        )
+        self.assertEqual(
+            found["protocols"], {"chat": True, "responses": True, "messages": True}
+        )
+
     def test_lmstudio_hint_from_control_port(self):
         control, _ = serve(
             self, {("GET", "/lmstudio-greeting"): (200, {}, {"lmstudio": True})}
@@ -1687,7 +1730,9 @@ class RemoteTests(Case):
         self.assertNotIn("requests", script)
         self.assertNotIn("providers", script)
         self.assertNotIn("removesuffix", script)
-        self.assertIn(json.dumps(providers.SWEEP_PORTS), script)
+        self.assertIn(
+            json.dumps([*providers.SWEEP_PORTS, providers.WORKBENCH_PORT]), script
+        )
         port, _ = serve(self, ollama({"qwen3:8b": 32768}))
         script = endpoints.remote_probe_script(ports=[port], control=[])
         self.assertIn("[[%d], [], {" % port, script)

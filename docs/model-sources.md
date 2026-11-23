@@ -178,7 +178,7 @@ For a server you attach, that server's own template handling decides. Workbench 
 
 ### What Workbench looks for
 
-The scan looks only at this computer's loopback address, `127.0.0.1`, on these ports: 11434, 1234, 9931, 8080, 8081, 8000, 1337, 5001, 5000, 13305, 30000, 10240 and 9292, leaving out Workbench's own model port. It also checks LM Studio's control ports, so it can tell you when LM Studio is open but its server is off. It never scans your network. A server on another machine is reached through [SSH](#a-gpu-machine-over-ssh) or by an `https://` address you type.
+The scan looks only at this computer's loopback address, `127.0.0.1`, on these ports: 11434, 1234, 9931, 8080, 8081, 8000, 1337, 5001, 5000, 13305, 30000, 10240, 9292 and 8095, leaving out Workbench's own model port. It also checks LM Studio's control ports, so it can tell you when LM Studio is open but its server is off. It never scans your network. A server on another machine is reached through [SSH](#a-gpu-machine-over-ssh) or by an `https://` address you type.
 
 For each server that answers, Workbench reads the model list, the context size of each model where the server reports it, and which of the three APIs it offers. It names the server from what it answers.
 
@@ -200,6 +200,7 @@ The server kinds Workbench recognises, with the APIs their documentation says th
 | TabbyAPI | 5000 | Yes | No | No |
 | SGLang | 30000 | Yes | Yes | Yes |
 | Lemonade Server | 13305 | Yes | Yes | Yes |
+| Strata | 8095 | Yes | Yes | Yes |
 | Another OpenAI-compatible server | Any address you type | As probed | As probed | As probed |
 
 vLLM, MLX Omni Server, KoboldCpp, LocalAI and llama-swap listen on every network interface by default. When one of them answers without a key, Workbench warns you to bind it to `127.0.0.1` or set a key if other devices share your network.
@@ -274,6 +275,8 @@ Workbench uses a separate key for each machine, stored in the data folder, and a
 ### Use a server that runs there
 
 After the connection check, **Servers running there** lists the model servers answering on the machine's own loopback address. Workbench finds them with one SSH command that runs a small probe on the machine; it does not scan the machine's network. Choose **Attach…** next to a server, pick the model, and attach it. **Look again** repeats the search. A server on a port outside the usual list, such as 9000, is found once you add the port under **Other ports** and choose **Look again**; Workbench remembers the ports for that machine.
+
+On a machine, the search also looks at port 10532, where Agent Workbench installed there serves its own local model, for example Strata with the Inkling SQ-20 pack on an NVIDIA card. Such a server needs its key. When the process answering on that port is the one in `running.json` of a Workbench data folder there, the list shows its model, `local-agent`, and its context, and **Attach…** reads the key from that folder's `api-key.txt` through SSH and keeps it in the key vault on this computer, so you do not paste it. Workbench reads only the key of a server whose process it matched, and only with the SSH account you paired. Keep that machine's Workbench open while you use the model: its server stops when that Workbench stops it.
 
 Attaching opens an SSH tunnel from a free port on this computer's `127.0.0.1` to that server's port on the machine's `127.0.0.1`, one port per server. The connection appears in **Connections** under "Over SSH", and agents talk to the model through the tunnel. **Reconnect** opens a tunnel again after the machine or this computer restarted; **Detach** closes it and removes the connection.
 

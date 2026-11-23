@@ -697,6 +697,23 @@ def _late_system(addr, model, token, protocols, models):
         return None
 
 
+def _known_protocols(kind, probed):
+    """A Workbench-run engine serves the APIs its kind documents; a probe answer still wins.
+
+    Strata answers an empty Anthropic Messages request by generating a reply, which can outlast
+    the probe's wait on a large context, so its probe alone can leave that API unconfirmed."""
+    import providers
+
+    documented = providers.KINDS.get(kind, {}).get("protocols") or {}
+    probed = probed or {}
+    return _flags(
+        {
+            name: documented.get(name) if probed.get(name) is None else probed[name]
+            for name in PROTOCOLS
+        }
+    )
+
+
 def _harness(protocols):
     names = dict(zip(PROTOCOLS, ("OMP", "Codex", "Claude Code")))
     if not protocols:
@@ -898,17 +915,14 @@ def set_ports(host, value):
 def discover(host):
     """List model servers answering on the machine's own loopback; nothing here scans a network."""
     import endpoints
+    import providers
 
     extra = extra_ports(host)
-
-    def ports():
-        import providers
-
-        return list(dict.fromkeys([*providers.SWEEP_PORTS, *extra]))
+    ports = endpoints.remote_ports(extra) if extra else None
 
     def posix():
         script = (
-            endpoints.remote_probe_script(ports=ports())
+            endpoints.remote_probe_script(ports=ports)
             if extra
             else endpoints.remote_probe_script()
         )
@@ -916,7 +930,7 @@ def discover(host):
         return execute(host, script.encode(), command, 30)
 
     def win():
-        table = endpoints.remote_probe_table(ports() if extra else None)
+        table = endpoints.remote_probe_table(ports)
         return execute(host, remote_win.probe(table), remote_win.POWERSHELL, 60)
 
     found = _either(host, posix, win)
@@ -926,7 +940,72 @@ def discover(host):
         raise ValueError(
             f"{host} sent a reply Workbench could not read; use Check connection, then search again."
         )
-    return [row for row in map(_endpoint_row, found[:32]) if row]
+    rows = [row for row in map(_endpoint_row, found[:32]) if row]
+    # Only Workbench's own model port, and ports the user added, can be a Workbench server there.
+    mine = {providers.WORKBENCH_PORT, *extra}
+    locked = [
+        row["port"]
+        for row in rows
+        if row["needs_key"] and not row["models"] and row["port"] in mine
+    ]
+    if locked:
+        try:
+            managed = _workbench_servers(host, locked)
+        except ValueError:
+            managed = {}
+        for row in rows:
+            if row["port"] in managed:
+                # A Workbench there runs this server: its key travels over SSH when it is attached.
+                row.update(managed[row["port"]], needs_key=False, workbench=True)
+    return rows
+
+
+def _workbench_query(host, mode, ports):
+    arg = ",".join(str(int(p)) for p in ports)
+    return _either(
+        host,
+        lambda: execute(
+            host,
+            (ROOT / "remote_workbench.py").read_bytes(),
+            f"python3 - {mode} {arg}",
+            30,
+        ),
+        lambda: execute(
+            host, remote_win.workbench(mode, ports), remote_win.POWERSHELL, 30
+        ),
+    )
+
+
+def _workbench_servers(host, ports):
+    """{port: {models, engine}} for the ports whose server a Workbench on the machine runs."""
+    reply = _workbench_query(host, "info", ports)
+    listed = reply.get("servers") if isinstance(reply, dict) else None
+    out = {}
+    for item in listed if isinstance(listed, list) else []:
+        if not isinstance(item, dict) or item.get("port") not in ports:
+            continue
+        model = _model(item.get("model"))
+        size = item.get("context")
+        whole = isinstance(size, int) and not isinstance(size, bool) and 0 < size <= 4000000
+        if model:
+            out[item["port"]] = dict(
+                models=[dict(id=model, context=size if whole else None)],
+                engine=_text(item.get("engine"), 40),
+            )
+    return out
+
+
+def workbench_key(host, port):
+    """The API key of the model server a Workbench on the machine runs on this port, or None."""
+    try:
+        reply = _workbench_query(host, "key", [port])
+    except Unreachable:
+        raise
+    except ValueError:
+        return None
+    value = reply.get("key") if isinstance(reply, dict) else None
+    plain = isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9_-]{16,200}", value)
+    return value if plain else None
 
 
 def attach(host, port, model="", name="", key=None):
@@ -949,6 +1028,8 @@ def attach(host, port, model="", name="", key=None):
             else "Type the model ID this server should use."
         )
     key = key.strip() if isinstance(key, str) and key.strip() else None
+    if key is None and row.get("workbench"):
+        key = workbench_key(host, port)
     _remember(host)
     ident = link_id(host, port)
     link = dict(
@@ -968,6 +1049,8 @@ def attach(host, port, model="", name="", key=None):
             f"The server on port {port} of {host} stopped answering; start it there, then search again."
         )
     protocols = row["protocols"] or _protocols(addr, key or "")
+    if row.get("workbench"):
+        protocols = _known_protocols(row["kind"], protocols)
     late = _late_system(addr, model, key or "", protocols, row["models"])
     label = labels().get(host, host)
     saved = entries().get(ident) or {}

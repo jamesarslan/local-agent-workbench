@@ -183,6 +183,73 @@ if ($null -eq $py) {
 """
 
 
+# The Windows form of remote_workbench.py: a port is a Workbench server when the process
+# listening on it, or its parent, is the one in running.json of the data folder named on
+# the listener's command line (--api-key-file or --config) or of the install script's
+# default folder, for the same port. $Mode 'info' prints alias and context; 'key' the key.
+WORKBENCH = r"""
+$ErrorActionPreference = 'Continue'
+$ProgressPreference = 'SilentlyContinue'
+function Find-Server([int]$port) {
+    $owners = @{}; $folders = @()
+    $pids = @(Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue | ForEach-Object { [int]$_.OwningProcess } | Select-Object -Unique)
+    foreach ($p in $pids) {
+        $proc = Get-CimInstance -ClassName Win32_Process -Filter ('ProcessId = ' + $p) -ErrorAction SilentlyContinue
+        if ($null -eq $proc) { continue }
+        $owners[[int]$p] = $true
+        if ($proc.ParentProcessId) { $owners[[int]$proc.ParentProcessId] = $true }
+        foreach ($m in [regex]::Matches([string]$proc.CommandLine, '--(?:api-key-file|config)\s+(?:"([^"]+)"|(\S+))')) {
+            $path = $m.Groups[1].Value
+            if (-not $path) { $path = $m.Groups[2].Value }
+            try { $folders += (Split-Path -Parent $path) } catch {}
+        }
+    }
+    if ($owners.Count -eq 0) { return $null }
+    if ($env:LOCALAPPDATA) { $folders += (Join-Path $env:LOCALAPPDATA 'Agent Workbench\data') }
+    foreach ($folder in ($folders | Select-Object -Unique)) {
+        $file = Join-Path $folder 'running.json'
+        if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { continue }
+        try { $rec = Get-Content -LiteralPath $file -Raw -Encoding UTF8 | ConvertFrom-Json } catch { continue }
+        if ($null -eq $rec -or $null -eq $rec.pid -or $null -eq $rec.port) { continue }
+        if ($owners.ContainsKey([int]$rec.pid) -and [int]$rec.port -eq $port) { return @{ folder = $folder; rec = $rec } }
+    }
+    return $null
+}
+$ports = @("$Ports".Split(',') | Where-Object { $_ -match '^\d{1,5}$' } | ForEach-Object { [int]$_ } | Select-Object -First 16)
+if ($Mode -eq 'key') {
+    $value = $null
+    $found = $null
+    if ($ports.Count) { $found = Find-Server $ports[0] }
+    if ($found) {
+        try { $text = (Get-Content -LiteralPath (Join-Path $found.folder 'api-key.txt') -Raw -ErrorAction Stop).Trim() } catch { $text = '' }
+        if ($text -cmatch '^[A-Za-z0-9_-]{16,200}$') { $value = $text }
+    }
+    [Console]::Out.WriteLine((ToJson @{ key = $value }))
+} else {
+    $rows = @()
+    foreach ($port in $ports) {
+        $found = Find-Server $port
+        if (-not $found) { continue }
+        $size = $null
+        if ($found.rec.spec -and $found.rec.spec.context -is [int]) { $size = [int]$found.rec.spec.context }
+        $rows += , ([ordered]@{ port = $port; model = $Alias; context = $size; engine = [string]$found.rec.engine })
+    }
+    [Console]::Out.WriteLine((ToJson @{ servers = $rows }))
+}
+"""
+
+
+def workbench(mode, ports):
+    """stdin for POWERSHELL that finds the Workbench model servers on these ports (see WORKBENCH)."""
+    if mode not in ("info", "key"):
+        raise ValueError("Unknown Workbench server query.")
+    return feed(
+        _prelude(Mode=mode, Ports=",".join(str(int(p)) for p in ports), Alias="local-agent")
+        + JSON
+        + WORKBENCH
+    )
+
+
 def _prelude(**values):
     return "".join(f"${name} = {quote(value)}\n" for name, value in values.items())
 
