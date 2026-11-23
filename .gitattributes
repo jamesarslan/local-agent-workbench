@@ -7,3 +7,4 @@ Dockerfile text eol=lf
 *.vbs text eol=crlf
 *.lock text eol=lf
 kits/** text eol=lf
+docs/*.html text eol=lf
