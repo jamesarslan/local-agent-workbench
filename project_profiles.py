@@ -104,7 +104,7 @@ DEFAULT_NAME = "Folder default"
 # Record keys that only say a notice was dismissed; a record with nothing else remembers no choices.
 NOTICE_ONLY = ("path", "updated", "default_notice")
 CHOICES = {
-    "channel": ("Tested", "Updated"),
+    "channel": ("Tested", "Updated", "Unsloth"),
     "kv": ("auto", "fp16", "fp8"),
     "thinking": ("off", "minimal", "low", "medium", "high", "xhigh", "max"),
     "image_route": ("auto", "selected", "pareto", "manual"),

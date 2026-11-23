@@ -556,7 +556,7 @@ def fit(size, vram, ram):
 
 ENGINES = ("llama.cpp", "Strata")
 BACKENDS = ("cuda", "vulkan", "metal", "cpu")
-ROLES = ("weights", "companion", "lora", "vision")
+ROLES = ("weights", "companion", "lora", "vision", "draft")
 KV_SETTINGS = ("auto", "fp8")
 CACHE_TYPES = ("f16", "q8_0", "q4_0")
 SIZING = (
@@ -807,7 +807,7 @@ def _join(pick, model, family, cache, root, accepts):
         precision = "fp8" if settings["kv"] == "fp8" else "f16"
     else:
         precision = cache or ("q8_0" if settings["lora"] else "f16")
-    files = [
+    listed = [
         dict(
             repo=file.get("repo", model["repo"]),
             revision=file.get("revision", model["revision"]),
@@ -818,6 +818,10 @@ def _join(pick, model, family, cache, root, accepts):
             role=file["role"],
         )
         for file in model["files"]
+    ]
+    files = [
+        file
+        for file in listed
         if file["role"] in ("weights", "companion") or settings[file["role"]]
     ]
     if "need_gib" in pick:
@@ -860,6 +864,9 @@ def _join(pick, model, family, cache, root, accepts):
         lora_bytes=sum(file["bytes"] for file in files if file["role"] == "lora"),
         memory_model=memory,
     )
+    drafter = [file for file in listed if file["role"] == "draft"]
+    if drafter:
+        item["drafter"] = drafter
     if status == "measured":
         item.update(evidence=pick["evidence"], measured_on=pick["measured_on"].strip())
     elif isinstance(pick.get("evidence"), dict):
@@ -1387,6 +1394,32 @@ def download_entry(ident, library, progress=None, cancel=None, session=None):
     )
 
 
+def download_drafter(model, progress=None, cancel=None, session=None):
+    """Download the DSpark drafter that the catalog lists for an Inkling GGUF into the
+    folder where the runtime looks for it; returns its path."""
+    import runtime
+
+    model = Path(str(model or ""))
+    item = next((item for item in entries() if item.get("drafter")), None)
+    if item is None or not runtime.inkling_gguf(model):
+        raise ValueError(
+            "The DSpark drafter is for Inkling 2 Mini GGUF files; choose one in "
+            "Weights first."
+        )
+    folder = _transfer(
+        "drafter",
+        "dspark-drafter",
+        "DSpark drafter",
+        runtime.drafter_folder(model),
+        item["drafter"],
+        progress,
+        cancel,
+        session,
+        _hub_headers(),
+    )
+    return str(folder / item["drafter"][0]["name"])
+
+
 def hub_files(query):
     from huggingface_hub import HfApi
 
@@ -1494,6 +1527,8 @@ def dispatch(action, payload, progress=None, cancel=None):
         return recommendation(bool(payload.get("refresh")))
     if action == "model-catalog":
         return _catalog_view()
+    if action == "model-download" and payload.get("drafter"):
+        return download_drafter(payload["drafter"], progress, cancel)
     if action == "model-download":
         return download_entry(
             str(payload.get("id", "")), runtime.settings()["library"], progress, cancel

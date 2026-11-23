@@ -466,6 +466,15 @@ class ValidationTest(ProjectCase):
         self.assertIn("for Agent", self.refused(harness="a\nb"))
         self.assertIn("is damaged", self.refused_item("text"))
 
+    def test_validation_accepts_every_engine_release(self):
+        import runtime
+
+        self.assertEqual(projects.CHOICES["channel"], runtime.CHANNELS)
+        for channel in ("Tested", "Updated", "Unsloth"):
+            self.assertEqual(
+                projects.validate_profile({"channel": channel}), {"channel": channel}
+            )
+
     def refused_item(self, item):
         with self.assertRaises(ValueError) as caught:
             projects.validate_profile(item, "lab")

@@ -51,12 +51,25 @@ workbench setup_engines.py --backend vulkan
 workbench setup_engines.py --backend cpu
 ```
 
-Install the engine with **Install engine** in **Advanced → Model library**, with **Install** next to llama.cpp / Strata in **Advanced → Setup**, or let the setup guide download it with a model. The **Engine release** setting in **Advanced → Model library** has two channels:
+Install the engine with **Install engine** in **Advanced → Model library**, with **Install** next to llama.cpp / Strata in **Advanced → Setup**, or let the setup guide download it with a model. The **Engine release** setting in **Advanced → Model library** has three channels:
 
 - Tested: the pinned build. Each archive is checked against a SHA-256 value pinned in the repository before it is unpacked.
 - Updated: the newest llama.cpp release, checked against the digest GitHub reports for it at that moment. It is not pinned in the repository and has not been run with Workbench.
+- Unsloth: Unsloth's llama.cpp build, pinned like Tested. It adds the DSpark drafter for Inkling 2 Mini ([below](#inkling-2-mini-with-unsloths-build)).
 
 With the CUDA build on Windows or Linux, engine setup also installs Strata, which runs Strata model packs, when Git is installed; `--no-strata` skips it. vLLM is a separate item in **Advanced → Setup**. Strata and vLLM both need an NVIDIA GPU with a working driver; on a Mac, Workbench serves GGUF models with llama.cpp and Metal. On Windows or Linux, when a Strata Flash Next launch preset already exists, the engine list also offers Flash preset, which starts that preset; Setup does not install it. Custom starts an engine you describe in a JSON manifest ([Reference](reference.md#engines)).
+
+### Inkling 2 Mini with Unsloth's build
+
+Unsloth's llama.cpp build adds DSpark, a small drafter model for Inkling 2 Mini: it proposes the next few tokens and Inkling checks them. The build is opt-in, and Tested stays the default.
+
+1. In **Advanced → Model library**, open **More engine settings** and set **Engine release** to **Unsloth**.
+2. Choose **Install Unsloth build**, or run `workbench setup_engines.py --unsloth`. Workbench downloads Unsloth's release `b12649-mix-c7059d6` from GitHub, checks it against a SHA-256 value pinned in the repository and unpacks it into `runtime/llama-unsloth-b12649` in the data folder, beside the Tested build. It picks the build as for Tested: Metal on Apple Silicon, the CUDA build that matches the NVIDIA GPU and driver, Vulkan for AMD and Intel GPUs, and CPU otherwise. AMD GPUs get Vulkan because Workbench does not detect the ROCm target that Unsloth's ROCm builds need.
+3. Select an Inkling 2 Mini GGUF in **Weights**, turn on **Speculative decoding** and choose **Download drafter**. It downloads `dspark-Inkling-2-Mini-Q8_0.gguf` (504 MB) from `unsloth/Inkling-2-Mini-GGUF` at a pinned revision, checks its SHA-256 and places it in the model's folder. The Inkling entries in the catalog list it as an optional file, so a model download does not fetch it.
+
+Workbench then starts `llama-server` with `-md <drafter> --spec-type draft-dspark --spec-draft-n-max 2 -ngld 99`. When the drafter is missing, or **Engine release** is Tested or Updated, Inkling runs without it and the start message says why; the mainline build has no DSpark support. With the drafter, replies can differ slightly from replies without it, even at temperature 0, as is usual for speculative decoding. One run of this setup on a Mac is recorded in [`results/inkling-unsloth-dspark-m3-max.json`](../results/inkling-unsloth-dspark-m3-max.json).
+
+The build and the drafter are Unsloth's work: [unslothai/unsloth](https://github.com/unslothai/unsloth) and [unsloth/Inkling-2-Mini-GGUF](https://huggingface.co/unsloth/Inkling-2-Mini-GGUF).
 
 ### Recommended models
 

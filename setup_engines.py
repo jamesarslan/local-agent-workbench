@@ -22,6 +22,7 @@ import requests
 from runtime import (
     DATA,
     QUIET,
+    UNSLOTH_TARGET,
     Cancelled,
     cancelled,
     load,
@@ -33,11 +34,14 @@ from runtime import (
 )
 
 Asset = namedtuple("Asset", "repo tag name target sha256 size")
+# One CUDA build of Unsloth's release, as its llama-prebuilt-manifest.json lists it.
+CudaBuild = namedtuple("CudaBuild", "asset line coverage min_sm max_sm sms")
 LLAMA_REPO, LLAMA_TAG, LLAMA_TARGET = (
     "ggml-org/llama.cpp",
     "b12633",
     "llama-native-b12633",
 )
+UNSLOTH_REPO, UNSLOTH_TAG = "unslothai/llama.cpp", "b12649-mix-c7059d6"
 STRATA_REPO, STRATA_TAG, STRATA_TARGET = (
     "Niko1221/Strata",
     "v0.2.19",
@@ -47,11 +51,20 @@ STRATA_COMMIT = "c6f6427d9de9016fd92d13e29740f65625261df7"
 STRATA_URL = "https://github.com/Niko1221/Strata.git"
 LABEL = {"cuda": "CUDA", "vulkan": "Vulkan", "cpu": "CPU", "metal": "Metal"}
 MARK = "workbench-setup: "
-PROGRAM = {LLAMA_REPO: "llama-server", STRATA_REPO: "strata-inkling"}
+PROGRAM = {
+    LLAMA_REPO: "llama-server",
+    STRATA_REPO: "strata-inkling",
+    UNSLOTH_REPO: "llama-server",
+}
+RELEASES = ("mainline", "unsloth")
 
 
 def _llama(name, sha256, size):
     return Asset(LLAMA_REPO, LLAMA_TAG, name, LLAMA_TARGET, sha256, size)
+
+
+def _unsloth(name, sha256, size):
+    return Asset(UNSLOTH_REPO, UNSLOTH_TAG, name, UNSLOTH_TARGET, sha256, size)
 
 
 def _strata(name, sha256, size):
@@ -131,6 +144,182 @@ STRATA_ASSETS = {
         432654826,
     ),
 }
+# Unsloth's llama.cpp build (opt-in): it adds the DSpark drafter for Inkling 2 Mini.
+# Names, sizes and SHA-256 values are GitHub's asset digests for the release, which
+# match the release's own llama-prebuilt-sha256.json. An AMD GPU gets the Vulkan build,
+# because Workbench does not detect the gfx target that picks one of its ROCm builds.
+UNSLOTH = {
+    ("macos", "metal"): [
+        _unsloth(
+            "llama-b12649-mix-c7059d6-bin-macos-arm64.tar.gz",
+            "4e2629c4bf538eb22a75a7e6a7f07cbab606d19f44f8846428df5ce9088267f9",
+            13205152,
+        )
+    ],
+    ("linux", "vulkan"): [
+        _unsloth(
+            "app-b12649-mix-c7059d6-linux-x64-vulkan.tar.gz",
+            "debe9f926cfb495731ceae96ed812f4e54eed308ac13e18884c3bcf101d2abee",
+            32911246,
+        )
+    ],
+    ("linux", "cpu"): [
+        _unsloth(
+            "app-b12649-mix-c7059d6-linux-x64-cpu.tar.gz",
+            "510597b6aec3a49cdefb74843cfd9f2844dbf6ae6455cb363f49a5c46e368734",
+            19227234,
+        )
+    ],
+    ("windows", "vulkan"): [
+        _unsloth(
+            "app-b12649-mix-c7059d6-windows-x64-vulkan.zip",
+            "38f217096d87539a4274d39384854d06f9430f5a270e2c6c7c2892953be09a3b",
+            28679193,
+        )
+    ],
+    ("windows", "cpu"): [
+        _unsloth(
+            "app-b12649-mix-c7059d6-windows-x64-cpu.zip",
+            "25416ff13c7a264536e766dff54a8b3520c15b212c810ab49267483940db4db7",
+            21480025,
+        )
+    ],
+}
+LINUX_CUDA = "app-{tag}-linux-x64-{line}-{coverage}.tar.gz"
+WINDOWS_CUDA = "app-{tag}-windows-x64-{line}-{coverage}.zip"
+SM_LEGACY = (50, 52, 60, 61)
+SM_OLDER_12 = (70, 75, 80, 86, 89)
+SM_OLDER_13 = (75, 80, 86, 89)
+SM_NEWER = (86, 89, 90, 100, 103, 120)
+SM_PORTABLE_12 = (70, 75, 80, 86, 89, 90, 100, 103, 120)
+SM_PORTABLE_13 = (75, 80, 86, 89, 90, 100, 103, 120)
+
+
+def _cuda_row(kind, line, coverage, sha256, size, sms):
+    name = kind.format(tag=UNSLOTH_TAG, line=line, coverage=coverage)
+    return CudaBuild(
+        _unsloth(name, sha256, size), line, coverage, sms[0], sms[-1], tuple(sms)
+    )
+
+
+UNSLOTH_CUDA = {
+    "linux": (
+        _cuda_row(
+            LINUX_CUDA,
+            "cuda13",
+            "older",
+            "8494a43a8fd079eaf9b06aa7a2518f21a2e9c0037e2bc0d7c52cde0b316e1431",
+            259382803,
+            SM_OLDER_13,
+        ),
+        _cuda_row(
+            LINUX_CUDA,
+            "cuda13",
+            "newer",
+            "eb4b6517a20572c3c93dbca1bc6c35ab9d5d930fe73aa1bb152087944295dfd5",
+            320123073,
+            SM_NEWER,
+        ),
+        _cuda_row(
+            LINUX_CUDA,
+            "cuda13",
+            "portable",
+            "ceaa18c2dd2a2343afc3414691857564b0388d4c7317c332175eba2a47ce831f",
+            440439613,
+            SM_PORTABLE_13,
+        ),
+        _cuda_row(
+            LINUX_CUDA,
+            "cuda12",
+            "legacy",
+            "ec7dc7c5ff2062a305a214f3e9452554481977e8d7eeda4283837e0a0ff5cb13",
+            51225797,
+            SM_LEGACY,
+        ),
+        _cuda_row(
+            LINUX_CUDA,
+            "cuda12",
+            "older",
+            "dfaf3c85bfaafa16627621a0501178a4c2fb7949cf1490b4d597418fb31c3c42",
+            313676010,
+            SM_OLDER_12,
+        ),
+        _cuda_row(
+            LINUX_CUDA,
+            "cuda12",
+            "newer",
+            "8cd3ba04b71073ebddb788acaeea4e4db20ac0d775d4d7f211abb5bcc7bba0d8",
+            322461748,
+            SM_NEWER,
+        ),
+        _cuda_row(
+            LINUX_CUDA,
+            "cuda12",
+            "portable",
+            "63f031751927fb06894928e18bf46e7f164c555b8807c8ac4e963e6a37c6d42c",
+            496598473,
+            SM_PORTABLE_12,
+        ),
+    ),
+    "windows": (
+        _cuda_row(
+            WINDOWS_CUDA,
+            "cuda13",
+            "older",
+            "3aee4d68e564f5f1307cf0eba968add78404b8cc6a642cf9cbcbe0c3d4bdf5f5",
+            254865469,
+            SM_OLDER_13,
+        ),
+        _cuda_row(
+            WINDOWS_CUDA,
+            "cuda13",
+            "newer",
+            "5d77edf5aea50cf21ee8e7bb4e88159f134c6d89bafb38449f60eb0f329d7578",
+            315363185,
+            SM_NEWER,
+        ),
+        _cuda_row(
+            WINDOWS_CUDA,
+            "cuda13",
+            "portable",
+            "9190abc39f70d3d4e9f6d76e77daecff94af56448a3ce075335eae0c8d988699",
+            435755740,
+            SM_PORTABLE_13,
+        ),
+        _cuda_row(
+            WINDOWS_CUDA,
+            "cuda12",
+            "legacy",
+            "43b726ed9d9328eb1a9b5e163c60cf01ac98cda97c50e12e942e50d9e138b33e",
+            46555292,
+            SM_LEGACY,
+        ),
+        _cuda_row(
+            WINDOWS_CUDA,
+            "cuda12",
+            "older",
+            "1bde79ab7182c27f9f7976847011ce7ef7dc9f0ea4ddede7c0ddf5360b070b7e",
+            309328776,
+            SM_OLDER_12,
+        ),
+        _cuda_row(
+            WINDOWS_CUDA,
+            "cuda12",
+            "newer",
+            "20d7c664d41ede068e5526aaaa70c078b362168f7a2c98622d414f69020511bf",
+            318089207,
+            SM_NEWER,
+        ),
+        _cuda_row(
+            WINDOWS_CUDA,
+            "cuda12",
+            "portable",
+            "2374ae22658c4e761b1a036fe069f6b5ad45a272e0e909c9cd73362a97b697c1",
+            492042743,
+            SM_PORTABLE_12,
+        ),
+    ),
+}
 
 VENDORS = {"10de": "nvidia", "1002": "amd", "8086": "intel"}
 WSL_NVIDIA_SMI = Path("/usr/lib/wsl/lib/nvidia-smi")
@@ -166,6 +355,12 @@ CUDA_PAIR = {
 
 
 def nvidia_gpu():
+    names = smi("--query-gpu=name", "--format=csv,noheader").splitlines()
+    return next((v.strip() for v in names if v.strip()), "")
+
+
+def smi(*args):
+    """Output of nvidia-smi with these arguments, or "" when it is missing or fails."""
     exe = shutil.which("nvidia-smi")
     if not exe and WSL_NVIDIA_SMI.is_file():
         exe = str(WSL_NVIDIA_SMI)
@@ -173,7 +368,7 @@ def nvidia_gpu():
         return ""
     try:
         done = subprocess.run(
-            [exe, "--query-gpu=name", "--format=csv,noheader"],
+            [exe, *args],
             capture_output=True,
             text=True,
             errors="replace",
@@ -183,9 +378,20 @@ def nvidia_gpu():
         )
     except (OSError, subprocess.SubprocessError):
         return ""
-    if done.returncode:
-        return ""
-    return next((v.strip() for v in done.stdout.splitlines() if v.strip()), "")
+    return "" if done.returncode else done.stdout
+
+
+@lru_cache(maxsize=1)
+def nvidia_cuda():
+    """The compute capabilities of the NVIDIA GPUs as integers (8.9 is 89) and the CUDA
+    version the driver supports as (major, minor); empty and None when unknown."""
+    caps = []
+    for line in smi("--query-gpu=compute_cap", "--format=csv,noheader").splitlines():
+        match = re.fullmatch(r"\s*(\d{1,2})\.(\d)\s*", line)
+        if match:
+            caps.append(int(match[1]) * 10 + int(match[2]))
+    found = re.search(r"CUDA Version:\s*(\d+)\.(\d+)", smi())
+    return tuple(sorted(set(caps))), (int(found[1]), int(found[2])) if found else None
 
 
 def linux_adapters(root=Path("/sys/class/drm")):
@@ -379,6 +585,101 @@ def wanted(backend, name, strata):
     return list(PINNED[(name, backend)]) + ([STRATA_ASSETS[name]] if strata else [])
 
 
+def cuda_lines(version):
+    """Unsloth CUDA runtime lines a driver runs, newest first. The builds carry their
+    CUDA runtime, so the driver decides: a CUDA 13 driver runs both lines, and a 12.4
+    or newer driver runs the CUDA 12 line (Unsloth's installer uses the same floor)."""
+    if not version:
+        return []
+    if version[0] >= 13:
+        return ["cuda13", "cuda12"]
+    return ["cuda12"] if version >= (12, 4) else []
+
+
+def unsloth_cuda(name, caps, version):
+    """The Unsloth CUDA build for these GPUs, chosen as Unsloth's installer does: per
+    runtime line, the narrowest build that lists every GPU's compute capability, then
+    the portable build. With unknown capabilities only a portable build is taken."""
+    for line in cuda_lines(version):
+        fits = [
+            b
+            for b in UNSLOTH_CUDA.get(name, ())
+            if b.line == line
+            and (all(c in b.sms for c in caps) if caps else b.coverage == "portable")
+        ]
+        narrow = [b for b in fits if b.coverage != "portable"]
+        if narrow or fits:
+            return min(narrow or fits, key=lambda b: (b.max_sm - b.min_sm, b.max_sm))
+    return None
+
+
+def unsloth_build(backend, name):
+    """Assets of Unsloth's build for the chosen mainline backend, the backend they use
+    and why. A GPU no Unsloth CUDA build covers gets its Vulkan build, or the CPU one."""
+    if backend != "cuda":
+        return list(UNSLOTH[(name, backend)]), backend, ""
+    caps, version = nvidia_cuda()
+    build = unsloth_cuda(name, caps, version)
+    if build:
+        return [build.asset], "cuda", (
+            f"Unsloth's {build.line} {build.coverage} build matches this NVIDIA GPU "
+            "and driver."
+        )
+    other = "vulkan" if vulkan_loader(name) else "cpu"
+    return list(UNSLOTH[(name, other)]), other, (
+        "No Unsloth CUDA build matches this NVIDIA GPU and driver, so its "
+        f"{LABEL[other]} build is used; update the NVIDIA driver to use CUDA."
+    )
+
+
+def release_of(release):
+    release = release or "mainline"
+    if release not in RELEASES:
+        raise ValueError("Choose mainline or unsloth for the llama.cpp release.")
+    return release
+
+
+def unsloth_installed():
+    """The installed Unsloth asset, or "" when none is complete."""
+    folder, name = DATA / "runtime" / UNSLOTH_TARGET, system()
+    builds = [a for (kind, _), rows in UNSLOTH.items() if kind == name for a in rows]
+    builds += [b.asset for b in UNSLOTH_CUDA.get(name, ())]
+    return next((a.name for a in builds if complete(folder, [a])), "")
+
+
+def unsloth_plan(backend=None):
+    """What installing Unsloth's build would download here, and whether it is ready."""
+    import runtime
+
+    found = detect()
+    empty = dict(tag=UNSLOTH_TAG, assets=[], download_bytes=0, ready=False)
+    if not found["supported"]:
+        return empty | dict(backend="", reason=found["reason"], installed="")
+    chosen, reason = resolve_backend(backend)
+    assets, used, note = unsloth_build(chosen, found["system"])
+    rows = [
+        dict(
+            name=a.name,
+            size=a.size,
+            installed=complete(DATA / "runtime" / a.target, [a]),
+        )
+        for a in assets
+    ]
+    try:
+        runtime.runtime(UNSLOTH_TARGET, "llama-server.exe")
+        ready = True
+    except ValueError:
+        ready = False
+    return empty | dict(
+        backend=used,
+        reason=note or reason,
+        assets=rows,
+        download_bytes=sum(v["size"] for v in rows if not v["installed"]),
+        ready=ready,
+        installed=unsloth_installed(),
+    )
+
+
 def marker(path):
     try:
         return Path(path).read_text().strip()
@@ -453,6 +754,7 @@ def info(backend=None):
     return plan(backend) | {
         "engines": runtime.available_engines(),
         "support": runtime.engine_support(),
+        "unsloth": unsloth_plan(backend),
     }
 
 
@@ -712,11 +1014,23 @@ def record_update(assets, tags, destination, backend, checkout, rev):
     write_json(DATA / "updates.json", meta)
 
 
-def install(update=False, backend=None, strata=None, progress=None, cancel=None):
+def install(
+    update=False, backend=None, strata=None, progress=None, cancel=None, release=None
+):
     detect.cache_clear()
+    nvidia_cuda.cache_clear()
+    unsloth = release_of(release) == "unsloth"
+    if unsloth and update:
+        raise ValueError(
+            "Update installs the newest mainline release; install Unsloth's build "
+            "without Update."
+        )
     chosen, reason = resolve_backend(backend)
     name = detect()["system"]
-    want_strata, notes = strata_choice(chosen, name, strata)
+    want_strata, notes = strata_choice(chosen, name, False if unsloth else strata)
+    if unsloth:
+        pinned, chosen, note = unsloth_build(chosen, name)
+        reason = note or reason
     tell(progress, job="engine-install", phase="detect", backend=chosen, message=reason)
     DATA.mkdir(exist_ok=True, parents=True)
     guard = FileLock(str(DATA / "engines.lock"), timeout=1)
@@ -732,6 +1046,9 @@ def install(update=False, backend=None, strata=None, progress=None, cancel=None)
         if update:
             assets, tags = newest_assets(chosen, name, want_strata)
             destination = DATA / "updates"
+        elif unsloth:
+            assets, tags = pinned, {}
+            destination = DATA / "runtime"
         else:
             assets, tags = wanted(chosen, name, want_strata), {}
             destination = DATA / "runtime"
@@ -802,7 +1119,7 @@ def install(update=False, backend=None, strata=None, progress=None, cancel=None)
         guard.release()
     result = dict(
         backend=chosen,
-        channel="Updated" if update else "Tested",
+        channel="Updated" if update else "Unsloth" if unsloth else "Tested",
         installed=[a.name for a in missing],
         skipped=skipped,
         strata=want_strata,
@@ -812,7 +1129,11 @@ def install(update=False, backend=None, strata=None, progress=None, cancel=None)
         progress,
         job="engine-install",
         phase="done",
-        message=f"The llama.cpp {LABEL[chosen]} build is ready.",
+        message=(
+            f"Unsloth's llama.cpp {LABEL[chosen]} build is ready."
+            if unsloth
+            else f"The llama.cpp {LABEL[chosen]} build is ready."
+        ),
         **result,
     )
     return result
@@ -929,6 +1250,12 @@ def main(argv=None):
         help="engine build to install (default: auto, chosen from the detected GPU)",
     )
     parser.add_argument("--no-strata", action="store_true", help="skip Strata")
+    parser.add_argument(
+        "--unsloth",
+        action="store_true",
+        help="install Unsloth's llama.cpp build, which adds the DSpark drafter for "
+        "Inkling 2 Mini",
+    )
     args = parser.parse_args(argv)
     steps, final = {}, []
 
@@ -946,7 +1273,12 @@ def main(argv=None):
 
     try:
         result = install(
-            args.update, args.backend, False if args.no_strata else None, show, None
+            args.update,
+            args.backend,
+            False if args.no_strata else None,
+            show,
+            None,
+            "unsloth" if args.unsloth else None,
         )
     except (Cancelled, ValueError, RuntimeError, requests.RequestException) as exc:
         try:

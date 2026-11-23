@@ -410,8 +410,49 @@
       }
 
       const kv = select("adv-kv", [["auto", "Automatic"], ["fp8", "8-bit (fp8)"]], config.kv === "fp8" ? "fp8" : "auto");
-      const channel = select("adv-channel", [["Tested", "Tested"], ["Updated", "Updated"]], config.channel === "Updated" ? "Updated" : "Tested");
-      const draft = ui.toggle("Speculative decoding", { description: "Uses a small draft model to answer faster when the setup has one.", checked: Boolean(config.draft) });
+      const releases = ["Tested", "Updated", "Unsloth"];
+      const channel = select("adv-channel", releases.map((name) => [name, name]), releases.includes(config.channel) ? config.channel : "Tested");
+      const draft = ui.toggle("Speculative decoding", { description: "Uses a small draft model to answer faster when the setup has one. Inkling 2 Mini uses the DSpark drafter, which needs the Unsloth release.", checked: Boolean(config.draft) });
+      const unslothNote = el("p", { class: "hint", attrs: { role: "status" } });
+      const unslothInstall = ui.button("Install Unsloth build", {
+        small: true,
+        pending: "Installing…",
+        errorHost: errors,
+        async onClick() {
+          await AW.models.engine({ origin: unslothInstall, release: "unsloth" });
+          await AW.store.refresh("engine", { force: true }).catch(() => null);
+          if (ctx.alive()) paintUnsloth();
+        },
+      });
+      const drafterGet = ui.button("Download drafter", {
+        small: true,
+        pending: "Downloading…",
+        errorHost: errors,
+        async onClick() {
+          await AW.jobs.run("model-download", { drafter: weights.value }, { title: "Downloading the DSpark drafter", origin: drafterGet, key: "model:dspark-drafter" });
+          if (ctx.alive()) ui.toast("The DSpark drafter is next to the model.", { kind: "ok" });
+        },
+      });
+      const unslothActions = el("div", { class: "actions" }, unslothInstall, drafterGet);
+      const unslothRow = el("div", { class: "stack" }, unslothNote, unslothActions);
+
+      function paintUnsloth() {
+        const build = AW.state.engine && AW.state.engine.unsloth;
+        const chosen = channel.value === "Unsloth";
+        const drafting = draft.input.checked && /^inkling-2-mini.*\.gguf(_file)?$/i.test(base(weights.value));
+        const missing = chosen && Boolean(build) && !build.ready && Array.isArray(build.assets) && build.assets.length > 0;
+        let text = "";
+        if (missing) text = "Unsloth's build is not installed yet" + (build.download_bytes ? " (" + AW.fmt.bytes(build.download_bytes) + ")." : ".");
+        else if (drafting && !chosen) text = "The DSpark drafter for Inkling 2 Mini needs the Unsloth release.";
+        else if (drafting) text = "Inkling 2 Mini uses the DSpark drafter when it is next to the model.";
+        unslothNote.textContent = text;
+        unslothNote.hidden = !text;
+        unslothInstall.hidden = !missing;
+        drafterGet.hidden = !(chosen && drafting);
+        unslothActions.hidden = unslothInstall.hidden && drafterGet.hidden;
+        unslothRow.hidden = !text && unslothActions.hidden;
+      }
+      if (!AW.state.engine) AW.store.refresh("engine").then(() => ctx.alive() && paintUnsloth(), () => {});
       const vision = ui.toggle("Vision companion", { description: "Loads the matching image model when the setup has one.", checked: Boolean(config.vision) });
       const lora = ui.toggle("Matched Qwen LoRA", { description: "Loads the LoRA adapter that matches a Qwen model when one is present.", checked: Boolean(config.lora) });
       const more = el("details", null, el("summary", { text: "More engine settings" }));
@@ -420,8 +461,9 @@
       moreBody.style.gap = "var(--space-2)";
       moreBody.append(
         ui.field("KV cache", kv, { hint: "8-bit uses less memory for long contexts." }).el,
-        ui.field("Engine release", channel, { hint: "Tested is the pinned build. Updated is the newest release, which has not been tested with Workbench." }).el,
+        ui.field("Engine release", channel, { hint: "Tested is the pinned build. Updated is the newest release, which has not been tested with Workbench. Unsloth is Unsloth's llama.cpp build, which adds the DSpark drafter for Inkling 2 Mini." }).el,
         draft.el,
+        unslothRow,
         vision.el,
         lora.el,
       );
@@ -462,6 +504,7 @@
       };
 
       function paint() {
+        paintUnsloth();
         moved.hidden = library === String(config.library || "");
         status.textContent = dirty() ? "You have unsaved changes." : "";
       }

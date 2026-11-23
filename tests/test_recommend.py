@@ -862,8 +862,12 @@ class ShippedCatalogTest(unittest.TestCase):
         self.assertEqual(pick["model"], other["model"])
         self.assertEqual(
             [file["path"] for file in self.models[pick["model"]]["files"]],
-            ["Mainline_Support/Inkling-2-Mini-UD-Q4_K_XL.gguf_file"],
+            [
+                "Mainline_Support/Inkling-2-Mini-UD-Q4_K_XL.gguf_file",
+                "dspark-Inkling-2-Mini-Q8_0.gguf",
+            ],
         )
+        self.assertFalse(pick["settings"]["draft"])
         self.assertEqual(pick["evidence"]["peak_memory_gib"], 20.5)
         self.assertEqual(pick["min_memory_gib"], smallest_mac(20.5))
         self.assertEqual((pick["min_memory_gib"], pick["rank"]), (32, 2))

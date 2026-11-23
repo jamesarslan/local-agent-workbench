@@ -574,6 +574,15 @@ class RoutingTest(BridgeCase):
         )
         self.assertEqual(seen, [(True, None, None, "P", "C")])
 
+    def test_engine_install_passes_the_release(self):
+        import setup_engines
+
+        install = self.use(setup_engines, "install", return_value={"installed": []})
+        bridge.dispatch("engine-install", {"release": "unsloth"}, "P", "C")
+        install.assert_called_once_with(
+            False, None, None, progress="P", cancel="C", release="unsloth"
+        )
+
     def test_area_actions_get_progress_only_when_they_take_it(self):
         fake = {
             "studio": types.SimpleNamespace(
