@@ -1,6 +1,6 @@
 # Project setup
 
-This guide covers what an agent reads from your project folder (instruction files, skills and MCP servers), how Agent Workbench shows and writes those files, the consent step for folders that start programs, the starter kits, and what Workbench remembers for each folder.
+This guide covers what an agent reads from your project folder (instruction files, skills and MCP servers), how Agent Workbench shows and writes those files, the consent step for folders that start programs, the starter kits, what Workbench remembers for each folder, and which settings travel with it.
 
 <picture>
 <source media="(prefers-color-scheme: dark)" srcset="images/project-setup-dark.png">
@@ -230,6 +230,36 @@ On this computer, in `projects.json` in the data folder, it remembers the last c
 In the folder, `.agent-workbench/profiles.json` holds named profiles that travel with it, for example when you commit the file to Git. **Save profile** stores the current choices under a name. A profile carries settings, not secrets or machine details: the agent, the kind of model source, the model ID, the engine settings, the tool switches, a prompt, the name of the connection (not its address or key) and the name of the model file (not its path).
 
 Applying a profile is never silent. **Review and apply…** opens **Apply profile**, which lists every setting it would change, from what to what, and shows a profile's prompt in full; you tick "I have read the prompt above." before **Apply profile** works. A profile's prompt applies to that folder only and is never written into your global settings. **Clear prompt…** removes it again.
+
+## Settings that travel with the folder
+
+Coming in the next release; the 0.4.0 kits do not have it.
+
+Named profiles in `.agent-workbench/profiles.json` are how a folder's setup moves to another computer. The file is plain JSON. It holds no keys, tokens, addresses or machine paths, so you can commit it with the project.
+
+- Save to this folder stores the current choices as a named profile in that file: the agent, the kind of model source, the connection's name, the model, the engine settings and the tool switches.
+- Folder default marks one profile as the folder's default. Only one profile can be the default.
+- When you open the folder on another computer, Workbench offers to review and apply the default profile. It never applies it on its own: **Apply profile** lists every setting it would change, and nothing changes until you confirm.
+
+A profile names things instead of storing them, so Workbench matches them on the computer you are on:
+
+- A connection is matched by its name. When this computer has no connection with that name, Workbench says so and tells you what to add in **Connections** before you apply the profile again.
+- A local model is matched by the file name of its weights. When no model file with that name is in your model folder, Workbench names the file, so you can download it or add it.
+
+A run can also become a profile: Save as profile in a run summary ([Run summaries](sessions.md#run-summaries)).
+
+### Where this folder's settings live
+
+The panel Where this folder's settings live shows, for the open folder, what is kept in the project and what stays on this computer:
+
+| Where | What | Travels with the folder |
+| --- | --- | --- |
+| `.agent-workbench/profiles.json` in the project | Named profiles and which one is the folder default | Yes |
+| `.agent-workbench/project.json` in the project | The project's MCP servers, without secrets | Yes |
+| `projects.json` in the data folder | The last choices for this folder and your consent answer | No |
+| `connections.json` in the data folder | Connections: name, provider, address and model | No |
+| `runs/` in the data folder | One record per agent launch | No |
+| The system credential vault | API keys and values for MCP server variables | No |
 
 ## Built-in tools
 

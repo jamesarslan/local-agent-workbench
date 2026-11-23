@@ -1,6 +1,6 @@
 # Sessions and terminals
 
-This guide covers where an agent runs once you launch it: the terminal dock inside the window, a terminal window of your system, sessions on an SSH machine and in the Docker sandbox, how to see what is running, and how to resume earlier sessions.
+This guide covers where an agent runs once you launch it: the terminal dock inside the window, a terminal window of your system, sessions on an SSH machine and in the Docker sandbox, how to see what is running, how to resume earlier sessions, and the run summary of each launch.
 
 The terminal dock, agent windows, resuming and the sandbox were not run for 0.4.0 in the finished desktop window; see [Tested configurations](../README.md#tested-configurations). The steps below carry that status.
 
@@ -90,6 +90,39 @@ Workbench reads each agent's own session history to list recent sessions for a f
 A session stays with the account it was started with. A session started with the agent's own sign-in must be resumed with **Agent account** as the source, and a session started with a Workbench source must be resumed with that source. When they do not match, the list says so ("This session used Claude Code's own account.") and offers a button that switches the source and resumes. For a session from the agent's own account, **Copy the resume command** copies the command to run it in your own terminal.
 
 **Watch read-only** follows a saved OMP session as it grows, messages and tool calls included, also when the session runs in its own terminal window. Watching is available for OMP sessions only.
+
+## Run summaries
+
+Coming in the next release; the 0.4.0 kits do not have it.
+
+Each time Workbench starts an agent, it records the launch as a run: a plain JSON file, `runs/<id>.json`, in the data folder ([Security and your data](security-and-data.md#where-workbench-keeps-data)). A run answers "what exactly ran here?" after the folder's setup has changed. It holds:
+
+| Part | What it records |
+| --- | --- |
+| Agent | The agent and its version |
+| Model source | The kind of source and the connection's name, not its address or key |
+| Model | The model, the context size, the reasoning setting and, for a local model, the name of the weights file |
+| Profile and kit | The profile and the starter kit in use, when there were any |
+| MCP servers | The servers the agent received at launch |
+| Instruction files | Each instruction file the agent reads, with a hash of its contents |
+| Skills | The skills the agent reads |
+| Folder prompt | The prompt for this folder, when one is set |
+
+A run never holds a key: no API keys, tokens or environment values, and no user name, password or query string from an address.
+
+Where to find runs:
+
+- Run summary on a terminal tab shows the run that tab started.
+- Recent runs lists earlier launches in the folder.
+
+What you can do with a run:
+
+- Copy summary copies a Markdown summary, ready to paste into an issue, a pull request or your notes.
+- Copy as JSON copies the same record as JSON.
+- See what changed since that run: Workbench compares the run with the folder's current setup and lists each difference, such as a newer agent version, another model or a changed instruction file.
+- Save as profile turns the run into a named profile. Applying it goes through the usual review: **Apply profile** lists every setting it would change, and nothing changes until you confirm.
+
+Runs stay on this computer and do not travel with the folder. To remove them, delete the `runs` folder in the data folder.
 
 ## Remote sessions
 

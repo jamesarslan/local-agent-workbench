@@ -64,29 +64,26 @@ CHECKS = {
 MAC_GATE = ("unit-tests", "desktop-smoke", "ci", "install-script", "install-manual", "first-start", "engine-install", "model-serve", "agent-window", "terminal-dock", "doctor")
 PLATFORM_NAMES = {"linux": "Linux", "macos": "macOS", "windows": "Windows"}
 
-SECTIONS = ["install", "how", "features", "fit", "privacy", "kits", "faq"]
+SECTIONS = ["install", "folders", "how", "features", "kits", "runs", "portable", "privacy", "fit", "status", "faq"]
 HEADINGS = [
-    ("h1", "Pick a model and a coding agent for each project folder."),
+    ("h1", "Pick where your model runs and which coding agent you use, remembered per project folder."),
     ("h2", "Install"),
     ("h3", "Linux x64"),
     ("h3", "macOS on Apple Silicon (preview)"),
     ("h3", "Windows x64"),
+    ("h2", "One folder, one setup"),
     ("h2", "How it works"),
+    ("h3", "Run the setup guide"),
+    ("h3", "Choose where the model runs"),
+    ("h3", "Launch the agent in your folder"),
     ("h2", "What it does"),
-    ("h3", "Guided setup"),
-    ("h3", "Attach what already runs"),
-    ("h3", "A GPU machine over plain SSH"),
-    ("h3", "Settings that stay with the folder"),
-    ("h3", "Project setup per agent"),
-    ("h3", "Sessions at a glance"),
+    ("h3", "Model sources"),
+    ("h3", "Project setup you can read first"),
+    ("h3", "Terminals and sessions"),
+    ("h3", "The right API for each agent"),
     ("h3", "Doctor"),
     ("h3", "Measure your own setup"),
-    ("h2", "When another tool is the better choice"),
-    ("h3", "Use something else when"),
-    ("h3", "Workbench fits when you want to"),
-    ("h2", "What leaves your computer"),
-    ("h3", "Keys"),
-    ("h3", "The agents themselves"),
+    ("h3", "Claude Code and Codex on local Qwen models"),
     ("h2", "Starter kits"),
     ("h3", "General software"),
     ("h3", "Web front end"),
@@ -96,10 +93,27 @@ HEADINGS = [
     ("h3", "DevOps and infrastructure"),
     ("h3", "Game development"),
     ("h3", "Blank"),
+    ("h2", "Run summaries"),
+    ("h3", "What a summary holds"),
+    ("h3", "What you can do with it"),
+    ("h2", "Settings that travel with the folder"),
+    ("h3", "From one machine to the next"),
+    ("h3", "Where settings live"),
+    ("h2", "What leaves your computer"),
+    ("h3", "No telemetry, no account"),
+    ("h3", "Keys stay in your credential vault"),
+    ("h3", "Checked downloads, per-user install"),
+    ("h3", "The agents themselves"),
+    ("h2", "What it is not"),
+    ("h3", "Use something else when"),
+    ("h3", "Workbench fits when you want to"),
+    ("h2", "What was run for 0.4.0"),
     ("h2", "Questions"),
 ]
 QUESTIONS = [
     "What does it cost, and what are you selling?",
+    "Does it keep per-folder config in plain files?",
+    "Can I see later exactly what a run used?",
     "I already use Ollama or LM Studio. What does this add?",
     "Do I need a GPU?",
     "Which agents can it start, and with which models?",
@@ -119,6 +133,8 @@ README_HEADINGS = [
     "What leaves your computer",
     "Tested configurations",
     "First run",
+    "Run summaries",
+    "Where settings live",
     "Guides",
     "Command line",
     "Building from source",
@@ -301,7 +317,7 @@ class Page(HTMLParser):
         if tag in ("h1", "h2", "h3"):
             kinds.append(("heading", tag, self.section_id()))
         if tag == "summary":
-            kinds.append(("summary",))
+            kinds.append(("summary", self.section_id()))
         if "eyebrow" in classes:
             kinds.append(("eyebrow",))
         if tag == "label":
@@ -336,7 +352,7 @@ class Page(HTMLParser):
         if kind[0] == "heading":
             self.headings.append((kind[1], text, kind[2]))
         elif kind[0] == "summary":
-            self.summaries.append(text)
+            self.summaries.append((kind[1], text))
         elif kind[0] == "eyebrow":
             self.eyebrow = text
         elif kind[0] == "label":
@@ -670,6 +686,23 @@ class ClaimTests(unittest.TestCase):
         self.assertEqual(problems, [], msg="\n".join(problems))
         self.assertTrue(any(attrs.get("href", "").endswith("MEASUREMENTS.md") for tag, attrs in page().tags if tag == "a"), msg="docs/index.html must link MEASUREMENTS.md for the numbers it does not show.")
 
+    def test_no_secrets_in_public_documents(self):
+        patterns = (
+            r"https?://[^/\s)\"'<>]*@",
+            r"https?://[^\s)\"'<>]*\?[^\s)\"'<>]*(key|token|secret|password|sig)=",
+            r"\bsk-[A-Za-z0-9_-]{16,}",
+            r"\b(ghp|gho|github_pat|hf|xox[bp])_[A-Za-z0-9_]{16,}",
+            r"\bAKIA[0-9A-Z]{16}\b",
+            r"\bBearer\s+[A-Za-z0-9._~+/-]{16,}",
+        )
+        problems = []
+        for rel in [*PUBLIC, "docs/index.html"]:
+            if exists(rel):
+                for pattern in patterns:
+                    for m in re.finditer(pattern, read(rel)):
+                        problems.append(f'{rel} contains "{m.group(0)[:40]}", which looks like a key or a credential in an address; documents show variable names, never values.')
+        self.assertEqual(problems, [], msg="\n".join(problems))
+
     def test_no_speed_figures_outside_measurements(self):
         problems = []
         for path in sorted(ROOT.rglob("*")):
@@ -799,7 +832,7 @@ class LandingPageTests(unittest.TestCase):
             self.assertIn('base="https://github.com/$REPOSITORY/releases/download/v$VERSION"', read("install.sh"), msg="install.sh must download the kit of its own pinned version.")
 
     def test_faq(self):
-        self.assertEqual(page().summaries, QUESTIONS, msg="docs/index.html FAQ questions differ from QUESTIONS in tests/test_docs.py; change one to match the other.")
+        self.assertEqual([text for where, text in page().summaries if where == "faq"], QUESTIONS, msg="docs/index.html FAQ questions differ from QUESTIONS in tests/test_docs.py; change one to match the other.")
 
     def test_images(self):
         p = page()
@@ -832,17 +865,40 @@ class LandingPageTests(unittest.TestCase):
         for needle in ("prefers-color-scheme: dark", "prefers-reduced-motion", "forced-colors: active", ":focus-visible", "@media print"):
             self.assertIn(needle, page().css, msg=f"docs/index.html CSS must contain {needle}.")
 
-    def test_diagram_has_text_alternatives(self):
-        p = page()
-        diagrams = [attrs for tag, attrs in p.tags if tag == "svg" and attrs.get("role") == "img"]
-        self.assertEqual(len(diagrams), 2, msg="docs/index.html needs the wide and the narrow diagram, each with role=img.")
-        for attrs in diagrams:
+    def test_diagrams_have_text_alternatives(self):
+        p, raw = page(), PAGE.read_text(encoding="utf-8")
+        for attrs in [attrs for tag, attrs in p.tags if tag == "svg" and attrs.get("role") == "img"]:
             refs = attrs.get("aria-labelledby", "").split()
-            self.assertEqual(len(refs), 2, msg="docs/index.html: each diagram is labelled by its title and its desc.")
+            self.assertEqual(len(refs), 2, msg="docs/index.html: each svg diagram is labelled by its title and its desc.")
             for ref in refs:
                 self.assertIn(ref, p.ids, msg=f"docs/index.html: the diagram label {ref} does not exist.")
-        self.assertEqual(len(p.descs), 2, msg="docs/index.html: each diagram needs one desc.")
-        self.assertEqual(p.descs[0], p.descs[1], msg="docs/index.html: the two diagram descriptions must be the same text.")
+        folders = re.search(r'<ol class="folders" aria-label="([^"]+)">(.*?)</ol>', raw, re.S)
+        self.assertTrue(folders and folders.group(1).strip(), msg='docs/index.html: the folder examples are an <ol class="folders"> with an aria-label.')
+        rows = re.findall(r"<li>(.*?)</li>", folders.group(2), re.S)
+        self.assertEqual(len(rows), 3, msg="docs/index.html: the folder examples have three rows.")
+        names = re.findall(r'dict\(id="([^"]+)", cli=', read("providers.py")) if exists("providers.py") else []
+        for row in rows:
+            pill = re.search(r'<span class="pill">(.*?)</span>\s*<span class="f-arrow"', row, re.S)
+            agent = re.sub(r"<[^>]+>|^starts ", "", re.sub(r'<span class="vh">starts </span>', "", pill.group(1) if pill else "")).strip()
+            self.assertIn(agent, names, msg=f"docs/index.html: the folder example agent {agent!r} is not one of providers.HARNESSES.")
+
+    def test_status_table_matches_the_record(self):
+        raw = PAGE.read_text(encoding="utf-8")
+        table = re.search(r'<table class="record[^"]*">(.*?)</table>', raw, re.S)
+        self.assertTrue(table, msg='docs/index.html needs the status table <table class="record"> built from docs/verification.json.')
+        found = {}
+        for row in re.findall(r"<tr>(.*?)</tr>", table.group(1).split("<tbody>", 1)[-1], re.S):
+            label = html.unescape(re.sub(r"<[^>]+>", "", re.search(r"<th[^>]*>(.*?)</th>", row, re.S).group(1))).strip()
+            cells = [[html.unescape(re.sub(r"<[^>]+>", "", li)).strip() for li in re.findall(r"<li>(.*?)</li>", cell, re.S)] for cell in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
+            found[label] = cells
+        expected = {}
+        for system in record()["systems"]:
+            label = system["label"] + (" (preview)" if system["platform"] == "macos" and not mac_gate_met() else "")
+            mine = [r for r in record()["results"] if r["system"] == system["id"]]
+            ok = [CHECKS[c] for c in CHECKS if any(r["check"] == c and r["status"] == "passed" for r in mine)]
+            rest = [CHECKS[c] for c in CHECKS if any(r["check"] == c and r["status"] != "passed" for r in mine)]
+            expected[label] = [ok, rest]
+        self.assertEqual(found, expected, msg="docs/index.html: the status table must list, per system of docs/verification.json, exactly its passed checks and its other checks, in catalogue order.")
 
 
 class ImageTests(unittest.TestCase):
@@ -1100,9 +1156,14 @@ class ChangelogTests(unittest.TestCase):
 
     def test_changelog_shape(self):
         self.assertEqual(self.text.splitlines()[0], "# Changelog", msg="CHANGELOG.md must start with # Changelog.")
-        first = next((t for level, t in headings(self.text) if level == 2), "")
-        self.assertRegex(first, r"^\[" + re.escape(site()["version"]) + r"\] - (unreleased|\d{4}-\d{2}-\d{2})$", msg="CHANGELOG.md: the first entry must be ## [0.4.0] - unreleased or a date.")
-        entry = self.text.split("\n## [", 2)[1] if "\n## [" in self.text else ""
+        entries = self.text.split("\n## [")[1:]
+        if entries and entries[0].startswith("Unreleased]\n"):
+            # Changes on the main branch since the last release come first, in the same heading order.
+            found = [t for level, t in headings(entries.pop(0)) if level == 3]
+            self.assertEqual(found, [h for h in CHANGELOG_HEADINGS if h in found], msg="CHANGELOG.md: the Unreleased headings must keep the order Added, Changed, Fixed, Security, Removed, Known issues.")
+        first = next((t for level, t in headings(self.text) if level == 2 and t != "[Unreleased]"), "")
+        self.assertRegex(first, r"^\[" + re.escape(site()["version"]) + r"\] - (unreleased|\d{4}-\d{2}-\d{2})$", msg="CHANGELOG.md: the first version entry must be ## [0.4.0] - unreleased or a date, after an optional ## [Unreleased].")
+        entry = entries[0] if entries else ""
         found = [t for level, t in headings(entry) if level == 3]
         self.assertEqual(found, [h for h in CHANGELOG_HEADINGS if h in found], msg="CHANGELOG.md: the 0.4.0 headings must keep the order Added, Changed, Fixed, Security, Removed, Known issues.")
         for needed in ("Added", "Known issues"):

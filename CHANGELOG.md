@@ -2,6 +2,17 @@
 
 All notable changes to Agent Workbench are listed here. Versions follow semantic versioning.
 
+## [Unreleased]
+
+### Added
+
+- Run summaries. Every agent launch is recorded as a plain JSON file, `runs/<id>.json` in the data folder. From Run summary on a terminal tab, or from Recent runs, Copy summary copies a Markdown summary of what ran: the agent and its version, the model source, the connection name, the model, context, reasoning, weights, profile, kit, MCP servers, the instruction files with their hashes, the skills and the folder prompt. Copy as JSON copies the same record. You can also see what changed since that run, or use Save as profile to run it again through the usual review-and-apply step. No keys are recorded: no API keys, tokens, environment values, or user names, passwords and query strings from addresses ([Run summaries](docs/sessions.md#run-summaries)).
+- Settings that travel with the folder. Save to this folder writes a named profile to `.agent-workbench/profiles.json`, plain JSON with no keys that is safe to commit, and Folder default marks one profile as the folder's default. When you open the folder on another computer, Workbench offers to review and apply it, never on its own. Connections are matched by name and model files by file name, and Workbench says what to add when one is missing. Where this folder's settings live shows what is kept in the project, in this computer's data folder and in the credential vault ([Settings that travel with the folder](docs/project-setup.md#settings-that-travel-with-the-folder)).
+
+### Changed
+
+- Redesigned project site. The first screen has the install command for each system; the page shows one setup per folder, the three setup steps with screenshots, the two features above, and a status table built from `docs/verification.json`.
+
 ## [0.4.0] - 2026-11-23
 
 ### Added

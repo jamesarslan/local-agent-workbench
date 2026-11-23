@@ -23,12 +23,7 @@ Each kit unpacks to `Agent-Workbench` and includes Python. The first start downl
 
 The downloads are not code-signed or notarised. Your system may warn you before it runs them. Check the SHA-256 first.
 
-| System | File | Check it | Signed |
-| --- | --- | --- | --- |
-| Windows x64 | `agent-workbench-windows-x64.zip` | `Get-FileHash -Algorithm SHA256 <file>`, compare with `SHA256SUMS` | No |
-| Linux x64 | `agent-workbench-linux-x64.tar.gz` | `sha256sum -c SHA256SUMS --ignore-missing` | No |
-| macOS arm64 (preview) | `agent-workbench-macos-arm64.tar.gz` | `shasum -a 256 -c SHA256SUMS --ignore-missing` | No, and not notarised |
-| Source, any system | `agent-workbench-source.tar.gz` | as for Linux | No. Needs your own Python |
+The kits are `agent-workbench-windows-x64.zip`, `agent-workbench-linux-x64.tar.gz` and `agent-workbench-macos-arm64.tar.gz` (preview), plus `agent-workbench-source.tar.gz` for any system with your own Python. Check each against `SHA256SUMS` as shown below.
 
 [Download 0.4.0](https://github.com/jamesarslan/local-agent-workbench/releases/tag/v0.4.0). The install scripts check `SHA256SUMS`, install for your user without sudo or administrator rights, and add a `workbench` command; `--uninstall` (`-Uninstall` on Windows) removes the app and keeps your data.
 
@@ -154,7 +149,13 @@ The **Setup guide** opens on the first start; skip it or reopen it from the side
 4. Project: pick a folder; a suggested starter kit shows every file before writing.
 5. Ready: start the agent in the terminal dock or a window, or later from **Launch**, which remembers the folder's setup.
 
-[Getting started](docs/getting-started.md)
+## Run summaries
+
+Next release, not in 0.4.0. Each agent launch is saved without keys as plain JSON in the data folder. From a terminal tab or Recent runs, copy what ran (agent and version, model and connection, instruction files with hashes, skills, MCP servers and more) as Markdown or JSON, see what changed since, or save it as a profile to run again. [More](docs/sessions.md#run-summaries)
+
+## Where settings live
+
+Next release, not in 0.4.0. Named profiles live in `.agent-workbench/profiles.json` in the project: plain JSON without keys, safe to commit, with an optional folder default that another machine offers to apply after review. Last choices, connections and run records stay in this machine's data folder; keys stay in the credential vault. [More](docs/project-setup.md#settings-that-travel-with-the-folder)
 
 ## Guides
 
@@ -169,18 +170,11 @@ The **Setup guide** opens on the first start; skip it or reopen it from the side
 
 ## Command line
 
-After a script install the command is `workbench`; alone, it opens the app. In a kit folder use `sh workbench.sh cli.py <verb>` or `Run.cmd cli.py <verb>`.
-
-- `doctor`: environment checks, one fix sentence each; `--json` for scripts.
-- `sessions`: running and recent sessions; `--workspace <folder>` for one project.
-- `agent`: starts the saved agent in a new window, or here with `--here`.
-- `status`: the running local model, or Stopped.
-
-All verbs: [Reference](docs/reference.md).
+After a script install the command is `workbench`; alone, it opens the app (in a kit folder: `sh workbench.sh cli.py <verb>` or `Run.cmd cli.py <verb>`). `doctor` checks the environment, `sessions` lists running and recent sessions, `agent` starts the folder's saved agent and `status` shows the local model. All verbs: [Reference](docs/reference.md).
 
 ## Building from source
 
-You need Python 3.12, 3.13 or 3.14; the launchers check it. Git is needed only for Strata, Node only for Pi, Codex, opencode and `npx` kit servers. Start with `sh workbench.sh` (Linux), `sh "Launch Workbench.command"` (macOS) or `Launch Workbench.cmd` (Windows). The first start builds `.venv-linux` (`.venv` on Windows) from the hash-pinned `requirements.lock`, and rebuilds it if incomplete. Tests: `sh workbench.sh -m unittest discover -s tests` or `Run.cmd -m unittest discover -s tests`; see [Contributing](CONTRIBUTING.md).
+You need Python 3.12, 3.13 or 3.14; Git only for Strata, Node only for Pi, Codex, opencode and `npx` kit servers. Start with `sh workbench.sh` (Linux), `sh "Launch Workbench.command"` (macOS) or `Launch Workbench.cmd` (Windows); the first start builds its environment from the hash-pinned `requirements.lock`. Tests: see [Contributing](CONTRIBUTING.md).
 
 ## Licence and credits
 
