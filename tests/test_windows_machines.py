@@ -502,6 +502,29 @@ class MissingKeychainTest(unittest.TestCase):
             self.assertTrue(connections.vault_status()["available"])
 
 
+class ManagedNodeOmpTest(unittest.TestCase):
+    def test_omp_names_the_machine_node_model(self):
+        import runtime
+
+        home = Path(tempfile.mkdtemp())
+        work = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, home, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, work, ignore_errors=True)
+        s = dict(runtime.settings(), workspace=str(work), model="", context=32768, search=False, firecrawl=False, blender=False, vision=False)
+        fake = type(sys)("project_setup")
+        fake.omp_entries = lambda s, taken: {}
+        fake.project_config_allowed = lambda workspace: False
+        with (
+            patch.dict(sys.modules, {"project_setup": fake}),
+            patch.object(Path, "home", return_value=home),
+            patch.object(shutil, "which", return_value="omp"),
+        ):
+            cmd = runtime.omp_command(s, profile_name="workbench-x", base="http://127.0.0.1:5/v1", model_id=runtime.ALIAS, env_key="K")
+        folder = Path(cmd[cmd.index("--config") + 1]).parent
+        models = json.loads((folder / "models.yml").read_text())
+        self.assertEqual(models["providers"]["workbench"]["models"][0]["name"], "local-agent")
+
+
 class WindowsNodeTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

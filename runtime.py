@@ -1359,7 +1359,8 @@ def omp_command(
     )
     entry = dict(
         id=model_id,
-        name=model.stem if model_id == ALIAS else model_id,
+        # A machine's managed node also serves "local-agent", and there is no local file to name it after.
+        name=(model.stem or model_id) if model_id == ALIAS else model_id,
         input=["text", "image"] if vision else ["text"],
         reasoning=s["thinking"] != "off",
         contextWindow=int(s["context"]),
