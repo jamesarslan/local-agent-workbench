@@ -227,24 +227,28 @@ class ProfileFileTest(ProjectCase):
         manifest.write_bytes(b"\xef\xbb\xbf" + json.dumps(content).encode())
         self.assertEqual(projects.load_manifest(manifest), content)
 
+    def test_lock_stays_out_of_the_project_folder(self):
+        file = self.put({"a": {}})
+        old = file.with_name("profiles.json.lock")
+        old.write_bytes(b"")
+        projects.save_project(self.s, "Research")
+        self.assertEqual(sorted(p.name for p in file.parent.iterdir()), ["profiles.json"])
+        lock = projects._profile_lock(file)
+        self.assertEqual(lock.parent, self.data / "locks")
+        self.assertNotEqual(lock, projects._profile_lock(self.tmp / "other" / file.name))
+        old.write_text("not ours", encoding="utf8")
+        self.assertTrue(projects.edit_profile(self.work, "a", "remove"))
+        self.assertEqual(old.read_text(encoding="utf8"), "not ours")
+
     @unittest.skipIf(os.name == "nt", "symlinks need extra rights on Windows")
-    def test_lock_link_is_refused_by_name(self):
+    def test_old_lock_link_is_not_followed(self):
         victim = self.tmp / "victim.txt"
         victim.write_text("keep")
         file = self.put({"a": {}})
-        lock = file.with_name("profiles.json.lock")
-        lock.symlink_to(victim)
-        for call in (
-            lambda: projects.save_project(self.s, "Research"),
-            lambda: projects.edit_profile(self.work, "a", "remove"),
-        ):
-            with self.assertRaisesRegex(
-                ValueError, r"^\.agent-workbench/profiles\.json\.lock goes through a link"
-            ):
-                call()
+        file.with_name("profiles.json.lock").symlink_to(victim)
+        self.assertTrue(projects.edit_profile(self.work, "a", "remove"))
         self.assertEqual(victim.read_text(), "keep")
-        self.assertEqual(json.loads(file.read_text()), {"a": {}})
-        self.assertEqual(projects.project_names(self.work), ["a"])
+        self.assertTrue(file.with_name("profiles.json.lock").is_symlink())
 
     def test_write_failures_say_what_to_do(self):
         file = self.put({"a": {}})
@@ -263,7 +267,7 @@ class ProfileFileTest(ProjectCase):
     @unittest.skipIf(os.name == "nt", "Windows reports a folder in the way as a busy lock")
     def test_lock_that_cannot_be_opened_says_what_to_do(self):
         file = self.put({"a": {}})
-        file.with_name("profiles.json.lock").mkdir()
+        projects._profile_lock(file).mkdir(parents=True)
         for call in (
             lambda: projects.save_project(self.s, "Research"),
             lambda: projects.edit_profile(self.work, "a", "remove"),
@@ -312,13 +316,13 @@ class ProfileFileTest(ProjectCase):
         self.assertEqual(file.read_text(encoding="utf8"), content)
         self.assertEqual(
             sorted(p.name for p in file.parent.iterdir()),
-            ["profiles.json", "profiles.json.lock"],
+            ["profiles.json"],
         )
 
     def test_busy_profile_lock_gives_up(self):
         file = self.put({"a": {}})
         with (
-            FileLock(str(file) + ".lock"),
+            FileLock(str(projects._profile_lock(file))),
             patch.object(projects, "LOCK_WAIT", 0.1),
         ):
             for call in (
