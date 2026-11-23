@@ -118,7 +118,7 @@
       .plain li::marker { color: var(--accent); }
       .small { font-size: 15px; color: var(--muted); }
       .more { margin: 26px 0 0; }
-      .badge { display: inline-block; margin: 0 0 12px; padding: 3px 10px; border-radius: 999px; background: var(--note-bg); color: var(--note-ink); font-size: 13px; font-weight: 700; }
+      .badge { display: inline-block; margin: 0 0 12px; padding: 3px 10px; border-radius: 8px; background: var(--note-bg); color: var(--note-ink); font-size: 13px; font-weight: 700; }
 
       .hero { position: relative; border-top: 0; padding: 48px 0 72px; background: radial-gradient(60% 55% at 90% 0%, var(--glow), transparent 70%), radial-gradient(45% 45% at 0% 0%, var(--glow), transparent 70%); }
       .hero-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 48px; align-items: start; }
@@ -216,6 +216,8 @@
       .checks { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 0; padding: 0; list-style: none; }
       .checks li { padding: 1px 8px; border: 1px solid var(--edge); border-radius: 10px; background: var(--raised); font-size: 13.5px; color: var(--text); }
       .record td:nth-child(2) li { border-color: var(--ok); }
+      .record td:nth-child(2) li::before { content: "\2713\00a0"; color: var(--ok); font-weight: 700; }
+      .fields code, .plain code { font-size: 0.84em; }
 
       .faq { max-width: 840px; margin-top: 28px; }
       details.q { border-top: 1px solid var(--edge); }
@@ -236,9 +238,9 @@
       @media (max-width: 960px) {
         .hero-grid, .feature { grid-template-columns: minmax(0, 1fr); gap: 32px; }
         .feature.flip > .shot { order: 0; }
-        .folders li { grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; }
-        .f-dir, .f-src { grid-column: 1 / -1; }
-        .folders .f-arrow:nth-of-type(4) { display: none; }
+        .folders li { grid-template-columns: 8.5rem auto minmax(0, 1fr); gap: 8px 12px; }
+        .f-dir { grid-column: 1 / -1; }
+        .folders .f-arrow:nth-of-type(2) { display: none; }
         nav ul { overflow-x: auto; }
       }
       @media (max-width: 760px) {
@@ -248,6 +250,10 @@
         .stack td::before { content: attr(data-label); display: block; margin-bottom: 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
         .stack tr { border-bottom: 1px solid var(--edge); }
         .stack th, .stack td { border: 0; padding-bottom: 4px; }
+        .stack tbody tr { padding: 8px 0 12px; }
+        .stack tbody th { font-size: 16px; }
+        .moves li { position: relative; padding-left: 56px; }
+        .moves li::before { position: absolute; left: 18px; top: 18px; margin: 0; }
       }
       @media (max-width: 480px) {
         body { font-size: 16px; }
@@ -258,6 +264,9 @@
         .hero-shot { margin-top: 36px; }
         pre { padding: 11px 12px; font-size: 0.8em; }
         footer ul { grid-template-columns: max-content; }
+        .folders li { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+        .folders .f-arrow { display: none; }
+        .f-src { padding-left: 12px; border-left: 2px solid var(--accent-soft); }
       }
       @media (forced-colors: active) {
         .tab-input:checked + label { border-color: Highlight; background: Highlight; color: HighlightText; }
@@ -684,68 +693,79 @@ Expand-Archive agent-workbench-windows-x64.zip -DestinationPath .</code></pre>
 
       <section id="runs" aria-labelledby="runs-h">
         <div class="wrap">
-          <p class="badge">Next release · not in the 0.4.0 download</p>
+          <p class="badge">New in the next release · not in the 0.4.0 download</p>
           <h2 id="runs-h">Run summaries</h2>
           <p class="intro">
-            Every agent launch is recorded as a plain JSON file in Workbench's data folder. Weeks later, after the
-            folder's setup has changed, you can still see exactly what ran and start it again.
+            Each agent Workbench starts in a folder leaves a run record in this computer's data folder: plain JSON,
+            no keys. After the folder's profile or instruction files have changed, the record still says what that
+            run used, so you can copy it into an issue or start from it again.
           </p>
           <div class="split">
             <div class="card">
               <h3>What a summary holds</h3>
               <ul class="fields">
                 <li>Agent and its version</li>
-                <li>Model source and connection name</li>
-                <li>Model, context and reasoning</li>
-                <li>Model weights file</li>
-                <li>Profile and starter kit</li>
-                <li>MCP servers</li>
-                <li>Instruction files, each with its hash</li>
-                <li>Skills</li>
-                <li>The folder's prompt</li>
+                <li>Where it started: terminal dock, own window or resumed session</li>
+                <li>Model source, connection name and API address (scheme, host and port only)</li>
+                <li>Model ID, context size and reasoning effort</li>
+                <li>For a local model: engine and weights file, with its <span class="nowrap">SHA-256</span> when it is in the catalogue</li>
+                <li>Profile and starter kit in use</li>
+                <li>MCP servers the agent received</li>
+                <li>Instruction files, each with its size and <span class="nowrap">SHA-256</span></li>
+                <li>Skills, each with its <span class="nowrap">SHA-256</span></li>
+                <li>The folder prompt, when the agent received it</li>
+                <li>Workbench version</li>
               </ul>
             </div>
             <div class="card">
               <h3>What you can do with it</h3>
               <ul class="plain">
-                <li>Open <b class="ui">Run summary</b> on a terminal tab, or pick a launch from <b class="ui">Recent runs</b>.</li>
-                <li><b class="ui">Copy summary</b> puts Markdown on the clipboard, ready for an issue or your notes. <b class="ui">Copy as JSON</b> gives the same record as data.</li>
-                <li>See what changed since that run: the agent version, model, instruction files or skills that differ now.</li>
-                <li><b class="ui">Save as profile</b> turns the run into a named profile, so you can run it again through the usual review-and-apply step.</li>
+                <li>On the tab of an agent Workbench started, <b class="ui">Run summary</b> in the terminal dock opens that run. <b class="ui">Project setup</b> → <b class="ui">Recent runs</b> lists the folder's newest runs, each with a <b class="ui">Summary…</b> button.</li>
+                <li><b class="ui">Copy summary</b> copies it as Markdown, ready for an issue or your notes. <b class="ui">Copy as JSON</b> copies the full record.</li>
+                <li>The summary ends with <em>Changed since this run</em>: the instruction files and skills that changed, are gone or are new in the folder now.</li>
+                <li><b class="ui">Save as profile</b> writes the run's choices to <code>.agent-workbench/profiles.json</code> under a new name. Apply it from <b class="ui">Project profiles</b>, after the usual review, to run the task again.</li>
               </ul>
             </div>
           </div>
           <p class="note">
-            No keys are recorded: no API keys, tokens or environment values, and no user name, password or query
-            string from an address.
+            No keys are recorded: no API keys, tokens or environment values, and no user name, password, path or query
+            string from an address. A run keeps the hash of each instruction file, not its text; commit those files
+            and the hash tells you which version ran. Codex and runs on an agent's own account do not receive the
+            folder prompt, so their summaries say "No prompt."
+          </p>
+          <p class="small more">
+            Runs stay on this computer: one JSON file per folder in <code>runs/</code> in the data folder, with the
+            newest 100 runs. Agents started on another machine over SSH and from the command line are not recorded.
+            <a href="https://github.com/jamesarslan/local-agent-workbench/blob/main/docs/sessions.md#run-summaries">Run summaries in detail</a>
           </p>
         </div>
       </section>
 
       <section id="portable" aria-labelledby="portable-h">
         <div class="wrap">
-          <p class="badge">Next release · not in the 0.4.0 download</p>
+          <p class="badge">New in the next release · not in the 0.4.0 download</p>
           <h2 id="portable-h">Settings that travel with the folder</h2>
           <p class="intro">
-            Named profiles live in <code>.agent-workbench/profiles.json</code> inside the project. The file is plain
-            JSON with no keys and no machine paths, so it is safe to commit.
+            A folder's setup is kept in plain files you can read, diff and commit. Named profiles live in
+            <code>.agent-workbench/profiles.json</code> inside the project, next to its MCP server list, instructions
+            and skills. The file holds no keys, addresses or machine paths, so it is safe to commit.
           </p>
           <h3 class="sub">From one machine to the next</h3>
           <ol class="moves">
-            <li><b class="ui">Save to this folder</b> stores the current agent, model source, connection name, model and tool switches as a named profile.</li>
-            <li>Mark one profile as the <b class="ui">Folder default</b>. Commit the file with the project.</li>
-            <li>Open the folder on another machine. Workbench offers to review and apply the default profile; it never applies it on its own.</li>
-            <li>Connections are matched by name and model files by file name. When one is missing, Workbench says what to add, and where.</li>
+            <li>On <b class="ui">Launch</b>, <b class="ui">Save as folder default</b> writes the current agent, kind of model source, connection name, model, engine settings and tool switches into that file as the folder default. In <b class="ui">Project profiles</b>, <b class="ui">Make default</b> does the same for a saved profile.</li>
+            <li>Commit <code>.agent-workbench/</code> with the project. The default profile carries the <b class="ui">Folder default</b> label in <b class="ui">Project profiles</b>.</li>
+            <li>Open the folder on a machine that has no setup for it yet. <b class="ui">Launch</b> says "This folder has saved settings" and offers a <b class="ui">Review and apply…</b> button. Nothing changes until you confirm.</li>
+            <li>Connections are matched by name and model files by file name. When one is missing, the review says which connection or model file to add. Keys are entered again on each computer.</li>
           </ol>
           <div class="portable-table">
             <h3>Where settings live</h3>
-            <p class="small">In the app, <b class="ui">Where this folder's settings live</b> shows the same for the folder you have open.</p>
+            <p class="small">In the app, <b class="ui">Where this folder's settings live</b> in <b class="ui">Project profiles</b> lists these for the open folder, each with <b class="ui">Show in folder</b>.</p>
             <div class="table">
               <table class="stack">
                 <thead><tr><th scope="col">Place</th><th scope="col">What it holds</th><th scope="col">Travels with the folder</th></tr></thead>
                 <tbody>
-                  <tr><th scope="row">The project folder, <code class="nowrap">.agent-workbench/</code></th><td data-label="What it holds">Named profiles and which one is the folder default (<code>profiles.json</code>); the project's MCP server list, without secrets (<code>project.json</code>)</td><td data-label="Travels with the folder">Yes, safe to commit</td></tr>
-                  <tr><th scope="row">This machine's data folder</th><td data-label="What it holds">Last choices per folder, connections and their addresses, consent answers, run records</td><td data-label="Travels with the folder">No</td></tr>
+                  <tr><th scope="row">The project folder</th><td data-label="What it holds">Named profiles and the folder default (<code>.agent-workbench/profiles.json</code>), the project's MCP servers without secrets (<code>.agent-workbench/project.json</code>), instruction files such as <code>AGENTS.md</code>, and skills in <code>.agents/skills</code></td><td data-label="Travels with the folder">Yes, safe to commit</td></tr>
+                  <tr><th scope="row">This computer's data folder</th><td data-label="What it holds">Last choices per folder (<code>projects.json</code>), connections with their addresses but no keys (<code>connections.json</code>), run records (<code>runs/</code>)</td><td data-label="Travels with the folder">No</td></tr>
                   <tr><th scope="row">The system credential vault</th><td data-label="What it holds">API keys and values for MCP server variables</td><td data-label="Travels with the folder">No, never written to a file</td></tr>
                 </tbody>
               </table>
@@ -878,23 +898,28 @@ Expand-Archive agent-workbench-windows-x64.zip -DestinationPath .</code></pre>
             <details class="q">
               <summary>Does it keep per-folder config in plain files?</summary>
               <p>
-                Yes. Named profiles are in <code>.agent-workbench/profiles.json</code> inside the project folder:
-                plain JSON with the agent, the kind of model source, the model, engine settings, tool switches, a
-                prompt, the connection's name and the model file's name, but no keys, addresses or machine paths.
-                Commit it and it moves with the project. The last choices for each folder on this computer are in
-                <code>projects.json</code> in Workbench's data folder, also plain JSON, and they stay on this
-                computer. Keys are only in the system credential vault. Saving to the folder in 0.4.0 is Save profile
-                on the Project profiles tab; marking a folder default and the offer to apply it on another machine come
-                in the next release.
+                Yes. What should move with a project is in the project folder:
+                <code>.agent-workbench/profiles.json</code> holds named profiles (the agent, the kind of model source,
+                the model, engine settings, tool switches, a prompt, the connection's name and the model file's name),
+                <code>.agent-workbench/project.json</code> the MCP servers, next to your instruction files and skills. These
+                are plain text files, and Workbench writes no keys, addresses or machine paths into them, so commit
+                them and clone the project on the next machine. There you add the connection under the same name with its key, and the model file;
+                applying the profile tells you which are missing. Last choices, connections and run records stay in
+                this computer's data folder, also plain JSON, and keys stay in the credential vault. Profiles and
+                <b class="ui">Save profile</b> are in 0.4.0. New in the next release: a folder default, which a
+                machine that has not opened the folder yet offers with a <b class="ui">Review and apply…</b> button.
               </p>
             </details>
             <details class="q">
-              <summary>Can I see later exactly what a run used?</summary>
+              <summary>Can I rerun an old task after the folder's setup has changed?</summary>
               <p>
-                From the next release, yes: every launch is recorded as a run summary with the agent and its version,
-                the model, the connection name, the instruction files with their hashes, the skills and MCP servers.
-                Copy it as Markdown or JSON, see what changed since, or save it as a profile and run it again. No keys
-                are recorded.
+                New in the next release. Every agent the app starts in a folder on this computer leaves a run summary: the agent and
+                its version, the model source, connection name and model, the instruction files with their SHA-256,
+                the skills, the MCP servers and the folder prompt if the agent received it. <b class="ui">Copy summary</b>
+                copies it as Markdown and <b class="ui">Copy as JSON</b> as data. Its last part lists the instruction
+                files and skills that changed since. <b class="ui">Save as profile</b> turns the run's choices back
+                into a profile you review and apply. A run keeps file hashes, not file contents, so the old
+                instruction text comes from your Git history. No keys are recorded.
               </p>
             </details>
             <details class="q">

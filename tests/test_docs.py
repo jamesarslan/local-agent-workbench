@@ -113,7 +113,7 @@ HEADINGS = [
 QUESTIONS = [
     "What does it cost, and what are you selling?",
     "Does it keep per-folder config in plain files?",
-    "Can I see later exactly what a run used?",
+    "Can I rerun an old task after the folder's setup has changed?",
     "I already use Ollama or LM Studio. What does this add?",
     "Do I need a GPU?",
     "Which agents can it start, and with which models?",
@@ -833,6 +833,13 @@ class LandingPageTests(unittest.TestCase):
 
     def test_faq(self):
         self.assertEqual([text for where, text in page().summaries if where == "faq"], QUESTIONS, msg="docs/index.html FAQ questions differ from QUESTIONS in tests/test_docs.py; change one to match the other.")
+
+    def test_ui_labels_exist_in_the_interface(self):
+        interface = interface_text()
+        labels = [html.unescape(re.sub(r"<[^>]+>", "", m)).strip() for m in re.findall(r'<b class="ui">(.*?)</b>', PAGE.read_text(encoding="utf-8"), re.S)]
+        missing = [label for label in labels if label not in interface]
+        self.assertTrue(labels, msg='docs/index.html marks interface labels with <b class="ui">.')
+        self.assertEqual(missing, [], msg='docs/index.html: these <b class="ui"> labels are not in the interface; use the label the app shows: ' + ", ".join(missing))
 
     def test_images(self):
         p = page()
