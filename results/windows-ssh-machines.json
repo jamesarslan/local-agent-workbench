@@ -43,7 +43,7 @@
       "label": "llama.cpp server",
       "models": [
        {
-        "id": "C:\\Users\\<x>\\testai\\models\\Qwen3.8-27B-UD-Q4_K_XL.gguf",
+        "id": "<path>",
         "context": 32768
        }
       ],
@@ -87,7 +87,7 @@
       "exit": 1,
       "seconds": 179.6,
       "file_text": null,
-      "note": ". This is a server-side issue, usually temporary — try again in a moment. If it persists, check your inference gateway (<ip>:60071).\n\n[claude-code:unrecognized_model] {\"model\":\"C:\\\\Users\\\\<x>\\\\testai\\\\models\\\\Qwen3.8-27B-UD-Q4_K_XL.gguf\",\"query_source\":\"sdk\"}\n"
+      "note": ". This is a server-side issue, usually temporary — try again in a moment. If it persists, check your inference gateway (<ip>:60071).\n\n[claude-code:unrecognized_model] {\"model\":\"<path>\",\"query_source\":\"sdk\"}\n"
      }
     },
     "terminal": {
@@ -95,7 +95,7 @@
      "lasting": false,
      "folder_shown_on_screen": true,
      "cleanup": [],
-     "screen_excerpt": " commands:/init - create an AGENTS.md file with instructions for Codex/status - show current session configuration/permissions - choose what Codex is allowed to do/model - choose what model and reasoning effort to use/review - review any changes and find issues ›Ask Codex to do anything GPT-6.2-Astra high fast·~\\AppData\\Local\\Temp\\awb-term-2g0n89zt\\it's $x `y; & ü’q [1] %OS%←agens · ?forshortcuts⚠2 warnings·f2toview3"
+     "screen_excerpt": " commands:/init - create an AGENTS.md file with instructions for Codex/status - show current session configuration/permissions - choose what Codex is allowed to do/model - choose what model and reasoning effort to use/review - review any changes and find issues ›Ask Codex to do anything GPT-6.2-Astra high <redacted>'s $x `y; & ü’q [1] %OS%←agens · ?forshortcuts⚠2 warnings·f2toview3"
     },
     "detach_ok": true
    },
@@ -109,7 +109,7 @@
      "context": 32768
     },
     "connect": {
-     "endpoint": "http://<ip>:55667/v1",
+     "endpoint": "<redacted>",
      "model": "local-agent",
      "machine": "windows-rtx",
      "connection_id": "0942fb93f12c06b3"
@@ -255,7 +255,7 @@
      "os": "posix"
     },
     "connect": {
-     "endpoint": "http://<ip>:60519/v1",
+     "endpoint": "<redacted>",
      "model": "local-agent",
      "machine": "fedora-amd",
      "connection_id": "0848b155341878a7"
@@ -294,7 +294,7 @@
      "exit": 1,
      "seconds": 35.3,
      "file_text": null,
-     "note": "t (13415 tokens) exceeds the available context size (8192 tokens), try increasing it (type=exceed_context_size_error)\nraw-http-request=/Users/<user>/.omp/profiles/workbench-acbd822f03b1-3eae58bdbcbc/logs/http-400-requests/1795455403395-273vienzpsauf.json\n"
+     "note": "t (13415 tokens) exceeds the available context size (8192 tokens), try increasing it (type=exceed_context_size_error)\nraw-http-request=<path>\n"
     }
    }
   }
