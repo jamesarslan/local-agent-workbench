@@ -1709,9 +1709,11 @@ class UnslothTest(EngineCase):
         )
         self.assertEqual(events[-1]["message"], "Unsloth's llama.cpp Metal build is ready.")
         self.assertEqual(setup_engines.unsloth_installed(), UNSLOTH_MAC)
-        with patch.object(runtime, "system", return_value="macos"):
-            found = runtime.locate(LLAMA_TARGET, "llama-server.exe", "Unsloth")
-        self.assertEqual(found, (folder, folder / "build" / "llama-server"))
+        if os.name != "nt":
+            # locate() picks the executable name from the host, and this archive is the macOS one.
+            with patch.object(runtime, "system", return_value="macos"):
+                found = runtime.locate(LLAMA_TARGET, "llama-server.exe", "Unsloth")
+            self.assertEqual(found, (folder, folder / "build" / "llama-server"))
         again = setup_engines.install(release="unsloth")
         self.assertEqual((again["installed"], again["skipped"]), ([], [UNSLOTH_MAC]))
 
