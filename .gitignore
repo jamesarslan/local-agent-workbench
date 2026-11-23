@@ -1,0 +1,17 @@
+.local/
+.venv/
+__pycache__/
+*.pyc
+.env
+*.gguf*
+*.strata
+models/
+.venv-linux/
+.env.*
+*.pem
+.ruff_cache/
+.superdesign/
+node_modules/
+python/
+dist/
+.DS_Store

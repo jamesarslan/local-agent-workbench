@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "id": "gamedev",
+  "label": "Game development",
+  "summary": "For game projects: follow the engine's layout, leave serialised assets to the editor and test from the command line.",
+  "works_with": "Godot, Unity, Unreal Engine",
+  "version": "0.4.0",
+  "priority": 70,
+  "detect": {
+    "strong": [
+      {"file": "project.godot"},
+      {"glob": "*.uproject"},
+      {
+        "all": [
+          {"file": "ProjectSettings/ProjectVersion.txt"},
+          {"dir": "Assets"},
+          {"file": "Packages/manifest.json"}
+        ]
+      }
+    ],
+    "weak": [
+      {"glob": "*.gd"},
+      {"glob": "*.tscn"},
+      {"glob": "*.tres"},
+      {"glob": "*.gdshader"},
+      {"glob": "*.unity"},
+      {"glob": "*.prefab"},
+      {"glob": "*.asmdef"},
+      {"glob": "Source/*.Target.cs"},
+      {"file": "Config/DefaultEngine.ini"},
+      {"dir": "Content"}
+    ]
+  },
+  "skills": [
+    {"name": "workbench-game-project-for-godot", "when": {"file": "project.godot"}},
+    {"name": "workbench-game-project-for-unity", "when": {"file": "ProjectSettings/ProjectVersion.txt"}},
+    {"name": "workbench-game-project-for-unreal", "when": {"glob": "*.uproject"}},
+    {"name": "workbench-gameplay-debug"},
+    {"name": "workbench-game-assets"}
+  ],
+  "mcp": [
+    {
+      "name": "godot",
+      "label": "Godot MCP",
+      "publisher": "Coding-Solo (community)",
+      "source": "https://github.com/Coding-Solo/godot-mcp",
+      "license": "MIT",
+      "version": "0.1.1",
+      "checked": "registry",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@coding-solo/godot-mcp@0.1.1"],
+      "requires": ["node"],
+      "default": false,
+      "network": "None documented; it drives your local Godot editor.",
+      "warning": "Community project. Starts the editor and runs project code. Off by default: this npm build predates a security fix made upstream in April 2026."
+    },
+    {
+      "name": "unreal",
+      "label": "Unreal MCP",
+      "publisher": "Epic Games",
+      "source": "https://dev.epicgames.com/documentation/unreal-engine/unreal-mcp-in-unreal-editor",
+      "license": "Unreal Engine licence",
+      "version": "ships with the editor (5.9 docs)",
+      "checked": "registry",
+      "transport": "http",
+      "url": "http://127.0.0.1:8000/mcp",
+      "requires": [],
+      "default": true,
+      "when": {"glob": "*.uproject"},
+      "network": "This computer only: the editor at 127.0.0.1:8000.",
+      "warning": "Experimental engine feature with no authentication; keep it on this computer."
+    },
+    {
+      "name": "mcp-for-unity",
+      "label": "MCP for Unity",
+      "publisher": "CoplayDev (community)",
+      "source": "https://github.com/CoplayDev/unity-mcp",
+      "license": "MIT",
+      "version": "10.3.0",
+      "checked": "registry",
+      "transport": "stdio",
+      "command": "uvx",
+      "args": ["--from", "mcpforunityserver==10.3.0", "mcp-for-unity", "--transport", "stdio"],
+      "env": {"DISABLE_TELEMETRY": "true"},
+      "requires": ["uv"],
+      "default": true,
+      "when": {"file": "ProjectSettings/ProjectVersion.txt"},
+      "network": "A local bridge to the Unity Editor. Usage telemetry is switched off here.",
+      "warning": "Community project, not affiliated with Unity. Edits scripts and assets in the editor."
+    },
+    {
+      "builtin": "blender",
+      "label": "Blender tools",
+      "requires": ["uv"],
+      "default": false,
+      "network": "A local connection to the Blender add-on. Asset sites only when you use those features.",
+      "warning": "Runs Python code inside Blender."
+    }
+  ]
+}

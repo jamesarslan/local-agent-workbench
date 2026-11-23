@@ -1,0 +1,10 @@
+{
+  "ChatWeights": "Qwen3.8-27B-UD-Q4_K_XL.gguf",
+  "ChatContext": 65536,
+  "ChatMtp": 3,
+  "ChatTokensPerSecond": 115.0032391805245,
+  "CodingWeights": "Qwen3.8-27B-UD-Q4_K_XL.gguf",
+  "CodingContext": 131072,
+  "CodingMtp": 3,
+  "CodingTokensPerSecond": 137.70225874992158
+}

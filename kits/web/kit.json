@@ -1,0 +1,159 @@
+{
+  "schema": 1,
+  "id": "web",
+  "label": "Web front end",
+  "summary": "For browser apps: run the dev server, check the page in a real browser, keep components consistent.",
+  "works_with": "React, Next.js, Vue, Svelte, Astro",
+  "version": "0.4.0",
+  "priority": 40,
+  "detect": {
+    "strong": [
+      {
+        "package_dep": [
+          "react", "next", "vue", "nuxt", "svelte", "@sveltejs/kit", "astro", "@angular/core",
+          "solid-js", "@remix-run/react", "vite"
+        ]
+      }
+    ],
+    "weak": [
+      {"glob": "next.config.*"},
+      {"glob": "vite.config.*"},
+      {"glob": "astro.config.*"},
+      {"glob": "svelte.config.*"},
+      {"glob": "nuxt.config.*"},
+      {"file": "angular.json"},
+      {"glob": "tailwind.config.*"},
+      {"file": "components.json"},
+      {"glob": "*.tsx"},
+      {"glob": "*.jsx"},
+      {"glob": "*.vue"},
+      {"glob": "*.svelte"},
+      {"glob": "*.astro"}
+    ]
+  },
+  "skills": [
+    {"name": "workbench-browser-verify"},
+    {"name": "workbench-accessibility-check"},
+    {"name": "workbench-component-add"},
+    {"name": "workbench-web-performance"},
+    {"name": "workbench-verify-change"}
+  ],
+  "mcp": [
+    {
+      "name": "playwright",
+      "label": "Playwright MCP",
+      "publisher": "Microsoft",
+      "source": "https://github.com/microsoft/playwright-mcp",
+      "license": "Apache-2.0",
+      "version": "0.0.86",
+      "checked": "registry",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@0.0.86", "--isolated"],
+      "requires": ["node"],
+      "default": true,
+      "network": "Sites the agent opens. Downloads a browser on first use.",
+      "warning": "Runs JavaScript in pages. It is not a security boundary. Opens a visible browser window."
+    },
+    {
+      "name": "chrome-devtools",
+      "label": "Chrome DevTools MCP",
+      "publisher": "Google",
+      "source": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+      "license": "Apache-2.0",
+      "version": "1.13.0",
+      "checked": "registry",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@1.13.0", "--no-usage-statistics", "--no-performance-crux"],
+      "env": {"CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS": "1"},
+      "requires": ["node"],
+      "default": false,
+      "network": "Sites the agent opens. Usage statistics, CrUX lookups and update checks are switched off here.",
+      "warning": "Exposes the content of the browser it controls. Use one browser server, not both."
+    },
+    {
+      "name": "eslint",
+      "label": "ESLint MCP",
+      "publisher": "ESLint",
+      "source": "https://github.com/eslint/rewrite/tree/main/packages/mcp",
+      "license": "Apache-2.0",
+      "version": "0.3.17",
+      "checked": "registry",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@eslint/mcp@0.3.17"],
+      "requires": ["node"],
+      "default": true,
+      "when": {"glob": "eslint.config.*"},
+      "network": "None documented; it lints local files.",
+      "warning": "Runs its own ESLint 10, not your project's, and reads only a flat config (eslint.config.*). TypeScript config files need @eslint/mcp and jiti installed in the project."
+    },
+    {
+      "name": "shadcn",
+      "label": "shadcn MCP",
+      "publisher": "shadcn/ui",
+      "source": "https://github.com/shadcn-ui/ui",
+      "license": "MIT",
+      "version": "4.23.0",
+      "checked": "registry",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "shadcn@4.23.0", "mcp"],
+      "requires": ["node"],
+      "default": true,
+      "when": {"file": "components.json"},
+      "network": "The component registries listed in components.json.",
+      "warning": ""
+    },
+    {
+      "name": "next-devtools",
+      "label": "Next.js DevTools MCP",
+      "publisher": "Vercel",
+      "source": "https://github.com/vercel/next-devtools-mcp",
+      "license": "MIT per npm; no licence file in repo",
+      "version": "0.4.0",
+      "checked": "registry",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "next-devtools-mcp@0.4.0"],
+      "env": {"NEXT_TELEMETRY_DISABLED": "1"},
+      "requires": ["node"],
+      "default": false,
+      "network": "Your local dev server and a documentation gateway. Usage telemetry is switched off here.",
+      "warning": "Needs Next.js 16 or later with the dev server running. Its repository has no licence file."
+    },
+    {
+      "name": "svelte",
+      "label": "Svelte MCP",
+      "publisher": "Svelte",
+      "source": "https://github.com/sveltejs/ai-tools",
+      "license": "MIT",
+      "version": "0.1.31",
+      "checked": "registry",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@sveltejs/mcp@0.1.31"],
+      "requires": ["node"],
+      "default": true,
+      "when": {"glob": "svelte.config.*"},
+      "network": "None documented for this local server.",
+      "warning": ""
+    },
+    {
+      "name": "context7",
+      "label": "Context7",
+      "publisher": "Upstash",
+      "source": "https://github.com/upstash/context7",
+      "license": "MIT (server); hosted backend private",
+      "version": "hosted",
+      "checked": "registry",
+      "transport": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "requires": [],
+      "default": false,
+      "network": "context7.com. Works without a key at a lower rate limit.",
+      "warning": "Hosted service; your question and the library name are sent to it."
+    }
+  ]
+}

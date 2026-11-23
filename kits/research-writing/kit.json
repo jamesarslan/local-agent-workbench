@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "id": "research-writing",
+  "label": "Research and writing",
+  "summary": "For reports, papers and notes: find and cite real sources, draft in passes and check every claim.",
+  "works_with": "Markdown, LaTeX, Quarto, Typst",
+  "version": "0.4.0",
+  "priority": 20,
+  "detect": {
+    "strong": [
+      {
+        "all": [
+          {
+            "mostly": [".md", ".tex", ".bib", ".docx", ".typ", ".qmd", ".rst"],
+            "share": 0.6,
+            "min_files": 3
+          },
+          {
+            "none": [
+              {"file": "package.json"},
+              {"file": "pyproject.toml"},
+              {"file": "requirements.txt"},
+              {"file": "Cargo.toml"},
+              {"file": "go.mod"},
+              {"file": "pom.xml"},
+              {"file": "Makefile"},
+              {"file": "CMakeLists.txt"}
+            ]
+          }
+        ]
+      }
+    ],
+    "weak": [
+      {"file": "references.bib"},
+      {"file": "_quarto.yml"},
+      {"file": "mkdocs.yml"},
+      {"dir": ".obsidian"},
+      {"dir": "drafts"},
+      {"dir": "notes"},
+      {"glob": "*.pdf"}
+    ]
+  },
+  "skills": [
+    {"name": "workbench-source-research"},
+    {"name": "workbench-citations"},
+    {"name": "workbench-outline-draft-revise"},
+    {"name": "workbench-fact-check"},
+    {"name": "workbench-document-convert"}
+  ],
+  "mcp": [
+    {
+      "builtin": "search",
+      "label": "Web search",
+      "requires": [],
+      "default": true,
+      "network": "Public search engines.",
+      "warning": "Public search engines receive the query."
+    },
+    {
+      "builtin": "firecrawl",
+      "label": "Page crawling",
+      "requires": ["docker"],
+      "default": true,
+      "network": "The sites the agent asks it to read.",
+      "warning": "Reads requested pages through local Docker containers."
+    },
+    {
+      "name": "fetch",
+      "label": "Fetch (reference server)",
+      "publisher": "Model Context Protocol",
+      "source": "https://github.com/modelcontextprotocol/servers/tree/main/src/fetch",
+      "license": "MIT",
+      "version": "2026.11.18",
+      "checked": "registry",
+      "transport": "stdio",
+      "command": "uvx",
+      "args": ["mcp-server-fetch@2026.11.18"],
+      "requires": ["uv"],
+      "default": false,
+      "network": "Any public address the agent asks it to read.",
+      "warning": "Reference server, not production-ready. Blocks local/internal addresses by default; never pass --allow-private-ips; a configured proxy is not covered by the guard."
+    },
+    {
+      "name": "arxiv",
+      "label": "arXiv MCP",
+      "publisher": "blazickjp (community)",
+      "source": "https://github.com/blazickjp/arxiv-mcp-server",
+      "license": "Apache-2.0",
+      "version": "0.8.2",
+      "checked": "registry",
+      "transport": "stdio",
+      "command": "uvx",
+      "args": ["arxiv-mcp-server@0.8.2"],
+      "requires": ["uv"],
+      "default": false,
+      "network": "arxiv.org, and the Semantic Scholar API for citation graphs.",
+      "warning": "Paper text is untrusted content. Stores papers in your home folder."
+    },
+    {
+      "name": "markitdown",
+      "label": "MarkItDown MCP",
+      "publisher": "Microsoft",
+      "source": "https://github.com/microsoft/markitdown/tree/main/packages/markitdown-mcp",
+      "license": "MIT",
+      "version": "0.0.1a8",
+      "checked": "registry",
+      "transport": "stdio",
+      "command": "uvx",
+      "args": ["markitdown-mcp@0.0.1a8"],
+      "requires": ["uv"],
+      "default": false,
+      "network": "Any address it is given.",
+      "warning": "Pre-release. Reads any file you can read, and any data from the network, when it is given the address."
+    }
+  ]
+}

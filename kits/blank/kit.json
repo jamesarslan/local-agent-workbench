@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "id": "blank",
+  "label": "Blank",
+  "summary": "Only a short AGENTS.md with the headings every agent reads. No skills and no tools.",
+  "works_with": "",
+  "version": "0.4.0",
+  "priority": 0,
+  "detect": {"strong": [], "weak": []},
+  "skills": [],
+  "mcp": []
+}

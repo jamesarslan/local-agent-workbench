@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "id": "python-data",
+  "label": "Python and data",
+  "summary": "For scripts, packages and notebooks: work inside the project's environment, treat source data as read-only and keep results reproducible.",
+  "works_with": "Python, Jupyter, pandas, Polars, DuckDB",
+  "version": "0.4.0",
+  "priority": 30,
+  "detect": {
+    "strong": [
+      {"file": "pyproject.toml"},
+      {"file": "uv.lock"},
+      {"file": "requirements.txt"},
+      {"file": "environment.yml"},
+      {"file": "Pipfile"},
+      {"file": "setup.py"},
+      {"glob": "*.ipynb"}
+    ],
+    "weak": [
+      {"glob": "*.csv"},
+      {"glob": "*.parquet"},
+      {"glob": "*.duckdb"},
+      {"dir": "notebooks"},
+      {"dir": "data"}
+    ]
+  },
+  "skills": [
+    {"name": "workbench-python-env"},
+    {"name": "workbench-csv"},
+    {"name": "workbench-data-explore"},
+    {"name": "workbench-notebook-hygiene"},
+    {"name": "workbench-plot-to-file"}
+  ],
+  "mcp": [
+    {
+      "name": "duckdb",
+      "label": "DuckDB MCP",
+      "publisher": "MotherDuck",
+      "source": "https://github.com/motherduckdb/mcp-server-motherduck",
+      "license": "MIT",
+      "version": "1.1.1",
+      "checked": "registry",
+      "transport": "stdio",
+      "command": "uvx",
+      "args": ["mcp-server-motherduck@1.1.1", "--db-path", ":memory:", "--read-write"],
+      "requires": ["uv"],
+      "default": true,
+      "network": "None, unless a query names a remote source such as S3.",
+      "warning": "Runs SQL in an in-memory database that is not read-only: queries can read and write local files."
+    },
+    {
+      "name": "jupyter",
+      "label": "Jupyter MCP",
+      "publisher": "Datalayer",
+      "source": "https://github.com/datalayer/jupyter-mcp-server",
+      "license": "BSD-3-Clause",
+      "version": "2.2.6",
+      "checked": "registry",
+      "transport": "stdio",
+      "command": "uvx",
+      "args": ["jupyter-mcp-server@2.2.6"],
+      "env": {"JUPYTER_URL": "http://127.0.0.1:8888"},
+      "env_from": ["JUPYTER_TOKEN"],
+      "requires": ["uv"],
+      "default": false,
+      "network": "Your Jupyter server at 127.0.0.1:8888, with the token you provide.",
+      "warning": "Runs code in your Jupyter kernel. Needs a running JupyterLab with jupyter-collaboration and jupyter-mcp-tools installed."
+    },
+    {
+      "name": "huggingface",
+      "label": "Hugging Face MCP",
+      "publisher": "Hugging Face",
+      "source": "https://github.com/huggingface/hf-mcp-server",
+      "license": "MIT (server source)",
+      "version": "hosted",
+      "checked": "registry",
+      "transport": "http",
+      "url": "https://huggingface.co/mcp",
+      "requires": [],
+      "default": false,
+      "network": "huggingface.co. Without a login it reads public data only.",
+      "warning": "Hosted service; your searches are sent to it."
+    },
+    {
+      "name": "context7",
+      "label": "Context7",
+      "publisher": "Upstash",
+      "source": "https://github.com/upstash/context7",
+      "license": "MIT (server); hosted backend private",
+      "version": "hosted",
+      "checked": "registry",
+      "transport": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "requires": [],
+      "default": false,
+      "network": "context7.com. Works without a key at a lower rate limit.",
+      "warning": "Hosted service; your question and the library name are sent to it."
+    }
+  ]
+}

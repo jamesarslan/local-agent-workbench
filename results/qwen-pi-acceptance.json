@@ -1,0 +1,42 @@
+[
+  {
+    "name": "arithmetic",
+    "passed": false,
+    "answer": "3189",
+    "elapsed_s": 0.405,
+    "finish": "stop",
+    "tokens": 5
+  },
+  {
+    "name": "logic",
+    "passed": false,
+    "answer": "[2,9,1,7]",
+    "elapsed_s": 0.348,
+    "finish": "stop",
+    "tokens": 10
+  },
+  {
+    "name": "coding",
+    "passed": true,
+    "answer": "[0, 0, 6, 15]",
+    "elapsed_s": 0.275,
+    "finish": "stop",
+    "tokens": 14
+  },
+  {
+    "name": "extraction",
+    "passed": true,
+    "answer": "{\"bolts\": 17, \"nuts\": 4}",
+    "elapsed_s": 0.234,
+    "finish": "stop",
+    "tokens": 15
+  },
+  {
+    "name": "tool round trip",
+    "passed": true,
+    "answer": "HERON-8107",
+    "elapsed_s": 0.679,
+    "finish": "tool_calls",
+    "tokens": 37
+  }
+]

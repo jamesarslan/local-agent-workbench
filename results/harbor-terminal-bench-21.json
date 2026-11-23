@@ -1,0 +1,36 @@
+[
+  {
+    "model": "deepseek/deepseek-v4.1-flash-1017",
+    "agent": "OMP 18.12.5",
+    "dataset": "terminal-bench/terminal-bench-2-1",
+    "reasoning": "high",
+    "unique_tasks": 89,
+    "passed": 71,
+    "attempts": 89,
+    "errored": 6,
+    "mean": 0.797752808988764,
+    "wall_seconds": 17098,
+    "harbor_cost_usd": null,
+    "reported_model_spend_usd": 5.85,
+    "concurrency": 3,
+    "skills": false,
+    "extensions": false
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash-1017",
+    "agent": "OMP 18.12.5",
+    "dataset": "terminal-bench/terminal-bench-2-1",
+    "reasoning": "max",
+    "unique_tasks": 89,
+    "passed": 78,
+    "attempts": 89,
+    "errored": 4,
+    "mean": 0.8764044943820225,
+    "wall_seconds": 20171,
+    "harbor_cost_usd": null,
+    "reported_model_spend_usd": 9.21,
+    "concurrency": 3,
+    "skills": false,
+    "extensions": false
+  }
+]

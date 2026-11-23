@@ -1,0 +1,237 @@
+{
+  "machine": {
+    "chip": "Apple M3 Max",
+    "unified_memory_gib": 48.0,
+    "os": "macOS 27.2.1",
+    "power": "battery",
+    "note": "Measured on battery power. The 27B runs show decode falling after long prompts in a pattern consistent with power throttling; treat their speeds as lower bounds and rerun on mains power before quoting them."
+  },
+  "engine": {
+    "name": "llama.cpp",
+    "build": "b12633",
+    "backend": "Metal",
+    "flags": "--jinja -fa on -ngl all -np 1 --no-mmproj",
+    "context": 32768,
+    "kv": "f16 (engine default)"
+  },
+  "model": {
+    "file": "Qwen3.5-9B-Q4_K_M.gguf",
+    "hf_repo": "unsloth/Qwen3.5-9B-GGUF",
+    "size_bytes": 5680522464,
+    "sha256": "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8"
+  },
+  "memory": {
+    "peak_server_rss_gib": 8.57,
+    "available_before_gib": 34.55,
+    "min_available_gib": 26.03,
+    "swap_growth_gib": 0.0
+  },
+  "date": "2026-11-22",
+  "benchmark": {
+    "condition": "Qwen3.5-9B-Q4_K_M.gguf",
+    "model": "local-agent",
+    "parallel": 1,
+    "median_decode_tps": 54.423,
+    "median_ttft_s": 0.1621,
+    "checks_passed": 1,
+    "checks_total": 5,
+    "speed": [
+      {
+        "text": "```python\nimport time\nimport threading\nfrom collections import OrderedDict\nfrom typing import Any, Optional, Tuple\n\n\nclass LRUCacheWithTTL:\n    \"\"\"\n    A thread-safe LRU cache with Time-To-Live (TTL) support.\n    Uses a monotonic clock for accurate expiration times.\n    \"\"\"\n\n    def __init__(self, max_size: int = 128, default_ttl: float = 60.0):\n        \"\"\"\n        Initialize the cache.\n\n        :param max_size: Maximum number of items to store.\n        :param default_ttl: Default time-to-live in seconds for new items.\n        \"\"\"\n        if max_size <= 0:\n            raise ValueError(\"max_size must be a positive integer\")\n        if default_ttl <= 0:\n            raise ValueError(\"default_ttl must be a positive number\")\n\n        self._max_size = max",
+        "tool_calls": [],
+        "ttft_s": 0.1568,
+        "wall_s": 3.5525,
+        "prefill_tps": 354.2679446554744,
+        "decode_tps": 56.248,
+        "prompt_tokens": 54,
+        "completion_tokens": 192,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "code-1-1",
+        "text_sha256": "2eef4107581dcc3b5fd87bb06dfc99b4564af3d93d8fcb459d838ab44759858c"
+      },
+      {
+        "text": "```rust\nuse std::collections::VecDeque;\nuse std::sync::{Arc, Mutex};\n\n/// A bounded FIFO queue implementation using VecDeque.\n/// \n/// # Safety\n/// This implementation is not thread-safe by default. Use Arc<Mutex<>> or Arc<RwLock<>>\n/// if concurrent access is required.\npub struct BoundedFifoQueue<T> {\n    inner: VecDeque<T>,\n    capacity: usize,\n}\n\nimpl<T> BoundedFifoQueue<T> {\n    /// Creates a new bounded FIFO queue with the specified capacity.\n    pub fn new(capacity: usize) -> Self {\n        BoundedFifoQueue {\n            inner: VecDeque::with_capacity(capacity),\n            capacity,\n        }\n    }\n\n    /// Pushes an element onto the queue.\n    /// Returns `Ok(())` if successful, `Err(",
+        "tool_calls": [],
+        "ttft_s": 0.1583,
+        "wall_s": 3.5487,
+        "prefill_tps": 314.79538300104934,
+        "decode_tps": 56.337,
+        "prompt_tokens": 48,
+        "completion_tokens": 192,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "code-1-2",
+        "text_sha256": "3e5affe4ed696b0c255267c85ea02578c3e075db958b3e5a70338da7af71ca22"
+      },
+      {
+        "text": "```python\n\"\"\"\nModule for merging overlapping half-open intervals.\n\nThis module provides functionality to merge a list of half-open intervals\n(half-open intervals are of the form [start, end), where start is inclusive\nand end is exclusive). It includes a core merging function and a comprehensive\ntest suite covering normal cases and edge cases.\n\nAuthor: Benchmark Case Generator\n\"\"\"\n\nfrom typing import List, Tuple, Union\nfrom dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass Interval:\n    \"\"\"\n    Represents a half-open interval [start, end).\n\n    Attributes:\n        start (int or float): The inclusive start of the interval.\n        end (int or float): The exclusive end of the interval.\n    \"\"\"\n    start: Union[int, float]\n    end: Union[int, float]\n\n    def __post_init__(self) -> None:\n        \"\"\"Ensure start",
+        "tool_calls": [],
+        "ttft_s": 0.1585,
+        "wall_s": 3.5919,
+        "prefill_tps": 307.98062998420784,
+        "decode_tps": 55.631,
+        "prompt_tokens": 47,
+        "completion_tokens": 192,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "code-1-3",
+        "text_sha256": "d91d190fd6b603ed0ddb057f4e9530863cbfed2b59422415ec9bd5593285fa16"
+      },
+      {
+        "text": "```python\nimport time\nimport threading\nfrom collections import OrderedDict\nfrom typing import Any, Optional, Tuple\nfrom datetime import datetime, timedelta\n\n\nclass LRUCacheWithTTL:\n    \"\"\"\n    A thread-safe LRU cache with Time-To-Live (TTL) support.\n    Uses a monotonic clock for accurate expiration times.\n    \"\"\"\n\n    def __init__(self, max_size: int = 128, default_ttl: Optional[float] = None):\n        \"\"\"\n        Initialize the cache.\n\n        :param max_size: Maximum number of items to store.\n        :param default_ttl: Default TTL in seconds for items without a specific TTL.\n        \"\"\"\n        if max_size <= 0:\n            raise ValueError(\"max_size must be a positive integer\")\n        \n        self._max_size = max_size\n        self._default_ttl = default_ttl\n        self._cache",
+        "tool_calls": [],
+        "ttft_s": 0.1657,
+        "wall_s": 3.755,
+        "prefill_tps": 338.51979086999586,
+        "decode_tps": 53.215,
+        "prompt_tokens": 54,
+        "completion_tokens": 192,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "code-2-1",
+        "text_sha256": "c329adbb3ca1b6ae94d1de8ca48210ebf912e41f2b33be802f19e1d93a64111c"
+      },
+      {
+        "text": "```rust\nuse std::collections::VecDeque;\nuse std::sync::{Arc, Mutex};\n\n/// A bounded FIFO queue implementation using VecDeque.\n/// \n/// # Safety\n/// This implementation is not thread-safe by default. Use Arc<Mutex<>> or Arc<RwLock<>>\n/// if concurrent access is required.\npub struct BoundedFifoQueue<T> {\n    inner: VecDeque<T>,\n    capacity: usize,\n}\n\nimpl<T> BoundedFifoQueue<T> {\n    /// Creates a new bounded FIFO queue with the specified capacity.\n    pub fn new(capacity: usize) -> Self {\n        BoundedFifoQueue {\n            inner: VecDeque::with_capacity(capacity),\n            capacity,\n        }\n    }\n\n    /// Pushes an element onto the queue.\n    /// Returns `Ok(())` if successful, `Err(",
+        "tool_calls": [],
+        "ttft_s": 0.1733,
+        "wall_s": 3.8186,
+        "prefill_tps": 287.47334882495267,
+        "decode_tps": 52.397,
+        "prompt_tokens": 48,
+        "completion_tokens": 192,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "code-2-2",
+        "text_sha256": "3e5affe4ed696b0c255267c85ea02578c3e075db958b3e5a70338da7af71ca22"
+      },
+      {
+        "text": "```python\n\"\"\"\nModule for merging overlapping half-open intervals.\n\nThis module provides functionality to merge a list of half-open intervals\n(half-open intervals are of the form [start, end), where start is inclusive\nand end is exclusive). It includes a core merging function and a comprehensive\ntest suite covering various edge cases.\n\nAuthor: Benchmark Case Generator\n\"\"\"\n\nfrom typing import List, Tuple, Union\nfrom dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass Interval:\n    \"\"\"\n    Represents a half-open interval [start, end).\n\n    Attributes:\n        start (int or float): The inclusive start of the interval.\n        end (int or float): The exclusive end of the interval.\n    \"\"\"\n    start: Union[int, float]\n    end: Union[int, float]\n\n    def __post_init__(self) -> None:\n        \"\"\"Ensure start is strictly",
+        "tool_calls": [],
+        "ttft_s": 0.1751,
+        "wall_s": 3.8011,
+        "prefill_tps": 278.38984054777643,
+        "decode_tps": 52.676,
+        "prompt_tokens": 47,
+        "completion_tokens": 192,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "code-2-3",
+        "text_sha256": "98c53ef0bfebf213083a69fc08497e96c70c2364ff545eee993d3230302b394b"
+      }
+    ],
+    "prefill": [
+      {
+        "text": "Based on the data provided, here is the summary of the record structure and the method for looking up a specific record.\n\n### 1. Structure Summary\n\n",
+        "tool_calls": [],
+        "ttft_s": 6.1528,
+        "wall_s": 6.8898,
+        "prefill_tps": 659.6268494330513,
+        "decode_tps": 42.07,
+        "prompt_tokens": 4053,
+        "completion_tokens": 32,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "prompt-4k",
+        "text_sha256": "c4c8abc3e98e231f4c8a5e1ca72aa3a1a9c6e93c9e077262b6e145d0a5248aa7"
+      },
+      {
+        "text": "Based on the data provided, here is the summary of the record structure and the method for looking up a specific record.\n\n### 1. Structure Summary\n\n",
+        "tool_calls": [],
+        "ttft_s": 31.1371,
+        "wall_s": 31.7583,
+        "prefill_tps": 525.5258754866628,
+        "decode_tps": 49.913,
+        "prompt_tokens": 16347,
+        "completion_tokens": 32,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "prompt-16k",
+        "text_sha256": "c4c8abc3e98e231f4c8a5e1ca72aa3a1a9c6e93c9e077262b6e145d0a5248aa7"
+      }
+    ],
+    "checks": [
+      {
+        "text": "3283",
+        "tool_calls": [],
+        "ttft_s": 0.1602,
+        "wall_s": 0.233,
+        "prefill_tps": 273.4902483633318,
+        "decode_tps": 54.968,
+        "prompt_tokens": 32,
+        "completion_tokens": 5,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "arithmetic",
+        "text_sha256": "9ca5e9b3a5cce0e6d3c7cbfc4884a57c9d9118cf901a16196d270765014bb7de",
+        "passed": false
+      },
+      {
+        "text": "[9, 2, 1, 7]",
+        "tool_calls": [],
+        "ttft_s": 0.1751,
+        "wall_s": 0.3953,
+        "prefill_tps": 280.8988764044944,
+        "decode_tps": 54.507,
+        "prompt_tokens": 48,
+        "completion_tokens": 13,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "logic",
+        "text_sha256": "2f2e89c66b7dcdd868ccc15dbb5fdafa6e1e2aedfa720738b7f51a1ca2330c79",
+        "passed": false
+      },
+      {
+        "text": "[0, 1, 10, 21]",
+        "tool_calls": [],
+        "ttft_s": 0.1771,
+        "wall_s": 0.4338,
+        "prefill_tps": 276.6675104044644,
+        "decode_tps": 54.557,
+        "prompt_tokens": 47,
+        "completion_tokens": 15,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "coding",
+        "text_sha256": "2100f6b0bad688f2a651edf4a2fc8d979a74182933684ce9037280e1c208511b",
+        "passed": false
+      },
+      {
+        "text": "```json\n{\"bolts\": 17, \"nuts\": 4}\n```",
+        "tool_calls": [],
+        "ttft_s": 0.1749,
+        "wall_s": 0.5257,
+        "prefill_tps": 231.5529484408768,
+        "decode_tps": 54.168,
+        "prompt_tokens": 39,
+        "completion_tokens": 20,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "extraction",
+        "text_sha256": "6ea3d97e3ccd3e9a9a85f21dd8c592f7b463700975055abfba23457a8723d7a2",
+        "passed": false
+      },
+      {
+        "text": "",
+        "tool_calls": [
+          {
+            "name": "lookup_fixture",
+            "arguments": "{\"id\":\"fixture-52\"}"
+          }
+        ],
+        "ttft_s": 0.7974,
+        "wall_s": 1.1718,
+        "prefill_tps": 454.3637658168555,
+        "decode_tps": 53.624,
+        "prompt_tokens": 291,
+        "completion_tokens": 29,
+        "draft_offered": null,
+        "draft_accepted": null,
+        "name": "tool-call",
+        "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "passed": true
+      }
+    ]
+  }
+}

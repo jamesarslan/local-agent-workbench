@@ -1,0 +1,33 @@
+{
+  "Linux Strata": {
+    "reply": "PINE",
+    "usage": {
+      "prompt_tokens": 18,
+      "completion_tokens": 44,
+      "total_tokens": 62,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    }
+  },
+  "Linux llama.cpp": {
+    "reply": "PINE",
+    "usage": {
+      "completion_tokens": 53,
+      "prompt_tokens": 20,
+      "total_tokens": 73,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    }
+  },
+  "vLLM Windows via WSL": {
+    "reply": "PINE",
+    "usage": {
+      "prompt_tokens": 35,
+      "total_tokens": 38,
+      "completion_tokens": 3,
+      "completion_tokens_details": null
+    }
+  }
+}

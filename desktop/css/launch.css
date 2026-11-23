@@ -1,0 +1,373 @@
+/* Launch view (ui.md 5.1): classes prefixed launch-. */
+#launch-notices:not(:empty) {
+  margin-bottom: var(--space-6);
+}
+.launch-cols {
+  align-items: start;
+}
+.launch-form,
+.launch-side {
+  min-width: 0;
+}
+
+/* Project and model */
+.launch-project {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--control-h);
+  justify-content: flex-start;
+  gap: var(--space-5);
+  overflow: hidden;
+  border-color: var(--border-control);
+  text-align: left;
+}
+.launch-project > .icon {
+  margin-left: auto;
+  color: var(--text-muted);
+}
+.launch-project-name {
+  flex: none;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: var(--weight-strong);
+}
+.launch-project-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+}
+#source-health {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-md);
+}
+#source-health[hidden] {
+  display: none;
+}
+#launch-machine,
+.launch-field-link,
+#account-link {
+  margin-top: var(--space-3);
+}
+
+/* Agent cards */
+.launch-agents {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--space-4);
+}
+.launch-agent {
+  cursor: pointer;
+}
+.launch-agent .choice-title {
+  overflow-wrap: anywhere;
+}
+.launch-agent-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.launch-agent-line > .mark {
+  flex: none;
+  margin-top: 5px;
+}
+
+/* Tools for this session */
+.launch-tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--space-8);
+}
+.launch-tools > .toggle,
+.launch-tools > .toggle + .toggle {
+  border-top: 1px solid var(--border);
+}
+#tools > .launch-tools:not(#session-extra) > .toggle:nth-child(-n + 2) {
+  border-top: 0;
+}
+.launch-extra-caption {
+  grid-column: 1 / -1;
+  margin: var(--space-4) 0 0;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+#session-extra:empty {
+  display: none;
+}
+.launch-skipped {
+  margin-top: var(--space-4);
+  color: var(--warn-text);
+}
+.launch-visual {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+.launch-manage {
+  margin-top: var(--space-5);
+}
+
+/* Right column */
+.launch-side {
+  position: sticky;
+  top: 0;
+}
+.launch-row-error {
+  grid-column: 2;
+}
+.launch-row-error:not(:empty) {
+  margin-top: var(--space-4);
+}
+.launch-row-error .notice {
+  font-size: var(--text-md);
+}
+.launch-where-pick {
+  display: none;
+}
+.launch-needs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+  color: var(--warn-text);
+  font-size: var(--text-md);
+}
+.launch-needs.ready {
+  color: var(--ok-text);
+}
+.launch-needs > .mark {
+  flex: none;
+}
+.launch-needs[hidden] {
+  display: none;
+}
+.launch-steps {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  list-style: none;
+}
+.launch-steps[hidden] {
+  display: none;
+}
+.launch-step {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: var(--space-4);
+  align-items: start;
+  font-size: var(--text-md);
+}
+.launch-step-number {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.launch-step[data-state="waiting"] .launch-step-title {
+  color: var(--text-muted);
+}
+.launch-step-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--space-4);
+  align-items: start;
+}
+.launch-step-body > .mark {
+  margin-top: 5px;
+}
+.launch-step-title {
+  font-weight: var(--weight-medium);
+}
+.launch-step-text {
+  grid-column: 2;
+}
+.launch-step .task.compact .task-title {
+  white-space: normal;
+}
+.launch-errors:not(:empty) {
+  margin-bottom: var(--space-5);
+}
+.launch-buttons {
+  display: grid;
+  gap: var(--space-4);
+}
+.launch-hints:has(> :not([hidden])) {
+  margin-top: var(--space-4);
+}
+.launch-hints > .hint {
+  margin: 0;
+}
+.launch-recent-list {
+  margin-bottom: var(--space-4);
+}
+.launch-recent-list .empty {
+  padding: var(--space-4) 0;
+}
+.launch-recent-list .term-session-main {
+  flex-wrap: wrap;
+  column-gap: var(--space-3);
+  white-space: normal;
+}
+.launch-recent-list .term-session-title {
+  overflow-wrap: anywhere;
+}
+
+/* Action bar: below 900 px wide or 700 px high the action panel sits at the bottom of the view */
+.launch-action.launch-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "steps steps steps"
+    "errors errors errors"
+    "needs needs needs"
+    "where . buttons"
+    "hints hints hints";
+  column-gap: var(--space-6);
+  row-gap: 0;
+  align-items: center;
+  margin: var(--space-6) 0 0;
+  padding: var(--space-5) var(--space-6);
+  box-shadow: var(--shadow-2);
+}
+.launch-bar:has(.launch-errors > [data-error]) .launch-steps,
+.launch-bar:has(.launch-errors > [data-error]) .launch-needs.ready {
+  display: none;
+}
+.launch-bar .launch-where-radios {
+  display: none;
+}
+.launch-bar .launch-where-pick {
+  grid-area: where;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.launch-bar .launch-where-pick > .field-label {
+  margin: 0;
+  white-space: nowrap;
+}
+.launch-bar .launch-where-pick > select {
+  width: auto;
+}
+.launch-bar .launch-steps {
+  grid-area: steps;
+}
+.launch-bar .launch-errors {
+  grid-area: errors;
+  max-height: 24vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.launch-bar .launch-errors .notice {
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--text-md);
+}
+.launch-bar .launch-errors:not(:empty) {
+  margin-bottom: var(--space-4);
+}
+.launch-bar .launch-needs {
+  grid-area: needs;
+  min-width: 0;
+  margin: 0 0 var(--space-4);
+  cursor: pointer;
+}
+
+.launch-bar .launch-buttons {
+  grid-area: buttons;
+  display: flex;
+  flex-direction: row-reverse;
+  gap: var(--space-4);
+}
+.launch-bar .launch-hints {
+  grid-area: hints;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}
+
+@media (max-width: 899px) {
+  .launch-side {
+    position: static;
+  }
+  .launch-agents {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .launch-tools {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #tools > .launch-tools:not(#session-extra) > .toggle:nth-child(2) {
+    border-top: 1px solid var(--border);
+  }
+}
+
+@media (max-height: 699px) {
+  .launch-side {
+    position: static;
+  }
+  #launch-view .launch-form .field {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    column-gap: var(--space-5);
+    align-items: center;
+    margin-bottom: var(--space-4);
+  }
+  #launch-view .launch-form .field > * {
+    grid-column: 2;
+  }
+  #launch-view .launch-form .field > .field-label {
+    grid-column: 1;
+    margin: 0;
+  }
+  #launch-view .launch-form .field:last-child {
+    margin-bottom: 0;
+  }
+  .launch-agent {
+    padding: var(--space-3) var(--space-5);
+  }
+  .launch-agent:has(input:checked) {
+    padding: calc(var(--space-3) - 1px) calc(var(--space-5) - 1px);
+  }
+  .launch-agent .choice-main {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--space-4);
+  }
+  .launch-agent .choice-reason {
+    flex-basis: 100%;
+  }
+  .launch-agent > input {
+    margin-top: 2px;
+  }
+}
+
+@media (max-width: 640px) {
+  .launch-action.launch-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "steps steps"
+      "errors errors"
+      "needs needs"
+      "where where"
+      "buttons buttons"
+      "hints hints";
+  }
+  .launch-bar .launch-where-pick {
+    margin-bottom: var(--space-4);
+  }
+}

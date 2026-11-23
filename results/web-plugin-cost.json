@@ -1,0 +1,16 @@
+{
+  "servers": [
+    {
+      "name": "search",
+      "tools": 1,
+      "tokens": 149
+    },
+    {
+      "name": "firecrawl",
+      "tools": 3,
+      "tokens": 396
+    }
+  ],
+  "tokens": 538,
+  "context": 131072
+}

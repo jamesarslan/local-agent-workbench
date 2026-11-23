@@ -1,0 +1,25 @@
+{
+  "exit": 0,
+  "calls": [
+    [
+      "tool_execution_start",
+      "mcp__search_web_search",
+      null
+    ],
+    [
+      "tool_execution_start",
+      "mcp__firecrawl_scrape",
+      null
+    ],
+    [
+      "tool_execution_end",
+      "mcp__firecrawl_scrape",
+      false
+    ],
+    [
+      "tool_execution_end",
+      "mcp__search_web_search",
+      false
+    ]
+  ]
+}

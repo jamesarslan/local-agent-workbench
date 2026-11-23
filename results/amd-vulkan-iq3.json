@@ -1,0 +1,38 @@
+{
+  "profile": "Inkling-2-Mini Mainline IQ3_XXS",
+  "engine": "llama.cpp b12633 Vulkan",
+  "context": 8192,
+  "ram_gib": 30.9,
+  "gpu": "AMD Radeon RX 9070 XT",
+  "remote_omp_reply": "PINE",
+  "ssh_loopback_forward_verified": true,
+  "consecutive_stop_start_checks": 2,
+  "gpu_gib": 15.9,
+  "reply": "PINE",
+  "elapsed_seconds": 2.562,
+  "usage": {
+    "completion_tokens": 46,
+    "prompt_tokens": 23,
+    "total_tokens": 69,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "timings": {
+    "cache_n": 0,
+    "prompt_n": 23,
+    "prompt_ms": 1270.051,
+    "prompt_per_token_ms": 55.21960869565217,
+    "prompt_per_second": 18.109508988221734,
+    "predicted_n": 46,
+    "predicted_ms": 1274.367,
+    "predicted_per_token_ms": 28.319266666666667,
+    "predicted_per_second": 35.311648842131035
+  },
+  "longer_probe": {
+    "sampled_peak_device_gib": 12.15,
+    "output_tokens": 256,
+    "decode_tps": 44.61398146192844,
+    "visible_chars": 249
+  }
+}
