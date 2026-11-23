@@ -238,6 +238,7 @@ results/inkling-q4-mainline-acceptance.json
 results/inkling-q4-mainline.json
 results/inkling-q8-acceptance.json
 results/inkling-q8.json
+results/inkling-unsloth-dspark-m3-max.json
 results/metal-m3-max-qwen3-5-4b-q4-k-m.json
 results/metal-m3-max-qwen3-5-9b-q4-k-m.json
 results/metal-m3-max-qwen3-8-27b-ud-iq3-xxs.json

@@ -1,0 +1,87 @@
+{
+  "date": "2026-11-23",
+  "machine": {
+    "chip": "Apple M3 Max",
+    "unified_memory_gib": 48.0,
+    "os": "macOS 27.2.1",
+    "power": "AC power when the Workbench run was made; not recorded for the two direct runs"
+  },
+  "engine": {
+    "name": "llama.cpp (Unsloth build)",
+    "repo": "unslothai/llama.cpp",
+    "tag": "b12649-mix-c7059d6",
+    "source_commit": "189f431bf58f433d376d718c7788b1bf4467fa72",
+    "asset": "llama-b12649-mix-c7059d6-bin-macos-arm64.tar.gz",
+    "asset_sha256": "4e2629c4bf538eb22a75a7e6a7f07cbab606d19f44f8846428df5ce9088267f9",
+    "backend": "Metal",
+    "flags": "--jinja -fa on -ngl all -c 32768 -np 1 --no-mmproj",
+    "draft_flags": "-md dspark-Inkling-2-Mini-Q8_0.gguf --spec-type draft-dspark --spec-draft-n-max 2 -ngld 99",
+    "context": 32768,
+    "kv": "f16 (engine default)"
+  },
+  "model": {
+    "file": "Mainline_Support/Inkling-2-Mini-UD-Q4_K_XL.gguf_file",
+    "hf_repo": "unsloth/Inkling-2-Mini-GGUF",
+    "size_bytes": 17629760736,
+    "sha256": "e64276656f072e9b2197a61723667cbdb71da66a716ffd966e572c21088f3cd3",
+    "note": "The same bytes as the repository-root Inkling-2-Mini-UD-Q4_K_XL.gguf at revision 8078d149286eec7193795413b9e0643da6d11fa1"
+  },
+  "drafter": {
+    "file": "dspark-Inkling-2-Mini-Q8_0.gguf",
+    "hf_repo": "unsloth/Inkling-2-Mini-GGUF",
+    "revision": "8078d149286eec7193795413b9e0643da6d11fa1",
+    "size_bytes": 503889952,
+    "sha256": "3da00cf7c31bbe5662b3c0d373ecf782d74d32ef43990acc158ce60c2add72e0"
+  },
+  "requests": {
+    "answer": "One user message asking for an iterative Fibonacci function with a short docstring; max_tokens 600, temperature 0",
+    "tool_call": "A system message asking for tool use, the user message 'Create hello.txt containing the word hi.' and one write_file tool; max_tokens 800, temperature 0"
+  },
+  "runs": [
+    {
+      "name": "direct-without-drafter",
+      "how": "llama-server started by hand with the flags above",
+      "drafter": false,
+      "answered": true,
+      "tool_call": "write_file",
+      "raw_timings": {
+        "prompt_n": 36,
+        "predicted_n": 600,
+        "predicted_ms": 21440.01,
+        "predicted_per_second": 27.94
+      }
+    },
+    {
+      "name": "direct-with-drafter",
+      "how": "llama-server started by hand with the flags and the draft flags above",
+      "drafter": true,
+      "answered": true,
+      "tool_call": "write_file",
+      "raw_timings": {
+        "prompt_n": 36,
+        "predicted_n": 600,
+        "predicted_ms": 16868.07,
+        "predicted_per_second": 35.51,
+        "draft_n": 480,
+        "draft_n_accepted": 359
+      }
+    },
+    {
+      "name": "workbench-with-drafter",
+      "how": "setup_engines.py --unsloth installed the build into a temporary data folder after matching the pinned SHA-256; catalog.download_drafter checked the drafter against its pinned SHA-256; runtime.start served it with Engine release Unsloth and Speculative decoding on; runtime.stop ended it",
+      "drafter": true,
+      "answered": true,
+      "tool_call": "write_file",
+      "tool_arguments": "{\"content\":\"hi\\n\",\"path\":\"hello.txt\"}",
+      "raw_timings": {
+        "prompt_n": 36,
+        "predicted_n": 600,
+        "predicted_ms": 16715.568,
+        "predicted_per_second": 35.83,
+        "draft_n": 480,
+        "draft_n_accepted": 359
+      }
+    }
+  ],
+  "note": "Single requests on one machine, not a benchmark. Unsloth notes that greedy output with a drafter may not be identical to output without one."
+}

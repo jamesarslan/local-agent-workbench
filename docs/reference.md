@@ -82,7 +82,7 @@ The **Engine** setting in **Advanced → Model library**:
 | Engine | Systems | What Setup installs | Release channels |
 | --- | --- | --- | --- |
 | Auto | All | Nothing of its own. It picks Strata for a `.strata` file, Flash preset for a Flash Next file, and llama.cpp otherwise | As for the engine it picks |
-| llama.cpp | Windows x64, Linux x64, macOS on Apple Silicon | `llama-server` build b12633 for CUDA, Vulkan, Metal or CPU | Tested (pinned SHA-256) or Updated (the newest release, checked against the digest GitHub reports) |
+| llama.cpp | Windows x64, Linux x64, macOS on Apple Silicon | `llama-server` build b12633 for CUDA, Vulkan, Metal or CPU | Tested (pinned SHA-256), Updated (the newest release, checked against the digest GitHub reports) or Unsloth (Unsloth's build b12649-mix-c7059d6, pinned SHA-256) |
 | Strata | Windows and Linux with an NVIDIA GPU | `strata-inkling` 0.1.65, from its release archive and source at a pinned commit; needs Git | Tested or Updated |
 | vLLM | Linux, or Windows through WSL, with an NVIDIA GPU | vLLM 0.34.0 in its own Python environment (**vLLM** in **Advanced → Setup**). Its version is pinned; its files and dependencies are not digest-checked | Version pin |
 | Flash preset | Windows and Linux | Nothing. It starts an existing Strata Flash Next launch preset from the reference workstation (`WORKBENCH_FLASH_CONFIG`) | — |
