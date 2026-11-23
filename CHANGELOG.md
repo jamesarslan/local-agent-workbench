@@ -2,6 +2,12 @@
 
 All notable changes to Agent Workbench are listed here. Versions follow semantic versioning.
 
+## [Unreleased]
+
+### Fixed
+
+- `install.ps1` no longer replaces or removes a Start menu shortcut that belongs to another Agent Workbench install of the same user, for example when a second copy is installed with `WORKBENCH_INSTALL_DIR` and uninstalled again.
+
 ## [0.5.0] - 2026-11-23
 
 ### Added
