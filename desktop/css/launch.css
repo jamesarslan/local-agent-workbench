@@ -206,6 +206,9 @@
 .launch-hints > .hint {
   margin: 0;
 }
+.launch-hints > .launch-folder-save {
+  margin-top: var(--space-2);
+}
 .launch-recent-list {
   margin-bottom: var(--space-4);
 }

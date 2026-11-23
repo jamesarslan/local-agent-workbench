@@ -102,6 +102,8 @@ INLINE = frozenset(
         "project-save",
         "project-preview",
         "project-apply",
+        "project-default-set",
+        "project-default-clear",
     )
 )
 INTERNAL = (
@@ -563,7 +565,14 @@ def dispatch(action, payload, progress=None, cancel=None):
     if action == "plugin-import":
         return projects.register(manifest(payload))
     if action == "project-list":
+        # The plain name list is the 0.3 shape; detail adds the folder default.
+        if payload.get("detail") is True:
+            return projects.project_list(payload["workspace"])
         return projects.project_names(payload["workspace"])
+    if action == "project-default-set":
+        return projects.set_default(payload["workspace"], payload["name"])
+    if action == "project-default-clear":
+        return projects.clear_default(payload["workspace"])
     s = settings()
     if action == "server-start":
         chosen = (
@@ -582,7 +591,9 @@ def dispatch(action, payload, progress=None, cancel=None):
     names = choices(s)
     out = selection(s, payload, names)
     if action == "project-save":
-        return projects.save_project(out, payload["name"])
+        return projects.save_project(
+            out, payload["name"], default=payload.get("default") is True
+        )
     if action in ("project-preview", "project-apply"):
         weights = (
             [p for p, _, _ in catalog.discover(s["library"])]

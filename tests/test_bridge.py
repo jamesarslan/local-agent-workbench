@@ -36,6 +36,7 @@ SHELL_ONLY = {
     "job-cancel",
     "bridge-log-open",
     "folder-pick",
+    "folder-reveal",
     "server-copy-key",
     "account-key-page",
 }
@@ -958,6 +959,36 @@ class LaunchTest(BridgeCase):
         self.assertEqual(write.call_args_list[0].args[1]["context"], 4096)
         self.assertEqual(write.call_args_list[1].args[1]["preset"], "")
         legacy.assert_not_called()
+
+    def test_folder_default_actions(self):
+        self.neighbours(provider="OpenRouter")
+        write = self.use(runtime, "write_json")
+        saved = self.use(projects, "save_project", return_value="/x/profiles.json")
+        bridge.dispatch("project-save", self.form(name="Folder default", default=True))
+        self.assertEqual(saved.call_args.args[1], "Folder default")
+        self.assertIs(saved.call_args.kwargs["default"], True)
+        bridge.dispatch("project-save", self.form(name="Research", default="yes"))
+        self.assertIs(saved.call_args.kwargs["default"], False)
+        write.assert_not_called()
+        names = self.use(projects, "project_names", return_value=["a"])
+        detail = self.use(projects, "project_list", return_value={"names": ["a"], "default": "a"})
+        here = {"workspace": str(self.folder)}
+        self.assertEqual(bridge.dispatch("project-list", here), ["a"])
+        self.assertEqual(
+            bridge.dispatch("project-list", here | {"detail": True}),
+            {"names": ["a"], "default": "a"},
+        )
+        self.assertEqual((names.call_count, detail.call_count), (1, 1))
+        chosen = self.use(projects, "set_default", return_value={"default": "a"})
+        cleared = self.use(projects, "clear_default", return_value={"default": ""})
+        self.assertEqual(bridge.dispatch("project-default-set", here | {"name": "a"}), {"default": "a"})
+        self.assertEqual(chosen.call_args.args, (str(self.folder), "a"))
+        self.assertEqual(bridge.dispatch("project-default-clear", here), {"default": ""})
+        self.assertEqual(cleared.call_args.args, (str(self.folder),))
+        for name in ("project-default-set", "project-default-clear"):
+            self.assertEqual(bridge.owner(name), "desktop_bridge")
+        for name in ("folder-default-dismiss", "folder-places"):
+            self.assertEqual(bridge.owner(name), "project_profiles")
 
     def test_project_apply_needs_a_reviewed_digest(self):
         self.neighbours(provider="OpenRouter")

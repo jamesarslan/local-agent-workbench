@@ -474,8 +474,8 @@
       if (blocked) launch.setAttribute("aria-disabled", "true");
       else launch.removeAttribute("aria-disabled");
     }
-    const save = AW.$("save");
-    if (!save.dataset.pending && !save.dataset.starting) {
+    for (const save of [AW.$("save"), parts.folderSave]) {
+      if (save.dataset.pending || save.dataset.starting) continue;
       if (starting || !form.workspace) save.setAttribute("aria-disabled", "true");
       else save.removeAttribute("aria-disabled");
     }
@@ -570,6 +570,32 @@
       .finally(() => paintAction(AW.form.get()));
   }
 
+  // Writes the current choices to .agent-workbench/profiles.json as the folder default, and remembers them here too.
+  async function onSaveDefault(event) {
+    const button = event.currentTarget;
+    const form = AW.form.get();
+    if (button.dataset.pending || button.getAttribute("aria-disabled") === "true" || !form.workspace) return;
+    const folder = AW.state.folder || {};
+    const replacing = typeof folder.saved_default === "string" && folder.saved_default;
+    const name = replacing || "Folder default";
+    if (replacing) {
+      const yes = await AW.ui.confirm({ text: "Replace the folder default " + name + " in .agent-workbench/profiles.json with the current choices?", ok: "Replace" });
+      if (!yes) return;
+    }
+    AW.ui.clearError(parts.errors);
+    const saving = AW.form.save().then(() => AW.request("project-save", { ...form, name, default: true }));
+    AW.ui
+      .pending(button, "Saving…", saving)
+      .then(
+        () => {
+          AW.ui.toast("Saved to .agent-workbench/profiles.json as " + name + ". It travels with the folder and holds no keys.", { kind: "ok" });
+          AW.store.refresh("folder").catch(() => {});
+        },
+        (thrown) => AW.ui.showError(parts.errors, thrown, { retry: () => parts.folderSave.click() }),
+      )
+      .finally(() => paintAction(AW.form.get()));
+  }
+
   // Recent sessions
 
   function paintRecent(force) {
@@ -622,7 +648,19 @@
         text: "Nothing is set up yet. The setup guide takes a few steps and ends with a running agent.",
         actions: [{ label: "Open setup guide", primary: true, run: () => AW.guide.open() }],
       });
-    if (folder && folder.key && folder.known === false && form.workspace) {
+    // A folder with a saved default, opened on a computer that remembers nothing for it: offer the review, never apply.
+    const offered = Boolean(folder && folder.key && folder.offer_default && folder.saved_default && form.workspace);
+    if (offered) {
+      const name = folder.saved_default;
+      const workspace = folder.path;
+      out.push({
+        id: "saved:" + folder.key + ":" + name,
+        kind: "info",
+        text: "This folder has saved settings: " + name + ".",
+        actions: [{ label: "Review and apply…", primary: true, run: (event) => AW.profiles.review(workspace, name, event && event.currentTarget) }],
+        onDismiss: () => dismissSaved(workspace),
+      });
+    } else if (folder && folder.key && folder.known === false && form.workspace) {
       const kit = AW.state.kitHint;
       const used = lastUsed();
       const text = "New folder. It starts with the choices you used last: " + used + "." + (kit ? " " + kit.label + " looks like a fit." : "");
@@ -635,6 +673,13 @@
     return out.filter((item) => !dismissed.has(item.id));
   }
 
+  // Remembered in this computer's record for the folder, so the notice stays away after a restart.
+  function dismissSaved(workspace) {
+    AW.request("folder-default-dismiss", { workspace })
+      .then(() => AW.store.refresh("folder").catch(() => {}))
+      .catch((thrown) => AW.ui.toast(AW.asError(thrown).message, { kind: "danger" }));
+  }
+
   function paintNotices(form) {
     const wanted = noticesWanted(form);
     const host = AW.$("launch-notices");
@@ -642,7 +687,14 @@
     if (!changed("notices", shape)) return;
     for (const node of [...host.children]) if (node.dataset.launchNotice) node.remove();
     for (const item of wanted) {
-      const node = AW.ui.notice(item.kind, item.text, { actions: item.actions, dismissible: true, onDismiss: () => dismissed.add(item.id) });
+      const node = AW.ui.notice(item.kind, item.text, {
+        actions: item.actions,
+        dismissible: true,
+        onDismiss() {
+          dismissed.add(item.id);
+          if (item.onDismiss) item.onDismiss();
+        },
+      });
       node.dataset.launchNotice = item.id;
       host.append(node);
     }
@@ -720,7 +772,15 @@
     parts.action.querySelector(".launch-buttons").classList.add("launch-bar-buttons");
     const hints = el("div", { class: "launch-hints" });
     AW.$("save-state").before(hints);
-    hints.append(AW.$("save-state"), AW.$("session-indicator"));
+    parts.folderSave = el("button", {
+      type: "button",
+      class: "link launch-folder-save",
+      id: "save-folder-default",
+      text: "Save as folder default",
+      title: "Saves these choices in .agent-workbench/profiles.json, which travels with the folder",
+      on: { click: onSaveDefault },
+    });
+    hints.append(AW.$("save-state"), AW.$("session-indicator"), parts.folderSave);
 
     const recentPanel = AW.$("launch-recent");
     parts.recentList = el("div", { class: "launch-recent-list", attrs: { "aria-labelledby": "launch-recent-head" } });

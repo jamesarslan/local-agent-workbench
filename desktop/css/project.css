@@ -420,8 +420,37 @@
   overflow-wrap: anywhere;
   font-weight: var(--weight-medium);
 }
+.project-profile-name > .chip {
+  margin-left: var(--space-3);
+}
 .project-profile-rename {
   flex: 1 1 220px;
+}
+.project-save-default {
+  margin-top: var(--space-4);
+}
+.project-places > .group-label:not(:first-child) {
+  margin-top: var(--space-6);
+}
+.project-place {
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--border);
+}
+.project-places > .group-label + .project-place {
+  border-top: 0;
+}
+.project-place-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.project-place-label {
+  font-weight: var(--weight-medium);
+}
+.project-place > p {
+  margin: var(--space-1) 0 0;
 }
 .project-profile > .project-notices {
   flex-basis: 100%;
