@@ -172,13 +172,13 @@ Claude Code sends a system message after the first user message, and Codex sends
 
 For models it serves itself, Workbench handles this: when the template of a GGUF file contains exactly that rejection, it serves a corrected copy that renders the message as a system turn. With the correction in place, on a Mac, Claude Code completed a file-writing task against Qwen3.5-9B and Qwen3.8-27B, and Codex against Qwen3.5-9B, started through Workbench's launch code from the command line. The Inkling template does not need the correction.
 
-For a server you attach, that server's own template handling decides. Workbench does not change it. Claude Code and Codex completed the same task against one model in Ollama 0.40.8; other Ollama models, LM Studio and the other servers were not run with Claude Code or Codex for this release.
+For a server you attach, that server's own template handling decides. Workbench does not change it, but it asks: when you attach a server, and again on **Check**, it sends the chosen model one short chat with a system message after the first turn and, when the server offers the Responses API, one with a developer message there, each asking for a one-token answer. A model the server lists as not loaded is not asked, so the check never loads one. When the server refuses the message, Claude Code and Codex are blocked for that connection with "This server's chat template rejects the system message Claude Code sends mid-conversation. Serve the model with Workbench, which fixes the template, or use OMP, Pi or opencode." (Codex's reason names the developer message), and OMP, Pi and opencode stay available. A llama.cpp server in Docker serving Qwen3.5-9B with its own template, attached from a Mac over SSH, was blocked this way while OMP wrote a file through it; Unsloth's llama.cpp build serving Inkling 2 Mini accepted the message and nothing was blocked. Claude Code and Codex completed the same task against one model in Ollama 0.40.8; other Ollama models, LM Studio and the other servers were not run with Claude Code or Codex for this release.
 
 ## Attach a server that is already running
 
 ### What Workbench looks for
 
-The scan looks only at this computer's loopback address, `127.0.0.1`, on these ports: 11434, 1234, 9931, 8080, 8000, 1337, 5001, 5000, 13305, 30000, 10240 and 9292, leaving out Workbench's own model port. It also checks LM Studio's control ports, so it can tell you when LM Studio is open but its server is off. It never scans your network. A server on another machine is reached through [SSH](#a-gpu-machine-over-ssh) or by an `https://` address you type.
+The scan looks only at this computer's loopback address, `127.0.0.1`, on these ports: 11434, 1234, 9931, 8080, 8081, 8000, 1337, 5001, 5000, 13305, 30000, 10240 and 9292, leaving out Workbench's own model port. It also checks LM Studio's control ports, so it can tell you when LM Studio is open but its server is off. It never scans your network. A server on another machine is reached through [SSH](#a-gpu-machine-over-ssh) or by an `https://` address you type.
 
 For each server that answers, Workbench reads the model list, the context size of each model where the server reports it, and which of the three APIs it offers. It names the server from what it answers.
 
@@ -188,7 +188,7 @@ The server kinds Workbench recognises, with the APIs their documentation says th
 | --- | --- | --- | --- | --- |
 | Ollama | 11434 | Yes | Yes | Yes |
 | LM Studio | 1234 | Yes | Yes | Yes |
-| llama.cpp server | 9931, 8080 | Yes | Yes | Yes |
+| llama.cpp server | 9931, 8080, 8081 | Yes | Yes | Yes |
 | vLLM | 8000 | Yes | Yes | Yes |
 | MLX LM server | 8080 | Yes | No | No |
 | MLX Omni Server | 10240 | Yes | No | Yes |
@@ -273,7 +273,7 @@ Workbench uses a separate key for each machine, stored in the data folder, and a
 
 ### Use a server that runs there
 
-After the connection check, **Servers running there** lists the model servers answering on the machine's own loopback address. Workbench finds them with one SSH command that runs a small probe on the machine; it does not scan the machine's network. Choose **Attach…** next to a server, pick the model, and attach it. **Look again** repeats the search. A server on a port outside the usual list, such as 8081, is found once you add the port under **Other ports** and choose **Look again**; Workbench remembers the ports for that machine.
+After the connection check, **Servers running there** lists the model servers answering on the machine's own loopback address. Workbench finds them with one SSH command that runs a small probe on the machine; it does not scan the machine's network. Choose **Attach…** next to a server, pick the model, and attach it. **Look again** repeats the search. A server on a port outside the usual list, such as 9000, is found once you add the port under **Other ports** and choose **Look again**; Workbench remembers the ports for that machine.
 
 Attaching opens an SSH tunnel from a free port on this computer's `127.0.0.1` to that server's port on the machine's `127.0.0.1`, one port per server. The connection appears in **Connections** under "Over SSH", and agents talk to the model through the tunnel. **Reconnect** opens a tunnel again after the machine or this computer restarted; **Detach** closes it and removes the connection.
 
@@ -281,7 +281,7 @@ Attaching opens an SSH tunnel from a free port on this computer's `127.0.0.1` to
 
 On a Linux x86_64 machine, **Workbench-managed model** offers **Install…**. Workbench then installs, under `~/.local/share/agent-workbench-node` on the machine, the Vulkan build of llama.cpp b12633, the Inkling 2 Mini UD-IQ3_XXS model and, unless OMP is already installed there, the OMP binary, each checked against a SHA-256 pinned in Workbench. The machine downloads them itself from github.com and huggingface.co. Workbench waits up to an hour for this.
 
-**Start and connect** starts the model on the machine's port 10542, bound to its loopback address with its own key, and opens the tunnel. **Stop…** stops it. The Inkling licence note applies to this model too.
+**Start and connect** starts the model on the machine's port 10542 with a 16K-token window, the catalog's choice for a 16 GB Vulkan card, bound to its loopback address with its own key, and opens the tunnel. **Stop…** stops it. The Inkling licence note applies to this model too.
 
 ### Remove a machine
 

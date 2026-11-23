@@ -376,7 +376,7 @@
     const again = ui.button("Look again", { small: true, onClick: () => findServers(host, typed()) });
     const b = block("Servers running there", { actions: [again], id: blockId("servers") });
     const portsId = blockId("ports");
-    const ports = el("input", { type: "text", class: "mono", id: portsId, value: entry(host).ports || "", attrs: { autocomplete: "off", spellcheck: "false", inputmode: "numeric", placeholder: "8081", "aria-describedby": portsId + "-hint" } });
+    const ports = el("input", { type: "text", class: "mono", id: portsId, value: entry(host).ports || "", attrs: { autocomplete: "off", spellcheck: "false", inputmode: "numeric", placeholder: "9000", "aria-describedby": portsId + "-hint" } });
     const portsField = {
       el: el(
         "div",

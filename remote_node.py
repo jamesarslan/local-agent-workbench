@@ -27,6 +27,9 @@ MODEL_URL = (
     + MODEL
 )
 MODEL_SHA = "fd9ccedae17c1bb89744612fbb46730b5275f2a342133d0419776bd1ae311657"
+# The catalog's 16 GB Vulkan pick for this file (vulkan-16-inkling-iq3): a 16K window with the
+# default f16 cache, computed at 12.9 GiB. OMP's first request alone is about 13,400 tokens.
+CONTEXT = 16384
 ENGINE_URL = "https://github.com/ggml-org/llama.cpp/releases/download/b12633/llama-b12633-bin-ubuntu-vulkan-x64.tar.gz"
 ENGINE_SHA = "33223bb1f421eb4120210fc61648acf1f7ba8deece1183c63af417c80a9ff013"
 
@@ -285,6 +288,7 @@ def probe():
         installed=(BASE / MODEL).is_file() and (BASE / "api-key").is_file(),
         running=bool(pid()),
         port=PORT,
+        context=CONTEXT,
         omp=omp_installed(),
     )
 
@@ -313,7 +317,7 @@ def start():
                     "-ngl",
                     "99",
                     "-c",
-                    "8192",
+                    str(CONTEXT),
                     "--parallel",
                     "1",
                     "--alias",
@@ -354,8 +358,15 @@ def start():
                 headers={"Authorization": "Bearer " + (BASE / "api-key").read_text()},
             )
             with urlopen(req, timeout=2) as r:
-                if json.load(r)["data"][0]["id"] == "local-agent":
-                    return probe()
+                served = json.load(r)["data"][0]
+                if served["id"] == "local-agent":
+                    info = probe()
+                    # A server started by an older Workbench keeps its own window.
+                    meta = served.get("meta")
+                    size = meta.get("n_ctx") if isinstance(meta, dict) else None
+                    if isinstance(size, int) and not isinstance(size, bool) and size > 0:
+                        info["context"] = size
+                    return info
         except OSError:
             pass
         if not pid():
@@ -430,7 +441,7 @@ def main():
             model = dict(
                 id="local-agent",
                 name="Inkling IQ3",
-                contextWindow=8192,
+                contextWindow=CONTEXT,
                 maxTokens=4096,
                 supportsTools=True,
             )

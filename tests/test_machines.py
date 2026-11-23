@@ -1,6 +1,7 @@
 import ast
 import atexit
 import hashlib
+import io
 import json
 import os
 import shutil
@@ -806,9 +807,9 @@ class MachinesTest(Base):
                 kind="ollama",
                 label="Ollama 0.40",
                 models=[
-                    {"id": "qwen3:14b", "context": 32768},
-                    {"id": "gemma3", "context": None},
-                    {"id": "huge", "context": None},
+                    {"id": "qwen3:14b", "context": 32768, "loaded": True},
+                    {"id": "gemma3", "context": None, "loaded": None},
+                    {"id": "huge", "context": None, "loaded": None},
                 ],
                 protocols=ALL,
                 needs_key=False,
@@ -1052,6 +1053,50 @@ class MachinesTest(Base):
             (row["context_window"], row["context_source"]), (32768, "server")
         )
 
+    def test_attach_asks_the_server_about_a_late_system_message(self):
+        import endpoints
+
+        late = MagicMock(return_value=False)
+        real = endpoints._late
+
+        def asked(*args):
+            with patch.object(endpoints, "late_system", late):
+                return real(*args)
+
+        self.found(_late=asked, _auth=endpoints._auth)
+        self.http({})
+        self.use(patch.object(machines, "forward", return_value=40333))
+        ident = machines.attach("box", 11434, key="sk")["connection_id"]
+        self.assertEqual(
+            late.call_args.args,
+            (
+                "http://127.0.0.1:40333/v1",
+                "qwen3:14b",
+                {"Authorization": "Bearer sk", "x-api-key": "sk"},
+                ALL,
+            ),
+        )
+        row = account_book.entries()[ident]
+        self.assertIs(row["late_system"], False)
+        verdicts = connections.compat("Attached endpoint", row)
+        self.assertIn("rejects the system message", verdicts["Claude Code"]["reason"])
+        self.assertTrue(verdicts["OMP"]["ok"])
+        late.return_value = None
+        machines.attach("box", 11434, key="sk")
+        self.assertIs(account_book.entries()[ident]["late_system"], False)
+        late.side_effect = OSError("gone")
+        machines.attach("box", 11434, key="sk")
+        self.assertIs(account_book.entries()[ident]["late_system"], False)
+        late.side_effect, late.return_value = None, True
+        machines.attach("box", 11434, key="sk")
+        self.assertIs(account_book.entries()[ident]["late_system"], True)
+        late.reset_mock()
+        rows = machines.discover("box")
+        rows[0]["models"][0]["loaded"] = False
+        with patch.object(machines, "discover", return_value=rows):
+            machines.attach("box", 11434, key="sk")
+        late.assert_not_called()
+
     def test_ids_and_reply_shape_match_the_endpoints_module(self):
         import endpoints
 
@@ -1108,7 +1153,7 @@ class MachinesTest(Base):
                     port=11434,
                     kind="ollama",
                     label=LABEL("ollama"),
-                    models=[{"id": "qwen3:14b", "context": 32768}],
+                    models=[{"id": "qwen3:14b", "context": 32768, "loaded": True}],
                     protocols={"chat": True, "responses": True, "messages": None},
                     needs_key=False,
                     base_path="/v1",
@@ -1915,6 +1960,46 @@ class RemoteNodeTest(unittest.TestCase):
         self.assertFalse((self.base / "omp-agent").exists())
         self.installed()
         self.assertEqual(self.verb("key"), "secret")
+
+    def test_start_serves_the_catalog_window_and_omp_matches_it(self):
+        self.installed()
+
+        class Reply(io.BytesIO):
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        served = {"data": [{"id": "local-agent", "meta": {"n_ctx": 16384}}]}
+        stat = MagicMock()
+        stat.return_value.read_text.return_value = "1 (llama-server) " + "S " * 30
+        with (
+            self.linux(),
+            patch.object(remote_node.socket, "socket"),
+            patch.object(remote_node.subprocess, "Popen") as spawned,
+            patch.object(remote_node, "Path", stat),
+            patch.object(remote_node, "pid", side_effect=[None] + [4242] * 5),
+            patch.object(
+                remote_node, "urlopen", side_effect=lambda *a, **k: Reply(json.dumps(served).encode())
+            ),
+        ):
+            spawned.return_value.pid = 4242
+            info = remote_node.start()
+            argv = spawned.call_args.args[0]
+            self.assertEqual(argv[argv.index("-c") + 1], "16384")
+            self.assertEqual(remote_node.CONTEXT, 16384)
+            self.assertEqual(info["context"], 16384)
+            served["data"][0]["meta"]["n_ctx"] = 8192
+            self.assertEqual(remote_node.start()["context"], 8192)
+            served["data"][0]["meta"] = ["odd"]
+            self.assertEqual(remote_node.start()["context"], 16384)
+        self.assertEqual(remote_node.probe()["context"], 16384)
+        self.assertIs(self.verb("omp-config"), True)
+        config = json.loads((self.base / "omp-agent/models.yml").read_text())
+        (model,) = config["providers"]["workbench"]["models"]
+        self.assertEqual(model["contextWindow"], remote_node.CONTEXT)
+        self.assertLess(model["maxTokens"], model["contextWindow"])
 
     def test_start_reports_a_busy_port(self):
         self.installed()

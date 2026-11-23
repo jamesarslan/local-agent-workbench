@@ -13,6 +13,9 @@ All notable changes to Agent Workbench are listed here. Versions follow semantic
 
 ### Changed
 
+- The Workbench-managed model on a Linux machine serves Inkling 2 Mini UD-IQ3_XXS with a 16K-token window instead of 8K, the catalog's choice for a 16 GB Vulkan card, and OMP is told the same window. OMP's first request is about 13,400 tokens, so it no longer fails against the 8K window. On a Radeon RX 9070 XT (16 GB) OMP wrote a file through it from a Mac, with 13.3 GiB of the card in use.
+- The scan also looks at port 8081, where a second llama.cpp server is often run.
+- Attached servers whose chat template refuses a system message after the first turn. When you attach a server or choose **Check**, Workbench asks the model once with a one-token chat in that shape (and a Responses request with a late developer message when the server offers that API). When the server refuses it, Claude Code and Codex are blocked for that connection with the reason, and OMP, Pi and opencode stay available ([Chat templates for Claude Code and Codex](docs/model-sources.md#chat-templates-for-claude-code-and-codex)).
 - Windows: the suite passes on Windows 11. The SSH public key sent during pairing ends in LF, the `profiles.json` lock lives in the data folder instead of the project's `.agent-workbench/` folder, npm shims run only when they point into their own `node_modules`, and `workbench doctor` prints ASCII punctuation when the console is not UTF-8.
 - Redesigned project site. The first screen has the install command for each system; the page shows one setup per folder, the three setup steps with screenshots, the two features above marked as new in the next release, and a status table built from `docs/verification.json`.
 
