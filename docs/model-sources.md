@@ -245,8 +245,8 @@ On this computer: the OpenSSH client (`ssh` and `ssh-keygen`). Doctor checks it.
 On the machine:
 
 - An SSH server that accepts a login from you.
-- `python3` 3.8 or newer, which Workbench uses to check the machine and find servers.
-- For the Workbench-managed model: Linux on x86_64, `curl`, and 13 GiB free in your home folder. On any other machine with `python3`, Workbench can check it and attach the servers running there, but cannot run the managed model.
+- On Linux and macOS, `python3` 3.8 or newer, which Workbench uses to check the machine and find servers. A Windows machine needs only Windows PowerShell, which Windows includes; see [Windows machines](#windows-machines).
+- For the Workbench-managed model: Linux on x86_64, `curl`, and 13 GiB free in your home folder, or Windows on x86_64 with an NVIDIA GPU of 16 GB or more and Python 3.8 or newer. On any other machine, Workbench can check it and attach the servers running there, but cannot run the managed model.
 
 ### Add and pair a machine
 
@@ -260,7 +260,7 @@ Workbench uses a separate key for each machine, stored in the data folder, and a
 
 ### Use a server that runs there
 
-After the connection check, **Servers running there** lists the model servers answering on the machine's own loopback address. Workbench finds them with one SSH command that runs a small probe on the machine; it does not scan the machine's network. Choose **Attach…** next to a server, pick the model, and attach it. **Look again** repeats the search.
+After the connection check, **Servers running there** lists the model servers answering on the machine's own loopback address. Workbench finds them with one SSH command that runs a small probe on the machine; it does not scan the machine's network. Choose **Attach…** next to a server, pick the model, and attach it. **Look again** repeats the search. A server on a port outside the usual list, such as 8081, is found once you add the port under **Other ports** and choose **Look again**; Workbench remembers the ports for that machine.
 
 Attaching opens an SSH tunnel from a free port on this computer's `127.0.0.1` to that server's port on the machine's `127.0.0.1`, one port per server. The connection appears in **Connections** under "Over SSH", and agents talk to the model through the tunnel. **Reconnect** opens a tunnel again after the machine or this computer restarted; **Detach** closes it and removes the connection.
 
@@ -279,6 +279,16 @@ Remove things in this order, all under **Pairing and removal**:
 3. **Forget this machine…**: Workbench deletes its key, tunnels and connections for the machine on this computer and changes nothing on the machine. If you forget a machine without revoking first, Workbench shows the key line you can remove from `~/.ssh/authorized_keys` there yourself.
 
 Remote agent sessions on a machine are covered in [Sessions and terminals](sessions.md#remote-sessions).
+
+### Windows machines
+
+Workbench works with the OpenSSH server that Windows includes, whether its SSH shell is Command Prompt (the default) or PowerShell. **Check connection** finds out which system the machine runs each time, and the machine's row then says Windows.
+
+- Finding servers: the probe runs in Windows PowerShell, so the machine needs no Python for it. It checks the same ports and answers the same way as on Linux. Attaching and tunnels work as above.
+- Remote sessions: Windows has no tmux, so a session opens PowerShell (PowerShell 7 when it is installed) in the folder you chose and starts the agent there. A folder that starts with `~` is under your user folder, and the agent is found the way PowerShell finds it, including `.cmd` and `.ps1` installs. The session ends when its tab or window closes; there is nothing to reattach, so **End** in the dock ends it.
+- Pairing: the Workbench key goes into `.ssh\authorized_keys` in your user folder, or into `administrators_authorized_keys` under `C:\ProgramData\ssh` for an administrator account, as the Windows OpenSSH server expects.
+
+The Workbench-managed model on Windows needs Python 3.8 or newer for your user and an NVIDIA GPU whose driver is version 580 or newer. Workbench installs it under `%LOCALAPPDATA%\agent-workbench-node`: the CUDA build of llama.cpp b12633 with its CUDA runtime, and an Inkling 2 Mini file chosen from the model catalog by the GPU's memory, UD-Q8_K_XL on a 32 GB card, UD-Q4_K_XL on 24 GB and UD-IQ3_XXS on 16 GB, each checked against its pinned SHA-256. If the model file is already on the machine, type its path under the managed model, or choose **Look for it** and then **Use this file**, before **Install…**. Workbench reads the whole file, uses it only if its SHA-256 matches, and links it into the folder instead of copying it when it can; otherwise the machine downloads the file. **Start and connect** starts the model outside the SSH session, so it keeps running after the connection closes, until you choose **Stop…**.
 
 ## Hosted providers
 

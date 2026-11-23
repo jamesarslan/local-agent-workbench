@@ -440,6 +440,25 @@ class WindowsMachineTest(Base):
         self.assertEqual(published.call_args.args[0]["context"], 32768)
 
 
+class WindowsSessionsTest(Base):
+    def test_windows_sessions_are_the_docks_own_terminals(self):
+        import sessions
+
+        self.windows_box()
+        docked = [
+            dict(id="t1", kind="remote", host="me@win", name="awb-0123456789abcdef", harness="Codex", workspace="/p", started=5.0, lasting=False),
+            dict(id="t2", kind="remote", host="me@other", name="awb-1123456789abcdef", harness="OMP", workspace="/p", started=6.0),
+        ]
+        self.use(patch.object(sessions, "docked", return_value=docked))
+        ssh = self.use(patch.object(sessions, "over_ssh"))
+        rows = sessions.remote("me@win")
+        self.assertEqual([(r["name"], r["state"], r["harness"]) for r in rows], [("awb-0123456789abcdef", "attached", "Codex")])
+        with patch("project_terminal.dispatch") as closed:
+            self.assertTrue(sessions.end_remote("me@win", "awb-0123456789abcdef"))
+        closed.assert_called_once_with("term-close", {"workspace": "/p", "id": "t1"})
+        ssh.assert_not_called()
+
+
 class WindowsNodeTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
