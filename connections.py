@@ -164,6 +164,22 @@ def _checked(harness, argv, values):
     return argv
 
 
+NO_LOGIN_KEYCHAIN = (
+    "The macOS login keychain was not found for this home folder, so keys are kept "
+    "only until Agent Workbench closes. Start Agent Workbench from your own account "
+    "without changing HOME to keep them."
+)
+
+
+def _keychain_missing(module):
+    """macOS shows a "Keychain Not Found" dialog that offers to reset the keychain when the
+    login keychain is missing, for example when HOME points elsewhere; never ask it then."""
+    if sys.platform != "darwin" or not module.endswith(".macOS"):
+        return False
+    folder = Path.home() / "Library" / "Keychains"
+    return not any((folder / n).exists() for n in ("login.keychain-db", "login.keychain"))
+
+
 def vault_status():
     reason = NO_VAULT.get(sys.platform, NO_VAULT["linux"])
     try:
@@ -173,6 +189,8 @@ def vault_status():
     except Exception:
         return {"available": False, "backend": "none", "reason": reason}
     module, name = type(backend).__module__, type(backend).__name__
+    if _keychain_missing(module):
+        return {"available": False, "backend": "macOS", "reason": NO_LOGIN_KEYCHAIN}
     available = not (module.endswith((".fail", ".null")) or "plaintext" in name.lower())
     return {
         "available": available,
@@ -253,6 +271,8 @@ def _lookup(s):
     slot = vault_slot(s)
     if _MEMORY.get(slot):
         return _MEMORY[slot], "memory"
+    if not vault_status()["available"]:
+        return "", "none"
     import keyring
 
     # Windows Credential Manager failures surface as pywintypes.error, not KeyringError.
@@ -313,6 +333,8 @@ def forget_key(s):
     except ValueError:
         return False
     _MEMORY.pop(slot, None)
+    if not vault_status()["available"]:
+        return True
     import keyring
 
     try:

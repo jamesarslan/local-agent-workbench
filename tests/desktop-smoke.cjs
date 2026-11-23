@@ -81,6 +81,9 @@ function launch(dataDir, userDir, port) {
       "--remote-debugging-address=127.0.0.1",
       "--remote-debugging-port=0",
       "--user-data-dir=" + userDir,
+      // HOME is a scratch folder here: keep Chromium away from the real keychain, which
+      // macOS would otherwise offer to reset because it finds no login keychain there.
+      ...(mac ? ["--use-mock-keychain"] : []),
       path.join(root, "desktop"),
     ],
     {

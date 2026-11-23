@@ -459,6 +459,49 @@ class WindowsSessionsTest(Base):
         ssh.assert_not_called()
 
 
+class MissingKeychainTest(unittest.TestCase):
+    def test_a_missing_login_keychain_is_never_asked(self):
+        import keyring
+        import types
+
+        import project_setup
+
+        calls = []
+
+        class Mac:
+            def get_password(self, *a):
+                calls.append(a)
+
+            set_password = delete_password = get_password
+
+        Mac.__module__ = "keyring.backends.macOS"
+        home = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, home, ignore_errors=True)
+        row = dict(provider="Attached endpoint", endpoint="http://127.0.0.1:9/v1", connection_id="abc")
+        with (
+            patch.object(keyring, "get_keyring", return_value=Mac()),
+            patch.object(keyring, "get_password", side_effect=lambda *a: calls.append(a)),
+            patch.object(keyring, "set_password", side_effect=lambda *a: calls.append(a)),
+            patch.object(connections.sys, "platform", "darwin"),
+            patch.object(connections.Path, "home", return_value=home),
+            patch.object(connections, "_MEMORY", {}),
+        ):
+            status = connections.vault_status()
+            self.assertFalse(status["available"])
+            self.assertIn("login keychain was not found", status["reason"])
+            self.assertEqual(connections.store_key(row, "k"), "memory")
+            self.assertEqual(connections.secret(row), "k")
+            self.assertTrue(connections.forget_key(row))
+            self.assertEqual(project_setup.secret_status(["X_TOKEN"]), {"X_TOKEN": "missing"})
+            with self.assertRaisesRegex(ValueError, "no system credential vault"):
+                project_setup.store_secret("X_TOKEN", "v")
+            self.assertFalse(project_setup.forget_secret("X_TOKEN"))
+            self.assertEqual(calls, [])
+            (home / "Library" / "Keychains").mkdir(parents=True)
+            (home / "Library" / "Keychains" / "login.keychain-db").write_text("")
+            self.assertTrue(connections.vault_status()["available"])
+
+
 class WindowsNodeTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
