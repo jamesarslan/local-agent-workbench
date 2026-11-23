@@ -30,7 +30,7 @@ All notable changes to Agent Workbench are listed here. Versions follow semantic
 ### Known issues
 
 - macOS is a preview. These macOS checks have not passed yet: a CI job, an install from a published release, a browser download with the Gatekeeper dialog, the first start of the desktop runtime, an agent in a native terminal window, and Doctor.
-- Hosted CI has not run for this release. The suites, the Node tests and the kit installs were run by hand on macOS, Windows 11 and Fedora 44 at the release commit.
+- Hosted CI has not run for this release. The Python and Node suites were run by hand on macOS, Windows 11 and Fedora 44 at the release commit, and the kit installs on Windows 11 and Fedora 44; no macOS kit was built for 0.5.0.
 - The kits are not code-signed or notarised. The release workflow is set up to record build attestations but has not run, so 0.5.0 may ship without them.
 - Pairing a machine through SSH and revoking its key were not run against the Windows and Fedora machines, which already accepted this computer's key; the PowerShell scripts for them are covered by unit tests only.
 - Workbench corrects the chat template only for models it serves. Against an attached server whose template refuses a late system message, Claude Code and Codex are blocked with the reason; OMP, Pi and opencode stay available.
