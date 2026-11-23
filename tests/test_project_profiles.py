@@ -1814,6 +1814,7 @@ class FolderDefaultTest(ProjectCase):
                 ("skills", True),
                 ("memory", False),
                 ("connections", False),
+                ("runs", False),
                 ("keys", False),
             ],
         )
@@ -1823,6 +1824,10 @@ class FolderDefaultTest(ProjectCase):
         )
         self.assertEqual(Path(where["memory"]["path"]), self.data / "projects.json")
         self.assertEqual(Path(where["connections"]["path"]), self.data / "connections.json")
+        import run_log
+
+        with patch.object(runtime, "DATA", self.data):
+            self.assertEqual(Path(where["runs"]["path"]), run_log.run_file(self.work))
         self.assertEqual((where["keys"]["path"], where["keys"]["exists"]), ("", False))
         self.assertIn("holds no keys", where["profiles"]["note"])
         self.assertFalse(where["profiles"]["exists"])
