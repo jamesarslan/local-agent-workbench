@@ -41,7 +41,7 @@ What is in it:
 | `desktop-runtime/` | The Electron runtime the window uses | No |
 | `workspace/` | The scratch project folder | Whatever you put there |
 | `traces/` | Recorded traces from **Advanced → Trace** | Can hold project content |
-| `runs/` | From the next release: one record per agent launch, for its run summary ([Run summaries](sessions.md#run-summaries)) | No keys, but folder paths, file names and the folder prompt can be private |
+| `runs/` | New in the next release: one JSON file per project folder with its newest 100 run records, for the run summaries ([Run summaries](sessions.md#run-summaries)) | No keys, but folder paths, file names and the folder prompt can be private |
 | `launchers/` | Launchers made with **Create launcher** | No |
 | `serve.log`, `engine.log`, `setup.log`, `bridge.log` | Logs. `bridge.log` holds start-up lines and errors, not the requests themselves | No |
 | `benchmark-*.json`, `latest-tool-load.json` | Results of your own benchmark runs | No |
