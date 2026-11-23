@@ -1,6 +1,7 @@
 """Doctor checks: every seam is patched, so nothing here touches the network, the vault or the real data folder."""
 
 import ast
+import atexit
 import contextlib
 import io
 import json
@@ -18,8 +19,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-if "runtime" not in sys.modules:
-    os.environ.setdefault("WORKBENCH_DATA", tempfile.mkdtemp(prefix="awb-test-"))
+if "runtime" not in sys.modules and "WORKBENCH_DATA" not in os.environ:
+    os.environ["WORKBENCH_DATA"] = tempfile.mkdtemp(prefix="awb-test-")
+    atexit.register(shutil.rmtree, os.environ["WORKBENCH_DATA"], ignore_errors=True)
 
 import doctor
 
@@ -42,6 +44,13 @@ def agent(name, path="", on_path=True, version="", hint=""):
         hint=hint,
         version=version,
     )
+
+
+def posix_quoted(path):
+    """How a macOS fix command quotes path: double quotes for a plain path; a path with a
+    backslash (what a simulated macOS check sees on a Windows host) is single-quoted."""
+    text = str(path)
+    return shlex.quote(text) if "\\" in text else f'"{text}"'
 
 
 def backend(module, name):
@@ -397,7 +406,7 @@ class DoctorTests(unittest.TestCase):
         self.assertRow(doctor.check_engine(), "fail", "does not start", "Reinstall it")
         self.system("darwin")
         folder = Path("/opt/engine/llama-server").parent
-        fix = f'xattr -dr com.apple.quarantine "{folder}"'
+        fix = f"xattr -dr com.apple.quarantine {posix_quoted(folder)}"
         self.assertRow(doctor.check_engine(), "fail", "does not start", fix)
 
     def test_engine_loader_errors_are_not_a_version(self):
@@ -703,12 +712,12 @@ class DoctorTests(unittest.TestCase):
         with patch.object(doctor, "_stat", lambda path: user), patch.object(doctor, "_read", self.read_file):
             profile.write_text(
                 "profile agent-workbench /srv/other/data/desktop-runtime/linux-*/electron flags=(unconfined) {\n"
-                f"  # {self.data}/desktop-runtime-old/electron\n  userns,\n}}\n",
+                f"  # {self.data / 'desktop-runtime-old'}/electron\n  userns,\n}}\n",
                 encoding="utf8",
             )
             self.assertRow(doctor.check_sandbox(), "warn", "has not been downloaded")
             profile.write_text(
-                f"profile agent-workbench {self.data}/desktop-runtime/linux-*/electron flags=(unconfined) {{\n"
+                f"profile agent-workbench {self.data / 'desktop-runtime'}/linux-*/electron flags=(unconfined) {{\n"
                 "  userns,\n}\n",
                 encoding="utf8",
             )
@@ -724,7 +733,7 @@ class DoctorTests(unittest.TestCase):
         self.answers["xattr"] = (0, "0081;65a1b2c3;Safari;")
         row = doctor.check_quarantine()
         self.assertRow(row, "fail", f"quarantine is set on: {self.root}", "xattr -dr")
-        self.assertIn(f'"{self.root}"', row["fix"])
+        self.assertIn(posix_quoted(self.root), row["fix"])
         probes = [call for call in self.calls if call[0] == "/usr/bin/xattr"]
         self.assertEqual(probes[0][1:], ["-p", "com.apple.quarantine", str(self.root)])
         self.answers["xattr"] = (1, "No such xattr: com.apple.quarantine")
@@ -739,15 +748,15 @@ class DoctorTests(unittest.TestCase):
 
         self.answers["xattr"] = inside
         row = doctor.check_quarantine()
-        self.assertRow(row, "fail", str(runtime), f'quarantine "{self.data}" and start')
+        self.assertRow(row, "fail", str(runtime), f"quarantine {posix_quoted(self.data)} and start")
         self.assertIn(self.paths[ENGINE], row["detail"])
         self.assertNotIn(str(self.root), row["fix"])
         with patch.object(doctor, "DATA", self.root / ".local"):
             self.answers["xattr"] = (0, "")
             fix = doctor.check_quarantine()["fix"]
-        self.assertIn(f'"{self.root}"', fix)
-        self.assertIn(f'"{Path(sys.executable).resolve()}"', fix)
-        self.assertIn(f'"{self.paths[ENGINE]}"', fix)
+        self.assertIn(posix_quoted(self.root), fix)
+        self.assertIn(posix_quoted(Path(sys.executable).resolve()), fix)
+        self.assertIn(posix_quoted(self.paths[ENGINE]), fix)
 
         del self.calls[:]
         row = doctor.check_automation()
@@ -870,6 +879,24 @@ class DoctorTests(unittest.TestCase):
             code = doctor.main(["nope"])
         self.assertEqual((code, out.getvalue()), (2, ""))
         self.assertIn("Unknown check: nope.", err.getvalue())
+
+    def test_output_outside_utf8_keeps_to_ascii_punctuation(self):
+        line = "ok    Data folder          C:\\Users\\José\\data · 348 GiB free → Setup ✓"
+        for encoding, expected in (
+            ("cp1252", "C:\\Users\\José\\data - 348 GiB free -> Setup ?".encode("cp1252")),
+            ("cp437", "C:\\Users\\José\\data - 348 GiB free -> Setup ?".encode("cp437")),
+            ("utf-8", "C:\\Users\\José\\data · 348 GiB free → Setup ✓".encode("utf-8")),
+        ):
+            raw = io.BytesIO()
+            stream = io.TextIOWrapper(raw, encoding=encoding, newline="\n")
+            with contextlib.redirect_stdout(stream):
+                doctor._emit(line)
+            stream.flush()
+            self.assertIn(expected, raw.getvalue(), encoding)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            doctor._emit(line)
+        self.assertEqual(out.getvalue(), line + "\n")
 
     def test_counts_and_render(self):
         rows = [

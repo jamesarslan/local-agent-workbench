@@ -140,6 +140,33 @@ class ShimTests(unittest.TestCase):
                 ):
                     self.assertEqual(host.command("omp"), [str(folder / "bun.cmd")])
 
+    def test_resolve_shim_stays_inside_its_node_modules(self):
+        folder = shim_folder(self)
+        outside = folder.parent / (folder.name + "-outside")
+        outside.mkdir()
+        self.addCleanup(shutil.rmtree, outside, ignore_errors=True)
+        (outside / "evil.js").write_text("x", encoding="utf8")
+        (folder / "beside.js").write_text("x", encoding="utf8")
+        (folder / "beside.exe").write_text("x", encoding="utf8")
+        script = "node_modules\\@openai\\codex\\bin\\codex.js"
+        for name, target in (
+            ("climb.cmd", "node_modules\\..\\..\\" + outside.name + "\\evil.js"),
+            ("up.cmd", "..\\" + outside.name + "\\evil.js"),
+            ("beside.cmd", "beside.js"),
+            ("beside-exe.cmd", "beside.exe"),
+            ("absolute.cmd", "node_modules\\..\\beside.js"),
+        ):
+            (folder / name).write_bytes(NEW_SHIM.replace(script, target).encode("utf8"))
+        with patch.object(host.shutil, "which", return_value="NODE"):
+            for name in ("climb.cmd", "up.cmd", "beside.cmd", "beside-exe.cmd", "absolute.cmd"):
+                self.assertIsNone(host.resolve_shim(folder / name), name)
+            (folder / "inner.cmd").write_bytes(
+                NEW_SHIM.replace(script, "node_modules\\pkg\\..\\pkg\\cli.js").encode("utf8")
+            )
+            self.assertEqual(
+                host.resolve_shim(folder / "inner.cmd"), ["NODE", str(folder / TARGETS[1])]
+            )
+
     def test_command_resolves_harness_shims_only(self):
         folder = shim_folder(self)
         shim = str(folder / "codex.cmd")

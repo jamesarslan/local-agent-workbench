@@ -192,15 +192,33 @@ def profile_file(workspace):
     )
 
 
+def _drop_old_lock(path):
+    """Remove the empty profiles.json.lock that 0.4.0 left beside profiles.json."""
+    old = path.with_name(path.name + ".lock")
+    try:
+        info = os.lstat(old)
+        if stat.S_ISREG(info.st_mode) and info.st_size == 0:
+            os.unlink(old)
+    except OSError:
+        pass
+
+
+def _profile_lock(path):
+    """The lock for one profiles.json. It lives in the data folder, so the project
+    folder never shows a stray lock file."""
+    key = hashlib.sha256(folder_paths.fold(str(path)).encode("utf8")).hexdigest()[:16]
+    return DATA / "locks" / f"profiles-{key}.lock"
+
+
 @contextmanager
 def _editing(path, create=False):
-    lock = folder_paths.inside(
-        path.parent.parent, path.parent.name, path.name + ".lock"
-    )
+    lock = _profile_lock(path)
     try:
+        lock.parent.mkdir(parents=True, exist_ok=True)
         if create:
             path.parent.mkdir(exist_ok=True)
         with _locked(lock):
+            _drop_old_lock(path)
             yield
     except OSError:
         raise ValueError(NO_WRITE) from None

@@ -17,6 +17,8 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import Mock, patch
 
+import psutil
+
 import account_book
 import catalog
 import connections
@@ -1051,6 +1053,15 @@ def bridge_env(base):
     }
 
 
+def interpreter(proc):
+    """The pid that runs Python for proc. A venv's python.exe on Windows is a launcher
+    that runs the base interpreter as its only child and takes it down when killed."""
+    if os.name != "nt":
+        return proc.pid
+    children = psutil.Process(proc.pid).children()
+    return children[0].pid if len(children) == 1 else proc.pid
+
+
 class Process:
     """A real bridge process driven over its pipes."""
 
@@ -1144,7 +1155,7 @@ class ProcessTest(unittest.TestCase):
         ready = bridge_process.read()
         self.assertEqual(ready["event"], "bridge-ready")
         self.assertEqual(ready["data"]["protocol"], 2)
-        self.assertEqual(ready["data"]["pid"], bridge_process.proc.pid)
+        self.assertEqual(ready["data"]["pid"], interpreter(bridge_process.proc))
         bridge_process.ask(1, "nope")
         self.assertEqual(
             bridge_process.read(), {"id": 1, "error": {"message": "Unknown desktop action."}}
@@ -1166,6 +1177,18 @@ class ProcessTest(unittest.TestCase):
         self.assertEqual(log.count("desktop_bridge: ignored a malformed request line"), 2)
         self.assertNotIn("garbage", log)
         self.assertIn("KeyError: 'workspace'", log)
+
+    def test_killing_the_started_process_ends_the_bridge(self):
+        # The desktop app stops a stuck bridge with proc.kill() on the process it started.
+        bridge_process = Process(self, self.base)
+        pid = bridge_process.read()["data"]["pid"]
+        self.assertEqual(pid, interpreter(bridge_process.proc))
+        bridge_process.proc.kill()
+        bridge_process.proc.wait(5)
+        limit = time.monotonic() + 5
+        while psutil.pid_exists(pid) and time.monotonic() < limit:
+            time.sleep(0.05)
+        self.assertFalse(psutil.pid_exists(pid))
 
     @unittest.skipUnless(
         os.environ.get("WORKBENCH_SLOW_TESTS"),

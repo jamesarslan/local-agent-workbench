@@ -50,7 +50,7 @@ class RunCase(unittest.TestCase):
         self.work = self.repo / "app"
         for folder in (self.data, self.repo / ".git", self.work):
             folder.mkdir(parents=True)
-        (self.work / "AGENTS.md").write_text(AGENTS, encoding="utf8")
+        (self.work / "AGENTS.md").write_text(AGENTS, encoding="utf8", newline="\n")
         self.skill("review")
         self.lab = {
             "lab": dict(
@@ -74,7 +74,7 @@ class RunCase(unittest.TestCase):
     def skill(self, name):
         folder = self.work / ".agents" / "skills" / name
         folder.mkdir(parents=True)
-        (folder / "SKILL.md").write_text(SKILL.format(name=name), encoding="utf8")
+        (folder / "SKILL.md").write_text(SKILL.format(name=name), encoding="utf8", newline="\n")
 
     def facts(self, **values):
         s = runtime.DEFAULTS | dict(
