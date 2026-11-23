@@ -99,7 +99,7 @@ LABELS = {
     "weight": "Local weights",
 }
 CHOICES = {
-    "channel": ("Tested", "Updated"),
+    "channel": ("Tested", "Updated", "Unsloth"),
     "kv": ("auto", "fp16", "fp8"),
     "thinking": ("off", "minimal", "low", "medium", "high", "xhigh", "max"),
     "image_route": ("auto", "selected", "pareto", "manual"),

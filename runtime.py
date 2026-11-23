@@ -32,6 +32,12 @@ LOCK = FileLock(str(DATA / "server.lock"), timeout=60)
 QUIET = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 POLL = 0.5
 ENGINES = ("Auto", "Strata", "llama.cpp", "Flash preset", "vLLM", "Custom")
+# Engine releases: the pinned mainline build, the newest mainline release, or Unsloth's
+# pinned build, which adds the DSpark drafter for Inkling 2 Mini.
+CHANNELS = ("Tested", "Updated", "Unsloth")
+UNSLOTH_TARGET = "llama-unsloth-b12649"
+DSPARK = "dspark-Inkling-2-Mini-Q8_0.gguf"
+DSPARK_ARGS = ("--spec-type", "draft-dspark", "--spec-draft-n-max", "2", "-ngld", "99")
 WSL_DISTRO = "AgentWorkbench-Web"
 VLLM_MODEL = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*")
 VLLM_PARSER = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}")
@@ -199,6 +205,10 @@ def loopback_env(env):
 def locate(name, exe, channel="Tested"):
     exe = exe if os.name == "nt" else exe.removesuffix(".exe")
     label = "Strata" if name.startswith("strata-") else "llama.cpp"
+    if channel == "Unsloth":
+        channel = "Tested"
+        if label == "llama.cpp":
+            name = UNSLOTH_TARGET
     if channel == "Updated":
         meta = load(DATA / "updates.json", {})
         family = (
@@ -222,6 +232,12 @@ def locate(name, exe, channel="Tested"):
         nested = next((v for v in (base / name).rglob(exe) if v.is_file()), None)
         if nested:
             return base / name, nested
+    if name == UNSLOTH_TARGET:
+        raise ValueError(
+            "Unsloth's llama.cpp build is not installed: open Advanced → Model "
+            "library and choose Install Unsloth build, or set Engine release back to "
+            "Tested."
+        )
     raise EngineMissing(
         label, f"The {label} engine is not installed: {install_hint()}."
     )
@@ -345,8 +361,8 @@ def validate_serving(s):
         raise ValueError("Choose 1,024 to 1,048,576 context tokens.")
     if s.get("kv", "auto") not in ("auto", "fp8"):
         raise ValueError("Choose auto or fp8 for the KV cache.")
-    if s.get("channel", "Tested") not in ("Tested", "Updated"):
-        raise ValueError("Choose Tested or Updated for the engine release.")
+    if s.get("channel", "Tested") not in CHANNELS:
+        raise ValueError("Choose Tested, Updated or Unsloth for the engine release.")
     wait = s.get("start_timeout") or 0
     if not within(wait, int, 0, 0) and not within(wait, int, 30, 7200):
         raise ValueError(
@@ -544,6 +560,48 @@ def flash_config():
             / "Strata/launch/flash-q2-32k-dflash2.json",
         )
     )
+
+
+def inkling_gguf(model):
+    name = Path(model).name.lower()
+    return name.startswith("inkling-2-mini") and name.endswith((".gguf", ".gguf_file"))
+
+
+def drafter_folder(model):
+    """Where the DSpark drafter goes for these weights: their repository folder."""
+    model = Path(model)
+    nested = model.parent.name == "Mainline_Support"
+    return model.parent.parent if nested else model.parent
+
+
+def drafter(model):
+    """The DSpark drafter beside an Inkling GGUF or in its repository folder, or None."""
+    model = Path(model)
+    places = (model.parent / DSPARK, drafter_folder(model) / DSPARK)
+    return next((path for path in places if path.is_file()), None)
+
+
+def draft_note(s):
+    """Why an Inkling GGUF with drafting on starts without the DSpark drafter, or ""."""
+    model = s.get("model") or ""
+    if (
+        not s.get("draft")
+        or s.get("engine") not in ("Auto", "llama.cpp")
+        or not inkling_gguf(model)
+    ):
+        return ""
+    if s.get("channel") != "Unsloth":
+        return (
+            "Inkling 2 Mini runs without the DSpark drafter, which needs Unsloth's "
+            "llama.cpp build; set Engine release to Unsloth in Advanced → Model "
+            "library to use it."
+        )
+    if not drafter(model):
+        return (
+            f"Inkling 2 Mini runs without the DSpark drafter, because {DSPARK} is not "
+            "next to the model; choose Download drafter in Advanced → Model library."
+        )
+    return ""
 
 
 def backend(s):
@@ -796,6 +854,13 @@ def backend(s):
                 cmd += ["--spec-type", "draft-mtp", "--spec-draft-n-max", "9"]
         else:
             cmd += ["--no-mmproj"]
+        dspark = (
+            drafter(model)
+            if s["draft"] and s["channel"] == "Unsloth" and inkling_gguf(model)
+            else None
+        )
+        if dspark:
+            cmd += ["-md", str(dspark), *DSPARK_ARGS]
         import chat_templates
 
         fixed = chat_templates.override(model, DATA / "templates")
@@ -815,8 +880,9 @@ def backend(s):
     env.update(PYTHONPATH=str(server.parents[1]), STRATA_API_KEY=key())
     if system() == "linux":
         try:
+            channel = "Updated" if s["channel"] == "Updated" else "Tested"
             folders.append(
-                locate("llama-native-b12633", "llama-server.exe", s["channel"])[0]
+                locate("llama-native-b12633", "llama-server.exe", channel)[0]
             )
         except ValueError:
             pass
@@ -1014,7 +1080,9 @@ def await_ready(rec, child=None, progress=None, cancel=None):
                         job="model-start",
                         phase="ready",
                         elapsed=int(elapsed),
-                        message="The model is ready.",
+                        message=" ".join(
+                            filter(None, ["The model is ready.", rec.get("note")])
+                        ),
                     )
                     return rec
             except (
@@ -1088,6 +1156,9 @@ def start(s, progress=None, cancel=None):
             )
             key()
             cmd, env = backend(s)
+            note = draft_note(s)
+            if note:
+                tell(progress, job="model-start", phase="prepare", message=note)
             detach = {} if system() == "windows" else {"start_new_session": True}
             with open_log(DATA / "serve.log") as log:
                 try:
@@ -1118,6 +1189,8 @@ def start(s, progress=None, cancel=None):
                     budget=start_budget(s),
                     log=str(DATA / "serve.log"),
                 )
+                if note:
+                    rec["note"] = note
                 write_json(DATA / "running.json", rec)
             except BaseException:
                 child.kill()

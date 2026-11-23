@@ -1,15 +1,16 @@
 // Model install (AW.models): the engine for local models when it is missing, the catalog download and the saved setup, each as a task with
 // progress and Cancel (ui.md 7, 9.8). A model whose licence carries a note asks before its download starts.
-// Beyond ui.md 9.8: AW.models.engine({origin, update}) installs or updates the engine alone; AW.models.statusHelp(entry) is the help text
+// Beyond ui.md 9.8: AW.models.engine({origin, update, release}) installs or updates the engine alone (release "unsloth" installs Unsloth's build); AW.models.statusHelp(entry) is the help text
 // of an entry's Measured or Suggested chip; AW.models.chip(entry) builds that chip.
 (function () {
   "use strict";
   const AW = window.AW;
   const flights = new Map();
 
-  function engine({ origin, update = false } = {}) {
-    const title = update ? "Updating the engine for local models" : "Installing the engine for local models";
-    return AW.jobs.run("engine-install", update ? { update: true } : {}, { title, origin, key: "engine" }).then((value) => {
+  function engine({ origin, update = false, release = "" } = {}) {
+    const title = release === "unsloth" ? "Installing Unsloth's llama.cpp build" : update ? "Updating the engine for local models" : "Installing the engine for local models";
+    const payload = release ? { release } : update ? { update: true } : {};
+    return AW.jobs.run("engine-install", payload, { title, origin, key: "engine" }).then((value) => {
       AW.store.refresh("engine", { force: true }).catch(() => {});
       return value;
     });

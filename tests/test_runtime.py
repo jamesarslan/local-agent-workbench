@@ -488,7 +488,7 @@ class CommandTests(RuntimeCase):
             (dict(context="many"), "1,024 to 1,048,576"),
             (dict(context=None), "1,024 to 1,048,576"),
             (dict(kv="q4"), "auto or fp8"),
-            (dict(channel="Nightly"), "Tested or Updated"),
+            (dict(channel="Nightly"), "Tested, Updated or Unsloth"),
             (dict(start_timeout=29), "start timeout"),
             (dict(start_timeout=7201), "start timeout"),
             (dict(start_timeout="soon"), "start timeout"),
@@ -533,6 +533,87 @@ class CommandTests(RuntimeCase):
         plain = runtime.backend(self.settings(engine="llama.cpp", model=str(tolerant)))[0]
         self.assertNotIn("--chat-template-file", plain)
         self.assertEqual(plain[-1], "--no-mmproj")
+
+    def inkling(self, drafter=True):
+        repo = self.data / "models/unsloth--Inkling-2-Mini-GGUF"
+        (repo / "Mainline_Support").mkdir(parents=True)
+        model = repo / "Mainline_Support/Inkling-2-Mini-UD-Q4_K_XL.gguf_file"
+        model.write_text("weights", encoding="utf8")
+        if drafter:
+            (repo / runtime.DSPARK).write_text("drafter", encoding="utf8")
+        return model
+
+    def test_dspark_drafter_needs_unsloth_inkling_draft_and_the_file(self):
+        self.system("macos")
+        mainline = self.llama()
+        unsloth = self.llama("runtime/llama-unsloth-b12649", "llama-b12649-mix-c7059d6")
+        model = self.inkling()
+        drafter = model.parents[1] / "dspark-Inkling-2-Mini-Q8_0.gguf"
+        s = self.settings(engine="llama.cpp", model=str(model), channel="Unsloth")
+        cmd = runtime.backend(s)[0]
+        self.assertEqual(cmd[0], str(unsloth))
+        at = cmd.index("-md")
+        self.assertEqual(
+            cmd[at : at + 8],
+            ["-md", str(drafter), "--spec-type", "draft-dspark"]
+            + ["--spec-draft-n-max", "2", "-ngld", "99"],
+        )
+        self.assertEqual(runtime.draft_note(s), "")
+        auto = runtime.backend(s | dict(engine="Auto"))[0]
+        self.assertIn("-md", auto)
+        extra = runtime.backend(s | dict(engine_args=["--cache-ram", "2048"]))[0]
+        self.assertEqual(extra[-2:], ["--cache-ram", "2048"])
+        for changes in (dict(draft=False), dict(channel="Tested")):
+            with self.subTest(changes=changes):
+                plain = runtime.backend(s | changes)[0]
+                self.assertNotIn("-md", plain)
+                self.assertNotIn("draft-dspark", plain)
+        self.assertEqual(runtime.backend(s | dict(channel="Tested"))[0][0], str(mainline))
+        other = self.data / "models/Qwen3.5-4B-Q4_K_M.gguf"
+        other.write_text("weights", encoding="utf8")
+        (other.parent / runtime.DSPARK).write_text("drafter", encoding="utf8")
+        self.assertNotIn("-md", runtime.backend(s | dict(model=str(other)))[0])
+        drafter.unlink()
+        self.assertNotIn("-md", runtime.backend(s)[0])
+        beside = model.with_name(runtime.DSPARK)
+        beside.write_text("drafter", encoding="utf8")
+        cmd = runtime.backend(s)[0]
+        self.assertEqual(cmd[cmd.index("-md") + 1], str(beside))
+
+    def test_draft_note_explains_why_inkling_runs_without_the_drafter(self):
+        model = self.inkling(drafter=False)
+        s = self.settings(engine="llama.cpp", model=str(model), channel="Unsloth")
+        self.assertIn("is not next to the model", runtime.draft_note(s))
+        self.assertIn("Download drafter", runtime.draft_note(s))
+        for channel in ("Tested", "Updated"):
+            note = runtime.draft_note(s | dict(channel=channel))
+            self.assertIn("needs Unsloth's llama.cpp build", note)
+            self.assertTrue(note.endswith("."))
+        for changes in (
+            dict(draft=False),
+            dict(engine="Strata"),
+            dict(model=self.model("Qwen3.5-4B-Q4_K_M.gguf")),
+        ):
+            with self.subTest(changes=changes):
+                self.assertEqual(runtime.draft_note(s | changes), "")
+        (model.parents[1] / runtime.DSPARK).write_text("drafter", encoding="utf8")
+        self.assertEqual(runtime.draft_note(s), "")
+
+    def test_unsloth_release_has_its_own_folder_and_message(self):
+        self.system("linux")
+        self.llama()
+        with self.assertRaisesRegex(ValueError, "choose Install Unsloth build"):
+            runtime.locate("llama-native-b12633", "llama-server.exe", "Unsloth")
+        exe = self.llama("runtime/llama-unsloth-b12649", "build")
+        self.assertEqual(
+            runtime.locate("llama-native-b12483", "llama-server.exe", "Unsloth"),
+            (self.data / "runtime/llama-unsloth-b12649", exe),
+        )
+        with self.assertRaises(runtime.EngineMissing) as caught:
+            runtime.locate("strata-inkling-0.1.65", "strata-inkling.exe", "Unsloth")
+        self.assertEqual(caught.exception.engine, "Strata")
+        self.assertNotIn("Unsloth", str(caught.exception))
+        runtime.validate_serving(self.settings(engine="llama.cpp", channel="Unsloth"))
 
     def test_extra_engine_options_are_allow_listed(self):
         self.assertEqual(
@@ -1087,6 +1168,20 @@ class LifecycleTests(RuntimeCase):
 
     def pid(self):
         return next(e["pid"] for e in self.events if e["phase"] == "spawn")
+
+    def test_start_reports_why_the_drafter_is_left_out(self):
+        s = self.custom(sys.executable, "-c", FAKE, "{port}", "{keyfile}", "0")
+        note = "Inkling 2 Mini runs without the DSpark drafter."
+        probe = runtime.endpoint_model
+        with patch.object(
+            runtime, "endpoint_model", lambda timeout=4: probe(0.5)
+        ), patch.object(runtime, "draft_note", return_value=note):
+            rec = runtime.start(s, progress=self.events.append)
+        self.assertEqual(rec["note"], note)
+        told = [e["message"] for e in self.events if e["phase"] == "prepare"]
+        self.assertIn(note, told)
+        self.assertEqual(self.events[-1]["message"], "The model is ready. " + note)
+        self.assertTrue(runtime.stop())
 
     def test_start_serves_and_stop_ends_it(self):
         s = self.custom(sys.executable, "-c", FAKE, "{port}", "{keyfile}", "0")

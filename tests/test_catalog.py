@@ -1024,6 +1024,67 @@ class CatalogTest(TempCase):
         self.assertTrue(plain)
         self.assertFalse(any("engine_args" in entry["settings"] for entry in plain))
 
+    def test_inkling_gguf_models_list_the_dspark_drafter(self):
+        raw = json.loads(catalog.CATALOG_FILE.read_text(encoding="utf8"))
+        drafter = {
+            "path": "dspark-Inkling-2-Mini-Q8_0.gguf",
+            "bytes": 503889952,
+            "sha256": "3da00cf7c31bbe5662b3c0d373ecf782d74d32ef43990acc158ce60c2add72e0",
+            "role": "draft",
+            "repo": "unsloth/Inkling-2-Mini-GGUF",
+            "revision": "8078d149286eec7193795413b9e0643da6d11fa1",
+        }
+        self.assertEqual(drafter["path"], runtime.DSPARK)
+        listing = []
+        for model in raw["models"]:
+            drafts = [f for f in model["files"] if f["role"] == "draft"]
+            if model["family"] == "inkling-2-mini":
+                listing.append(model["id"])
+                self.assertEqual(drafts, [drafter], model["id"])
+                self.assertEqual(model["files"][0]["role"], "weights")
+            else:
+                self.assertEqual(drafts, [], model["id"])
+        self.assertEqual(len(listing), 3)
+        entries = catalog.parse_catalog(raw, catalog.ROOT, accept_all)[1]
+        for entry in entries:
+            with self.subTest(entry=entry["id"]):
+                self.assertNotIn("draft", [f["role"] for f in entry["files"]])
+                if entry["model"] not in listing:
+                    self.assertNotIn("drafter", entry)
+                    continue
+                self.assertFalse(entry["settings"]["draft"])
+                self.assertEqual(
+                    entry["drafter"],
+                    [
+                        dict(
+                            repo=drafter["repo"],
+                            revision=drafter["revision"],
+                            path=drafter["path"],
+                            name=runtime.DSPARK,
+                            bytes=drafter["bytes"],
+                            sha256=drafter["sha256"],
+                            role="draft",
+                        )
+                    ],
+                )
+
+    def test_draft_files_follow_the_draft_setting(self):
+        data = fixture()
+        data["models"][0]["files"].append(
+            {"path": "Alpha-draft.gguf", "bytes": 5, "sha256": "ab" * 32, "role": "draft"}
+        )
+        data["picks"][4]["settings"]["draft"] = True
+        joined = by_id(self.parsed(data)[1])
+        drafted, plain = joined["alpha-peak"], joined["alpha-q8"]
+        self.assertEqual(drafted["files"][-1]["name"], "Alpha-draft.gguf")
+        self.assertEqual(drafted["download_bytes"], 1455)
+        self.assertNotIn("draft", [f["role"] for f in plain["files"]])
+        self.assertEqual(plain["drafter"][0]["name"], "Alpha-draft.gguf")
+        self.assertNotIn("drafter", joined["beta-fp8"])
+        data["models"][0]["files"][-1]["sha256"] = None
+        with self.assertRaises(ValueError):
+            self.parsed(data)
+
     def test_parse_catalog_rejects_bad_values(self):
         self.assertEqual(len(self.parsed()[1]), 6)
 
@@ -1858,6 +1919,41 @@ class DownloadTest(DownloadCase):
             (other / "org--Alpha-GGUF" / "sub" / "Alpha-Q4.gguf").read_bytes(), self.data
         )
 
+    def test_drafter_downloads_beside_the_inkling_weights(self):
+        body = b"dspark drafter"
+        drafter = dict(
+            repo="unsloth/Inkling-2-Mini-GGUF",
+            revision=REV_OTHER,
+            path=runtime.DSPARK,
+            name=runtime.DSPARK,
+            bytes=len(body),
+            sha256=hashlib.sha256(body).hexdigest(),
+            role="draft",
+        )
+        item = dict(id="metal-32-inkling-q4", drafter=[drafter])
+        self.patched(catalog, "entries", return_value=[dict(id="other"), item])
+        repo = self.tmp / "models" / "unsloth--Inkling-2-Mini-GGUF"
+        model = repo / "Mainline_Support" / "Inkling-2-Mini-UD-Q4_K_XL.gguf_file"
+        url = f"{catalog.HUB}/unsloth/Inkling-2-Mini-GGUF/resolve/{REV_OTHER}/{runtime.DSPARK}"
+        events = []
+        path = catalog.download_drafter(
+            model, events.append, None, FakeSession(by_url={url: body})
+        )
+        self.assertEqual(path, str(repo / runtime.DSPARK))
+        self.assertEqual((repo / runtime.DSPARK).read_bytes(), body)
+        self.assertEqual(runtime.drafter(model), repo / runtime.DSPARK)
+        self.assertEqual(events[-1]["message"], "DSpark drafter is ready")
+        self.assertEqual(events[-1]["id"], "dspark-drafter")
+        again = FakeSession(by_url={url: body})
+        catalog.download_drafter(model, None, None, again)
+        self.assertEqual(again.calls, [])
+        (repo / runtime.DSPARK).unlink()
+        with self.assertRaisesRegex(ValueError, "failed its checksum"):
+            catalog.download_drafter(model, None, None, FakeSession(by_url={url: b"x" * len(body)}))
+        self.assertFalse((repo / runtime.DSPARK).exists())
+        with self.assertRaisesRegex(ValueError, "Inkling 2 Mini GGUF"):
+            catalog.download_drafter(self.tmp / "Qwen3.5-4B-Q4_K_M.gguf")
+
     def test_download_refuses_second_job_and_cancels_by_id(self):
         item, served = self.item()
         gate, errors = threading.Event(), []
@@ -2278,6 +2374,12 @@ class DispatchTest(TempCase):
         result = catalog.dispatch("model-download", payload, progress=report, cancel=token)
         self.assertEqual(result, {"id": "x"})
         download.assert_called_once_with("alpha-q8", library, report, token)
+        drafter = self.patched(catalog, "download_drafter", return_value="/d.gguf")
+        payload = {"drafter": "/m/Inkling-2-Mini-UD-Q4_K_XL.gguf_file"}
+        result = catalog.dispatch("model-download", payload, progress=report, cancel=token)
+        self.assertEqual(result, "/d.gguf")
+        drafter.assert_called_once_with(payload["drafter"], report, token)
+        download.assert_called_once()
 
         with self.assertRaises(ValueError) as caught:
             catalog.dispatch("model-unknown", {})

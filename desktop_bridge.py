@@ -529,8 +529,16 @@ def dispatch(action, payload, progress=None, cancel=None):
     if action == "engine-install":
         import setup_engines
 
+        install, release = setup_engines.install, payload.get("release")
+        if release:
+
+            def install(*args, progress=None, cancel=None):
+                return setup_engines.install(
+                    *args, progress=progress, cancel=cancel, release=release
+                )
+
         return supply(
-            setup_engines.install,
+            install,
             bool(payload.get("update")),
             payload.get("backend"),
             payload.get("strata"),
