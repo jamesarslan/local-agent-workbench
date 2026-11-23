@@ -1,6 +1,7 @@
 """Environment checks. Each check is independent and returns {id, title, status, detail, fix}."""
 
 import argparse
+import codecs
 import http.client
 import importlib.util
 import json
@@ -741,12 +742,19 @@ def render(rows):
     return "\n".join(lines + ["", total])
 
 
+PLAIN = str.maketrans(
+    {"·": "-", "→": "->", "…": "...", "—": "-", "–": "-", "‘": "'", "’": "'",
+     "“": '"', "”": '"', "\u00a0": " ", "\u202f": " "}
+)
+
+
 def _emit(text):
-    try:
-        print(text)
-    except UnicodeEncodeError:
-        encoding = sys.stdout.encoding or "ascii"
-        print(text.encode(encoding, "replace").decode(encoding))
+    encoding = getattr(sys.stdout, "encoding", None)
+    if encoding and codecs.lookup(encoding).name != "utf-8":
+        # A pipe on Windows (an SSH session, a redirect) gets the ANSI code page, and the
+        # reader may decode it as UTF-8 or OEM: plain ASCII punctuation reads the same in all.
+        text = text.translate(PLAIN).encode(encoding, "replace").decode(encoding)
+    print(text)
 
 
 def main(argv=None):
