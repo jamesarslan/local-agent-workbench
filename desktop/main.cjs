@@ -60,6 +60,23 @@ const local = {
     shell.showItemInFolder(log);
     return true;
   },
+  // Reveals only a path the bridge lists in folder-places, never one the page names; a file that does not exist
+  // yet is shown through the nearest folder that does.
+  "folder-reveal": async (input) => {
+    const place = typeof input.place === "string" ? input.place : "";
+    const rows = await client.call("folder-places", {
+      workspace: typeof input.workspace === "string" ? input.workspace : "",
+    });
+    const row = (Array.isArray(rows) ? rows : []).find(
+      (item) => item && item.id === place && typeof item.path === "string" && item.path,
+    );
+    if (!row) throw { message: "Choose a file from the list to show." };
+    let target = row.path;
+    while (!fs.existsSync(target) && path.dirname(target) !== target)
+      target = path.dirname(target);
+    shell.showItemInFolder(target);
+    return true;
+  },
   "folder-pick": async () => {
     const result = await dialog.showOpenDialog(win, {
       properties: ["openDirectory"],

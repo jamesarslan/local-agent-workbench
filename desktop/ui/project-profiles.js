@@ -1,5 +1,6 @@
-// Project setup, Project profiles tab: what this computer remembers for the folder, the named profiles stored in the folder,
-// and the Apply profile dialog with every change and the prompt in full (ui.md 5.3).
+// Project setup, Project profiles tab: what this computer remembers for the folder, the named profiles stored in the folder
+// with the folder default, where each of these settings lives, and the Apply profile dialog with every change and the
+// prompt in full (ui.md 5.3). AW.profiles.review opens that dialog from Launch too.
 (function () {
   "use strict";
   const AW = window.AW;
@@ -13,9 +14,14 @@
   let folderError = null;
   let names = null;
   let namesError = null;
+  let defaultName = "";
+  let problem = "";
   let renaming = "";
+  let places = null;
+  let placesError = null;
   const folderTicket = AW.ticket();
   const namesTicket = AW.ticket();
+  const placesTicket = AW.ticket();
 
   function sourceLabel(recipe) {
     if (!recipe) return "";
@@ -128,7 +134,13 @@
     renameButton.dataset.action = "rename";
     const remove = AW.ui.button("Remove…", { small: true, onClick: () => removeProfile(name, errors) });
     remove.dataset.action = "remove";
-    row.append(el("span", { class: "project-profile-name", text: name }), el("div", { class: "project-row-actions" }, P.keyed(review, "review:" + name), P.keyed(renameButton, "rename:" + name), P.keyed(remove, "remove:" + name)), errors);
+    const isDefault = name === defaultName;
+    const mark = isDefault
+      ? AW.ui.button("Clear default", { small: true, pending: "Saving…", onClick: () => markDefault(name, false, errors) })
+      : AW.ui.button("Make default", { small: true, pending: "Saving…", onClick: () => markDefault(name, true, errors) });
+    mark.dataset.action = "default";
+    const label = el("span", { class: "project-profile-name" }, el("span", { text: name }), isDefault ? AW.ui.chip("Folder default", "ok") : null);
+    row.append(label, el("div", { class: "project-row-actions" }, P.keyed(review, "review:" + name), P.keyed(mark, "default:" + name), P.keyed(renameButton, "rename:" + name), P.keyed(remove, "remove:" + name)), errors);
     return row;
   }
 
@@ -155,13 +167,44 @@
       P.swap(host, AW.ui.empty("No profiles in this folder yet. A profile is a named set of launch choices that travels with the folder."));
       return;
     }
-    P.swap(host, names.map(profileRow));
+    P.swap(host, problem ? AW.ui.notice("warn", problem) : null, names.map(profileRow));
+  }
+
+  function placeRow(row) {
+    const node = el("div", { class: "project-place", data: { place: row.id } });
+    const head = el("div", { class: "project-place-head" }, el("span", { class: "project-place-label", text: row.label }));
+    if (row.path) head.append(P.keyed(AW.ui.button("Show in folder", { small: true, onClick: () => reveal(row.id) }), "reveal:" + row.id));
+    node.append(head);
+    if (row.path) node.append(el("p", { class: "project-row-path mono", title: AW.fmt.path(row.path), text: AW.fmt.path(row.path) + (row.exists ? "" : " · not created yet") }));
+    node.append(el("p", { class: "project-caption", text: row.note }));
+    return node;
+  }
+
+  function paintPlaces() {
+    const host = parts.places;
+    if (placesError && !places) {
+      P.loaded(host);
+      P.swap(host, AW.ui.errorNotice(placesError, { retry: () => loadPlaces() }));
+      return;
+    }
+    if (!places) {
+      P.loading(host, "where the settings live");
+      return;
+    }
+    P.loaded(host);
+    const rows = Array.isArray(places) ? places : [];
+    const group = (travels, label) => {
+      const listed = rows.filter((row) => Boolean(row.travels) === travels);
+      return listed.length ? [el("p", { class: "group-label", text: label }), ...listed.map(placeRow)] : [];
+    };
+    P.swap(host, group(true, "Travels with the folder"), group(false, "Stays on this computer"));
   }
 
   function paint() {
     if (!parts) return;
     paintFolder();
     paintNames();
+    paintPlaces();
   }
 
   async function loadFolder() {
@@ -188,7 +231,7 @@
     paintNames();
     let list = null;
     try {
-      list = await AW.request("project-list", { workspace: ctx.workspace });
+      list = await AW.request("project-list", { workspace: ctx.workspace, detail: true });
     } catch (thrown) {
       if (!namesTicket.current(mine)) return;
       namesError = AW.asError(thrown);
@@ -196,9 +239,53 @@
       return;
     }
     if (!namesTicket.current(mine)) return;
-    names = Array.isArray(list) ? list : [];
+    showNames(list);
     P.setCount("profiles", names.length);
+  }
+
+  function showNames(list) {
+    const detail = list && !Array.isArray(list) ? list : { names: list };
+    names = Array.isArray(detail.names) ? detail.names : [];
+    defaultName = typeof detail.default === "string" ? detail.default : "";
+    problem = typeof detail.problem === "string" ? detail.problem : "";
     paintNames();
+  }
+
+  async function loadPlaces() {
+    if (!ctx.workspace) return;
+    const mine = placesTicket.next();
+    placesError = null;
+    paintPlaces();
+    try {
+      const value = await AW.request("folder-places", { workspace: ctx.workspace });
+      if (!placesTicket.current(mine)) return;
+      places = value;
+    } catch (thrown) {
+      if (!placesTicket.current(mine)) return;
+      placesError = AW.asError(thrown);
+    }
+    paintPlaces();
+  }
+
+  async function reveal(place) {
+    AW.ui.clearError(parts.placesErrors);
+    try {
+      await AW.request("folder-reveal", { workspace: ctx.workspace, place });
+    } catch (thrown) {
+      AW.ui.showError(parts.placesErrors, thrown);
+    }
+  }
+
+  async function markDefault(name, on, errors) {
+    try {
+      const detail = on ? await AW.request("project-default-set", { workspace: ctx.workspace, name }) : await AW.request("project-default-clear", { workspace: ctx.workspace });
+      AW.ui.toast(on ? name + " is now the folder default." : "This folder has no default profile now.", { kind: "ok" });
+      showNames(detail);
+      focusRow(name, "default");
+      AW.store.refresh("folder").catch(() => {});
+    } catch (thrown) {
+      AW.ui.showError(errors, thrown);
+    }
   }
 
   async function forgetFolder() {
@@ -272,10 +359,13 @@
       const yes = await AW.ui.confirm({ text: "Replace the profile " + label + " in this folder with the current choices?", ok: "Replace" });
       if (!yes) return;
     }
+    const asDefault = parts.asDefault.checked;
     try {
-      await AW.request("project-save", { ...AW.form.get(), workspace: ctx.workspace, name: label });
+      await AW.request("project-save", { ...AW.form.get(), workspace: ctx.workspace, name: label, default: asDefault });
       parts.name.value = "";
-      AW.ui.toast("Saved the profile " + label + ".", { kind: "ok" });
+      parts.asDefault.checked = false;
+      AW.ui.toast("Saved the profile " + label + (asDefault ? " as the folder default." : "."), { kind: "ok" });
+      if (asDefault) AW.store.refresh("folder").catch(() => {});
       await loadNames();
     } catch (thrown) {
       AW.ui.showError(parts.saveErrors, thrown);
@@ -288,11 +378,10 @@
     return String(value);
   }
 
-  function openApply(name, origin) {
+  function openApply(name, origin, workspace = ctx.workspace) {
     const dialog = AW.ui.dialog("profile-dialog");
     const body = AW.$("profile-dialog-body");
     AW.$("profile-dialog-title").textContent = "Apply profile: " + name;
-    const workspace = ctx.workspace;
 
     async function load() {
       body.replaceChildren(el("p", { class: "project-dialog-intro", text: "Preparing the changes…" }), AW.ui.skeleton(3, "the profile's changes"));
@@ -339,7 +428,7 @@
       const needs = preview.needs && preview.needs.connection;
       if (needs)
         nodes.push(
-          AW.ui.notice("warn", "Add a " + needs.provider + " connection named " + (needs.name || needs.provider) + ".", {
+          AW.ui.notice("warn", "Add " + (/^[AEIOU]/i.test(needs.provider) ? "an " : "a ") + needs.provider + " connection named " + (needs.name || needs.provider) + ".", {
             actions: [
               {
                 label: "Open Connections",
@@ -381,8 +470,10 @@
             } catch (thrown) {
               AW.ui.toast(AW.asError(thrown).message, { kind: "danger" });
             }
-            loadFolder();
-            P.refresh({ fresh: true });
+            if (parts && ctx.workspace === workspace) {
+              loadFolder();
+              P.refresh({ fresh: true });
+            }
           },
         });
         const sync = () => {
@@ -423,6 +514,9 @@
       });
       const saveErrors = el("div", { class: "project-notices" });
       const saveRow = el("div", { class: "project-save-profile" }, nameField.el, saveButton);
+      const asDefault = el("input", { type: "checkbox", id: "profile-as-default" });
+      const places = el("div", { class: "project-places" });
+      const placesErrors = el("div", { class: "project-notices" });
       panel.append(
         el("section", { class: "panel project-panel", attrs: { "aria-label": "Remembered on this computer" } }, el("div", { class: "panel-head" }, el("h2", { class: "panel-title", text: "Remembered on this computer" })), folderBody, folderErrors),
         el(
@@ -431,11 +525,19 @@
           el("div", { class: "panel-head" }, el("h2", { class: "panel-title" }, "Profiles in this folder · ", el("span", { class: "project-path-title", text: ".agent-workbench/profiles.json" })), count),
           list,
           saveRow,
+          el("label", { class: "check project-save-default" }, asDefault, "Make it the folder default"),
           saveErrors,
-          el("p", { class: "project-caption", text: "Commit .agent-workbench/profiles.json to share these with your team." }),
+          el("p", { class: "project-caption", text: "Commit .agent-workbench/profiles.json to share these with your team. On another computer, Launch offers the folder default for review." }),
+        ),
+        el(
+          "section",
+          { class: "panel project-panel", attrs: { "aria-label": "Where this folder's settings live" } },
+          el("div", { class: "panel-head" }, el("h2", { class: "panel-title", text: "Where this folder's settings live" })),
+          places,
+          placesErrors,
         ),
       );
-      parts = { folderBody, folderErrors, count, list, name, nameField, saveRow, saveErrors };
+      parts = { folderBody, folderErrors, count, list, name, nameField, saveRow, saveErrors, asDefault, places, placesErrors };
     },
     update(next) {
       const moved = next.workspace !== ctx.workspace;
@@ -444,13 +546,22 @@
       if (moved) {
         folder = null;
         names = null;
+        defaultName = "";
+        problem = "";
+        places = null;
         renaming = "";
       }
       paint();
       if (next.fresh || moved) {
         loadFolder();
         loadNames();
+        loadPlaces();
       }
     },
   });
+
+  AW.profiles = {
+    // The same review and confirmation as Project profiles; nothing is applied without them.
+    review: (workspace, name, origin) => openApply(name, origin, workspace),
+  };
 })();

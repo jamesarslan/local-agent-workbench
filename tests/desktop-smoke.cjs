@@ -19,8 +19,18 @@ const folder = path.join(base, "Sample project"),
   data = path.join(base, "data"),
   user = path.join(base, "chromium"),
   fresh = path.join(base, "fresh-data"),
-  freshUser = path.join(base, "fresh-chromium");
+  freshUser = path.join(base, "fresh-chromium"),
+  cloned = path.join(base, "Cloned project"),
+  declined = path.join(base, "Declined project");
 for (const dir of [folder, other, data, fresh]) fs.mkdirSync(dir);
+// Two folders that arrive with a saved folder default, as a clone from another computer would.
+for (const dir of [cloned, declined]) {
+  fs.mkdirSync(path.join(dir, ".agent-workbench"), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, ".agent-workbench", "profiles.json"),
+    JSON.stringify({ "Folder default": { default: true, harness: "OMP", search: false, context: 8192 } }),
+  );
+}
 fs.writeFileSync(
   path.join(data, "settings.json"),
   JSON.stringify({
@@ -302,7 +312,31 @@ async function test() {
     "document.getElementById('term-info').textContent === 'This terminal was closed because the Workbench service restarted.'",
   );
 
-  // (4) A second start with an empty data folder opens the setup guide; leaving it shows Launch with Launch blocked.
+  // (4) A folder with a saved default on a computer that remembers nothing for it: Launch offers a review, never applies
+  // on its own; applying goes through the confirm dialog, and a dismissal is remembered for the folder.
+  const notice = (word) =>
+    "[...document.querySelectorAll('#launch-notices .notice')].find(n => n.textContent.includes(" + JSON.stringify(word) + "))";
+  await js("AW.project.select(" + JSON.stringify(cloned) + ")");
+  await wait(notice("This folder has saved settings: Folder default."));
+  const before = await js("request('folder-get',{workspace:" + JSON.stringify(cloned) + "})");
+  assert.equal(before.known, false);
+  assert.equal(before.offer_default, true);
+  await js(notice("This folder has saved settings") + ".querySelector('button').click()");
+  await wait("document.getElementById('profile-dialog').open && [...document.querySelectorAll('#profile-dialog-body button')].some(b => b.textContent.trim() === 'Apply profile')");
+  await js("[...document.querySelectorAll('#profile-dialog-body button')].find(b => b.textContent.trim() === 'Apply profile').click()");
+  await wait("!document.getElementById('profile-dialog').open");
+  await wait("request('folder-get',{workspace:" + JSON.stringify(cloned) + "}).then(f => f.known && !f.offer_default && f.profile === 'Folder default')");
+  await wait("!" + notice("This folder has saved settings"));
+  const places = await js("request('folder-places',{workspace:" + JSON.stringify(cloned) + "})");
+  assert.deepEqual(places.map((row) => row.id), ["profiles", "project", "instructions", "skills", "memory", "connections", "keys"]);
+  await js("AW.project.select(" + JSON.stringify(declined) + ")");
+  await wait(notice("This folder has saved settings: Folder default."));
+  await js(notice("This folder has saved settings") + ".querySelector('.notice-actions button:last-child').click()");
+  await wait("request('folder-get',{workspace:" + JSON.stringify(declined) + "}).then(f => !f.known && !f.offer_default && f.saved_default === 'Folder default')");
+  await js("AW.project.select(" + JSON.stringify(folder) + ")");
+  await wait("!" + notice("This folder has saved settings"));
+
+  // (5) A second start with an empty data folder opens the setup guide; leaving it shows Launch with Launch blocked.
   second = launch(fresh, freshUser, "10579");
   const secondGone = new Promise((_, rej) => {
     second.once("error", (e) => rej(Error("The second Electron did not start: " + e.message)));
@@ -347,7 +381,7 @@ async function test() {
   }
   passed = true;
   console.log(
-    "Passed: theme, per-project tool choices, OMP transcript watcher, interactive PTY, project switch and close, refused action, service restart, first run",
+    "Passed: theme, per-project tool choices, OMP transcript watcher, interactive PTY, project switch and close, refused action, service restart, folder default review, first run",
   );
 }
 Promise.race([test(), aborted])

@@ -767,7 +767,7 @@ class RestoreTest(ProjectCase):
         self.assertEqual(
             preview["blockers"],
             [
-                "Add a OpenRouter connection named Model lab in Connections, then apply this profile.",
+                "Add an OpenRouter connection named Model lab in Connections, then apply this profile.",
                 "Register these MCP plugins in Plugins first: github, postgres.",
             ],
         )
@@ -940,6 +940,8 @@ class FolderMemoryTest(ProjectCase):
                 "project_mcp": {},
                 "updated": "",
                 "consent_granted": "",
+                "saved_default": "",
+                "offer_default": False,
             },
         )
         self.assertFalse((self.data / "projects.json").exists())
@@ -1524,6 +1526,310 @@ class RegistryTest(ProjectCase):
         text = json.dumps(rows)
         for secret in ("s3cret", "k-789", "ws-secret", "tok-", "hunter2", "frag"):
             self.assertNotIn(secret, text)
+
+
+GPU_BOX = dict(provider="Attached endpoint", name="GPU box")
+
+
+class FolderDefaultTest(ProjectCase):
+    def saved(self):
+        return json.loads(
+            (self.work / ".agent-workbench" / "profiles.json").read_text(encoding="utf8")
+        )
+
+    def test_old_file_without_a_default_still_works(self):
+        self.put(OLD_FILE)
+        self.assertEqual(
+            projects.project_list(self.work),
+            {"names": ["Research"], "default": "", "problem": ""},
+        )
+        self.assertEqual(projects.folder_default(self.work), "")
+        view = projects.folder_view(self.work)
+        self.assertEqual((view["saved_default"], view["offer_default"]), ("", False))
+        self.assertEqual(projects.project_names(self.work), ["Research"])
+
+    def test_save_marks_one_default_and_replacing_keeps_it(self):
+        projects.save_project(self.s, "A")
+        projects.save_project(self.s, "B", default=True)
+        rows = self.saved()
+        self.assertEqual(list(rows["B"])[0], "default")
+        self.assertIs(rows["B"]["default"], True)
+        self.assertNotIn("default", rows["A"])
+        projects.save_project(self.s, "A", default=True)
+        self.assertEqual(projects.folder_default(self.work), "A")
+        self.assertNotIn("default", self.saved()["B"])
+        projects.save_project(self.s | {"context": 8192}, "A")
+        rows = self.saved()
+        self.assertIs(rows["A"]["default"], True)
+        self.assertEqual(rows["A"]["context"], 8192)
+        self.assertEqual(list(rows), ["A", "B"])
+        self.assertEqual(projects.project_list(self.work)["default"], "A")
+
+    def test_set_and_clear_default(self):
+        self.assertEqual(
+            projects.clear_default(self.work),
+            {"names": [], "default": "", "problem": ""},
+        )
+        self.assertFalse((self.work / ".agent-workbench").exists())
+        with self.assertRaisesRegex(ValueError, "^This profile no longer exists"):
+            projects.set_default(self.work, "a")
+        self.put({"a": {"context": 4096}, "b": {"default": False, "context": 8192}})
+        self.assertEqual(projects.set_default(self.work, "b")["default"], "b")
+        self.assertEqual(self.saved(), {"a": {"context": 4096}, "b": {"default": True, "context": 8192}})
+        self.assertEqual(projects.set_default(self.work, "a")["default"], "a")
+        self.assertEqual(self.saved(), {"a": {"default": True, "context": 4096}, "b": {"context": 8192}})
+        with self.assertRaisesRegex(ValueError, "^This profile no longer exists"):
+            projects.set_default(self.work, "gone")
+        self.assertEqual(projects.clear_default(self.work)["default"], "")
+        self.assertEqual(self.saved(), {"a": {"context": 4096}, "b": {"context": 8192}})
+        self.assertTrue(projects.edit_profile(self.work, "a", "remove"))
+        self.assertEqual(projects.set_default(self.work, "b")["default"], "b")
+        self.assertTrue(projects.edit_profile(self.work, "b", "rename", "c"))
+        self.assertEqual(projects.folder_default(self.work), "c")
+
+    def test_two_defaults_give_a_clear_message(self):
+        self.put(
+            {
+                "a": self.profile(default=True),
+                "b": self.profile(default=True),
+                "c": self.profile(),
+            }
+        )
+        sentence = (
+            ".agent-workbench/profiles.json marks more than one profile as the folder default: "
+            "'a' and 'b'. Choose Make default on the one to keep in Project profiles."
+        )
+        with self.assertRaises(ValueError) as caught:
+            projects.folder_default(self.work)
+        self.assertEqual(str(caught.exception), sentence)
+        listed = projects.project_list(self.work)
+        self.assertEqual(listed, {"names": ["a", "b", "c"], "default": "", "problem": sentence})
+        view = projects.folder_view(self.work)
+        self.assertEqual((view["saved_default"], view["offer_default"]), ("", False))
+        self.assertEqual(projects.preview_project(self.s, "a", [])["blockers"], [])
+        self.assertEqual(projects.set_default(self.work, "b")["problem"], "")
+        self.assertEqual(projects.folder_default(self.work), "b")
+
+    def test_default_must_be_true_or_false(self):
+        self.put({"a": self.profile(default="yes")})
+        with self.assertRaisesRegex(ValueError, "does not accept for Folder default"):
+            projects.validate_profile({"default": "yes"}, "a")
+        with self.assertRaisesRegex(ValueError, "does not accept for Folder default"):
+            projects.preview_project(self.s, "a", [])
+        self.assertIn("Folder default", projects.project_list(self.work)["problem"])
+        self.assertEqual(projects.validate_profile({"default": False, "context": 4096}), {"context": 4096})
+        projects.set_default(self.work, "a")
+        self.assertIs(self.saved()["a"]["default"], True)
+
+    def test_marking_the_default_does_not_void_a_review(self):
+        self.put({"a": self.profile(context=4096), "b": self.profile()})
+        before = projects.preview_project(self.s, "a", [])["digest"]
+        projects.set_default(self.work, "a")
+        self.assertEqual(projects.preview_project(self.s, "a", [])["digest"], before)
+        self.assertEqual(projects.apply_project(self.s, "a", [], before)["context"], 4096)
+
+    def test_notice_needs_a_default_and_no_remembered_choices(self):
+        self.assertFalse(projects.folder_view(self.work)["offer_default"])
+        self.put({"Shared": self.profile(context=4096, default=True)})
+        view = projects.folder_view(self.work)
+        self.assertEqual(
+            (view["known"], view["saved_default"], view["offer_default"]),
+            (False, "Shared", True),
+        )
+        self.assertFalse((self.data / "projects.json").exists())
+        view = projects.remember(self.work, self.s | {"harness": "Codex"})
+        self.assertEqual(
+            (view["known"], view["saved_default"], view["offer_default"]),
+            (True, "Shared", False),
+        )
+        other = self.tmp / "other"
+        other.mkdir()
+        self.put({"Shared": self.profile(default=True)}, other)
+        projects.set_kit(other, "web")
+        self.assertFalse(projects.folder_view(other)["offer_default"])
+
+    def test_dismissal_is_remembered_per_folder_and_per_default(self):
+        other = self.tmp / "other"
+        other.mkdir()
+        for folder in (self.work, other):
+            self.put({"Shared": self.profile(default=True), "Next": self.profile()}, folder)
+        self.assertEqual(
+            projects.dispatch("folder-default-dismiss", {"workspace": str(self.work)})[
+                "offer_default"
+            ],
+            False,
+        )
+        self.assertEqual(
+            set(self.record()), {"path", "updated", "default_notice"}
+        )
+        self.assertEqual(self.record()["default_notice"], "Shared")
+        view = projects.folder_view(self.work)
+        self.assertEqual(
+            (view["known"], view["saved_default"], view["recipe"]), (False, "Shared", {})
+        )
+        self.assertTrue(projects.folder_view(other)["offer_default"])
+        projects.set_default(self.work, "Next")
+        self.assertTrue(projects.folder_view(self.work)["offer_default"])
+        self.assertTrue(projects.forget(self.work))
+        projects.set_default(self.work, "Shared")
+        self.assertTrue(projects.folder_view(self.work)["offer_default"])
+        empty = self.tmp / "empty"
+        empty.mkdir()
+        self.assertFalse(projects.dismiss_default(empty)["offer_default"])
+        self.assertNotIn(
+            paths.project_key(empty),
+            json.loads((self.data / "projects.json").read_text())["folders"],
+        )
+
+    def test_default_saved_on_one_computer_applies_on_another(self):
+        # Computer A: an attached GPU box and a local copy of the weights.
+        self.accounts[:] = [
+            GPU_BOX | dict(connection_id="a-111", endpoint="http://10.0.0.5:8080/v1")
+        ]
+        on_a = self.s | dict(
+            harness="Claude Code",
+            provider="Attached endpoint",
+            connection_id="a-111",
+            remote_model="qwen3-coder-30b",
+            model="/machine-a/models/qwen.gguf",
+            context=65536,
+        )
+        projects.save_project(on_a, projects.DEFAULT_NAME, default=True)
+        projects.save_project(
+            on_a | dict(provider="Managed local", connection_id=""), "Local"
+        )
+        projects.remember(self.work, on_a)
+        text = (self.work / ".agent-workbench" / "profiles.json").read_text(encoding="utf8")
+        for local in ("a-111", "10.0.0.5", "/machine-a", str(self.data)):
+            self.assertNotIn(local, text)
+
+        # Computer B: its own data folder, a GPU box with another id and address, weights elsewhere.
+        data_b = self.tmp / "data-b"
+        data_b.mkdir()
+        library = self.tmp / "library-b"
+        library.mkdir()
+        (library / "qwen.gguf").touch()
+        moved = patch.object(projects, "DATA", data_b)
+        moved.start()
+        self.addCleanup(moved.stop)
+        self.accounts[:] = [
+            GPU_BOX | dict(connection_id="b-222", endpoint="http://127.0.0.1:18080/v1")
+        ]
+        view = projects.folder_view(self.work)
+        self.assertEqual(
+            (view["known"], view["saved_default"], view["offer_default"]),
+            (False, "Folder default", True),
+        )
+        with self.assertRaisesRegex(ValueError, "Review what this profile changes"):
+            projects.apply_project(self.s, "Folder default", [], "")
+        self.assertFalse((data_b / "projects.json").exists())
+        preview = projects.preview_project(self.s, "Folder default", [])
+        self.assertEqual(preview["blockers"], [])
+        changed = {row["field"]: row["to"] for row in preview["changes"]}
+        self.assertEqual(
+            (changed["harness"], changed["provider"], changed["connection"]),
+            ("Claude Code", "Attached endpoint", "GPU box"),
+        )
+        out = projects.apply_project(self.s, "Folder default", [], preview["digest"])
+        self.assertEqual(
+            (out["connection_id"], out["endpoint"], out["remote_model"], out["context"]),
+            ("b-222", "http://127.0.0.1:18080/v1", "qwen3-coder-30b", 65536),
+        )
+        view = projects.folder_view(self.work)
+        self.assertEqual(view["recipe"]["connection_id"], "b-222")
+        self.assertEqual((view["known"], view["offer_default"]), (True, False))
+        weights = [str(library / "qwen.gguf")]
+        local = projects.preview_project(self.s, "Local", weights)
+        self.assertEqual(local["blockers"], [])
+        self.assertEqual(
+            projects.restore_project(self.s, "Local", weights)["model"], weights[0]
+        )
+
+    def test_missing_pieces_on_the_new_computer_are_named(self):
+        self.put(
+            {
+                "Folder default": self.profile(
+                    provider="Attached endpoint",
+                    connection_name="GPU box",
+                    default=True,
+                ),
+                "Local": self.profile(weight="qwen.gguf"),
+            }
+        )
+        preview = projects.preview_project(self.s, "Folder default", [])
+        self.assertEqual(
+            preview["blockers"],
+            ["Add an Attached endpoint connection named GPU box in Connections, then apply this profile."],
+        )
+        self.assertEqual(
+            preview["needs"], {"connection": {"provider": "Attached endpoint", "name": "GPU box"}}
+        )
+        self.assertEqual(
+            projects.preview_project(self.s, "Local", [])["blockers"],
+            ["Add qwen.gguf to your model library before applying this profile."],
+        )
+        self.assertFalse((self.data / "projects.json").exists())
+
+    def test_folder_files_and_records_hold_no_secrets(self):
+        secrets = ("pa55word", "sk-live-123", "host.invalid", "conn-secret-id", "tok=abc")
+        self.accounts.append(
+            dict(
+                provider="OpenRouter",
+                name="Lab",
+                connection_id="conn-secret-id",
+                endpoint="https://user:pa55word@host.invalid/v1?tok=abc",
+            )
+        )
+        s = self.s | dict(
+            provider="OpenRouter",
+            connection_id="conn-secret-id",
+            endpoint="https://user:pa55word@host.invalid/v1?tok=abc",
+            remote_model="vendor/model",
+            model="/private/models/x.gguf",
+        )
+        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-live-123"}):
+            projects.save_project(s, projects.DEFAULT_NAME, default=True)
+            projects.dismiss_default(self.work)
+            rows = projects.places(self.work)
+        files = [
+            (self.work / ".agent-workbench" / "profiles.json").read_text(encoding="utf8"),
+            (self.data / "projects.json").read_text(encoding="utf8"),
+            json.dumps(rows),
+            json.dumps(projects.folder_view(self.work)),
+            json.dumps(projects.project_list(self.work)),
+        ]
+        for text in files:
+            for secret in (*secrets, "/private/models"):
+                self.assertNotIn(secret, text)
+        self.assertEqual(self.saved()["Folder default"]["connection_name"], "Lab")
+
+    def test_places_lists_what_travels_and_what_stays(self):
+        rows = projects.dispatch("folder-places", {"workspace": str(self.work)})
+        self.assertEqual(
+            [(row["id"], row["travels"]) for row in rows],
+            [
+                ("profiles", True),
+                ("project", True),
+                ("instructions", True),
+                ("skills", True),
+                ("memory", False),
+                ("connections", False),
+                ("keys", False),
+            ],
+        )
+        where = {row["id"]: row for row in rows}
+        self.assertEqual(
+            Path(where["profiles"]["path"]), self.work / ".agent-workbench" / "profiles.json"
+        )
+        self.assertEqual(Path(where["memory"]["path"]), self.data / "projects.json")
+        self.assertEqual(Path(where["connections"]["path"]), self.data / "connections.json")
+        self.assertEqual((where["keys"]["path"], where["keys"]["exists"]), ("", False))
+        self.assertIn("holds no keys", where["profiles"]["note"])
+        self.assertFalse(where["profiles"]["exists"])
+        projects.save_project(self.s, "a")
+        self.assertTrue(projects.places(self.work)[0]["exists"])
+        with self.assertRaises(ValueError):
+            projects.places(str(self.work / "gone"))
 
 
 if __name__ == "__main__":
