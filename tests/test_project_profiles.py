@@ -1681,10 +1681,14 @@ class FolderDefaultTest(ProjectCase):
             (view["known"], view["saved_default"], view["recipe"]), (False, "Shared", {})
         )
         self.assertTrue(projects.folder_view(other)["offer_default"])
+        # A default marked on this computer is not offered back to it.
         projects.set_default(self.work, "Next")
-        self.assertTrue(projects.folder_view(self.work)["offer_default"])
+        self.assertFalse(projects.folder_view(self.work)["offer_default"])
         self.assertTrue(projects.forget(self.work))
         projects.set_default(self.work, "Shared")
+        self.assertFalse(projects.folder_view(self.work)["offer_default"])
+        # A default changed by someone else (a pull, another computer) is offered again.
+        self.put({"Shared": self.profile(), "Next": self.profile(default=True)}, self.work)
         self.assertTrue(projects.folder_view(self.work)["offer_default"])
         empty = self.tmp / "empty"
         empty.mkdir()

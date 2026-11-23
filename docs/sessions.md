@@ -104,7 +104,7 @@ Each time the app starts an agent in a folder on this computer, in the terminal 
 | Model | The model ID, the context size and the reasoning effort; for a local model, the engine and the weights file name, with its SHA-256 when the file is in Workbench's model catalogue |
 | Profile and kit | The profile and the starter kit in use, when there were any |
 | MCP servers | The servers the agent received at launch |
-| Instruction files | Each instruction file the agent reads, with its size and the SHA-256 of its first 1 MiB |
+| Instruction files | Each instruction file the agent reads, with its size and SHA-256 (files over 64 MiB show the size only) |
 | Skills | Each skill the agent reads, with its path and SHA-256 |
 | Folder prompt | The folder prompt, when the agent received it, up to 8,000 characters. Codex, and agents started with their own account, do not receive the folder prompt, so their summaries say "No prompt." |
 | Workbench | The Workbench version and the time the run started |

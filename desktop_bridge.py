@@ -654,7 +654,12 @@ def dispatch(action, payload, progress=None, cancel=None):
             )
         facts = {}
         connections.launch(out, facts=facts)
-        note_run(out["harness"], "window", facts)
+        threading.Thread(
+            target=note_run,
+            args=(out["harness"], "window", facts),
+            name="run-summary",
+            daemon=True,
+        ).start()
     if action in ("launch-start", "launch-save"):
         remember(out["workspace"], {**out, "preset": payload.get("preset", "")})
     if action == "launch-start":

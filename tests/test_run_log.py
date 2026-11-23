@@ -486,5 +486,29 @@ class ConnectionFactsTest(unittest.TestCase):
             self.assertEqual(native["settings"]["provider"], "Native login")
 
 
+class DigestTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="awb-digest-"))
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+
+    def test_hash_covers_the_whole_file(self):
+        body = b"a" * (3 << 20) + b"tail"
+        f = self.tmp / "AGENTS.md"
+        f.write_bytes(body)
+        self.assertEqual(
+            run_log._digest(f), (len(body), hashlib.sha256(body).hexdigest())
+        )
+
+    def test_files_over_the_limit_keep_their_size_only(self):
+        f = self.tmp / "big.md"
+        f.write_bytes(b"x" * 10)
+        with patch.object(run_log, "HASH_LIMIT", 5):
+            self.assertEqual(run_log._digest(f), (10, ""))
+
+    def test_missing_and_folders_are_not_hashed(self):
+        self.assertEqual(run_log._digest(self.tmp / "gone.md"), (None, ""))
+        self.assertEqual(run_log._digest(self.tmp)[1], "")
+
+
 if __name__ == "__main__":
     unittest.main()

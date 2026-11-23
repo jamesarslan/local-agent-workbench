@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
+import stat
 from pathlib import Path
 import re
 import secrets
@@ -17,7 +18,7 @@ from runtime import ROOT
 
 MAX_RUNS = 100
 MAX_PROMPT = 8000
-HASH_CAP = 1 << 20
+HASH_LIMIT = 64 << 20
 MAX_FILE = 4 << 20
 LIST_LIMIT = 100
 VERSION = 1
@@ -66,13 +67,25 @@ def origin(url):
 
 
 def _digest(path):
-    """(size, sha256 of the first 1 MiB) of a regular file; (None, '') when it cannot be read."""
+    """(size, sha256 of the whole file) of a regular file; (None, '') when it cannot be read or is too large."""
+    flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_BINARY", 0)
     try:
-        size = os.stat(path).st_size
-        raw = project_profiles._read_capped(path)[:HASH_CAP]
-    except (OSError, ValueError):
+        fd = os.open(path, flags)
+    except OSError:
         return None, ""
-    return size, hashlib.sha256(raw).hexdigest()
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_size > HASH_LIMIT:
+            return (info.st_size if stat.S_ISREG(info.st_mode) else None), ""
+        digest = hashlib.sha256()
+        with open(fd, "rb", closefd=False) as stream:
+            for block in iter(lambda: stream.read(1 << 16), b""):
+                digest.update(block)
+        return info.st_size, digest.hexdigest()
+    except OSError:
+        return None, ""
+    finally:
+        os.close(fd)
 
 
 def _catalog_sha(name):

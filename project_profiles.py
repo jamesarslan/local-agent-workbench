@@ -404,6 +404,7 @@ def set_default(workspace, name):
         if not isinstance(name, str) or name not in rows:
             raise ValueError("This profile no longer exists. Pick another profile.")
         write_json(path, {key: _marked(item, key == name) for key, item in rows.items()})
+    _seen_here(workspace, name)
     return project_list(workspace)
 
 
@@ -466,7 +467,10 @@ def save_project(s, name, default=False):
         **({"connection_name": connection["name"]} if connection else {}),
         "weight": Path(s["model"]).name,
     }
-    return save_item(s["workspace"], name, item, default=default)
+    path = save_item(s["workspace"], name, item, default=default)
+    if default:
+        _seen_here(s["workspace"], name)
+    return path
 
 
 def _resolve(s, item, paths):
@@ -943,6 +947,14 @@ def offer_default(record, saved):
     if not saved or _remembers(record):
         return False
     return _text((record or {}).get("default_notice"), 80) != saved
+
+
+def _seen_here(workspace, name):
+    """A default marked on this computer is not offered back to it; another computer still gets the offer."""
+    try:
+        _update_folder(workspace, lambda record: record.update(default_notice=name))
+    except (OSError, ValueError):
+        pass
 
 
 def dismiss_default(workspace):

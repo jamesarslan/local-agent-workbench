@@ -545,7 +545,11 @@ def dispatch(action, p):
             admit()
             SESSIONS[ident] = session = Session(argv, env, project, title, agent, **where)
         if action == "term-open" and agent:
-            session.run = note_run(agent, p.get("kind"), facts)
+            # Asking the agent for its version can take seconds; the terminal must not wait for it.
+            def keep(session=session, kind=p.get("kind")):
+                session.run = note_run(agent, kind, facts)
+
+            threading.Thread(target=keep, name="run-summary", daemon=True).start()
         if action == "term-remote":
             # The terminal is open; a failed registry write must not lose its id.
             try:
