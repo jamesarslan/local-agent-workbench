@@ -1,4 +1,4 @@
-"""Workbench-managed SSH identities, Linux workers and loopback forwards."""
+"""Workbench-managed SSH identities, Linux and Windows workers and loopback forwards."""
 
 import hashlib
 import json
@@ -13,10 +13,12 @@ import time
 import psutil
 from filelock import FileLock
 from host import terminal
+import remote_win
 from runtime import DATA, ROOT, QUIET, load, write_json
 
 HOSTS = DATA / "machines.json"
 LINKS = DATA / "machine-links.json"
+SYSTEMS = DATA / "machine-systems.json"
 NODE_PORT = 10542
 PROTOCOLS = ("chat", "responses", "messages")
 REMOTE_CLI = {
@@ -127,6 +129,8 @@ def pairing_line(host):
             except FileNotFoundError:
                 raise ValueError(NO_SSH) from None
     pub = key.with_suffix(".pub").read_text().strip()
+    if windows(host):
+        return remote_win.pairing_line(pub)
     value = shlex.quote(pub)
     return (
         "umask 077; mkdir -p ~/.ssh && touch ~/.ssh/authorized_keys && (grep -qxF "
@@ -230,10 +234,199 @@ def execute(host, source, command, timeout=90):
         ) from None
 
 
-def run(host, action, timeout=90):
-    return execute(
-        host, (ROOT / "remote_node.py").read_bytes(), "python3 - " + action, timeout
+def systems():
+    return _load(SYSTEMS)
+
+
+def system(host):
+    row = systems().get(host)
+    return row if isinstance(row, dict) else {}
+
+
+def windows(host):
+    return system(host).get("os") == "windows"
+
+
+def _note_system(host, **fields):
+    with FileLock(str(SYSTEMS) + ".lock"):
+        rows = systems()
+        old = rows.get(host) if isinstance(rows.get(host), dict) else {}
+        rows[host] = {**old, **fields, "checked": int(time.time())}
+        write_json(SYSTEMS, rows)
+
+
+def detect(host):
+    """Learn whether the machine answers SSH with Windows (cmd or PowerShell) or a POSIX shell."""
+    try:
+        out = _ssh_run(host, [remote_win.DETECT], None, 20).decode(errors="replace")
+    except Unreachable:
+        raise
+    except ValueError:
+        out = ""  # a POSIX shell that rejects the line, such as csh
+    kind = "windows" if remote_win.is_windows(out) else "posix"
+    _note_system(host, os=kind)
+    return kind
+
+
+def _either(host, posix, win):
+    """Run the POSIX or Windows form; a machine never checked is detected once when POSIX fails."""
+    if windows(host):
+        return win()
+    try:
+        return posix()
+    except Unreachable:
+        raise
+    except ValueError:
+        if system(host) or detect(host) != "windows":
+            raise
+    return win()
+
+
+def run(host, action, timeout=90, arg=""):
+    return _either(
+        host,
+        lambda: execute(
+            host, (ROOT / "remote_node.py").read_bytes(), "python3 - " + action, timeout
+        ),
+        lambda: execute(
+            host, remote_win.node(action, arg), remote_win.POWERSHELL, timeout
+        ),
     )
+
+
+def _windows_plan(info, source=""):
+    """Engine and model for a Windows node, chosen from the catalog by the card's memory."""
+    import catalog
+    import recommend
+    import setup_engines
+    from urllib.parse import quote
+
+    picks = []
+    for item in catalog.entries():
+        if item["engine"] != "llama.cpp" or not item["model"].startswith(
+            "inkling-2-mini-ud"
+        ):
+            continue
+        # IQ3_XXS was measured on a 16 GB Vulkan card; keep it as the 16 GB pick on CUDA too.
+        if "vulkan" in item["backends"] and "cuda" not in item["backends"]:
+            item["backends"] = [*item["backends"], "cuda"]
+        if "cuda" in item["backends"]:
+            picks.append(item)
+    vram = info.get("gpu_gib") if info.get("gpu_vendor") == "nvidia" else None
+    ram = info.get("ram_gib")
+    hardware = dict(
+        backend="cuda",
+        memory_gib=float(vram) if isinstance(vram, (int, float)) and vram > 0 else None,
+        ram_gib=float(ram) if isinstance(ram, (int, float)) else 0.0,
+        unknown=[],
+        notes=[],
+    )
+    pick = recommend.recommend(hardware, picks)["pick"] if hardware["memory_gib"] else None
+    if not pick:
+        raise ValueError(
+            "The managed model on Windows needs an NVIDIA GPU with at least 16 GB of memory; attach a server that is already running on this machine instead."
+        )
+    weights = next(f for f in pick["files"] if f["role"] == "weights")
+    revision = quote(str(weights["revision"]), safe="")
+    engine = [
+        dict(
+            name=a.name,
+            url=f"https://github.com/{a.repo}/releases/download/{a.tag}/{a.name}",
+            sha256=a.sha256,
+            bytes=a.size,
+        )
+        for a in setup_engines.PINNED[("windows", "cuda")]
+    ]
+    return dict(
+        model=dict(
+            id=pick["model"],
+            label=pick["label"],
+            name=weights["path"].rsplit("/", 1)[-1],
+            url=f"{catalog.HUB}/{weights['repo']}/resolve/{revision}/{quote(weights['path'])}",
+            sha256=weights["sha256"],
+            bytes=weights["bytes"],
+            context=pick["settings"]["context"],
+        ),
+        engine=engine,
+        source=source,
+    )
+
+
+def _plan_summary(info):
+    try:
+        model = _windows_plan(info)["model"]
+    except Exception:
+        return None
+    return {k: model[k] for k in ("label", "name", "bytes", "context")}
+
+
+def check(host):
+    """Check connection: learn the machine's system, then read its hardware and managed node."""
+    if detect(host) != "windows":
+        info = run(host, "probe", 20)
+        if isinstance(info, dict):
+            info["os"] = "posix"
+        return info
+    info = execute(host, remote_win.check(), remote_win.POWERSHELL, 60)
+    if not isinstance(info, dict):
+        raise ValueError(
+            f"{host} sent a reply Workbench could not read; use Check connection, then retry."
+        )
+    shell = "pwsh" if info.get("shell") == "pwsh" else "powershell"
+    _note_system(host, os="windows", shell=shell, python=_text(info.get("python"), 20))
+    info["plan"] = _plan_summary(info) if info.get("managed") else None
+    return info
+
+
+def _windows_info(host):
+    info = execute(host, remote_win.check(), remote_win.POWERSHELL, 60)
+    if not isinstance(info, dict):
+        raise ValueError(
+            f"{host} sent a reply Workbench could not read; use Check connection, then retry."
+        )
+    if not info.get("managed"):
+        raise ValueError(
+            _text(info.get("reason"), 400)
+            or "This machine cannot run the Workbench-managed model."
+        )
+    return info
+
+
+def install(host, source=""):
+    if not windows(host):
+        return run(host, "install", 3600)
+    source = (source or "").strip()
+    if len(source) > 1024 or any(ord(c) < 32 for c in source):
+        raise ValueError("Use a single-line path to the model file.")
+    doc = _windows_plan(_windows_info(host), source)
+    return run(host, "install", 3600, remote_win.plan_arg(doc))
+
+
+def model_files(host):
+    """Files on a Windows machine with exactly the size of the model Workbench would download."""
+    if not windows(host):
+        raise ValueError("Workbench looks for existing model files on Windows machines only.")
+    doc = _windows_plan(_windows_info(host))
+    found = run(host, "files", 120, remote_win.plan_arg(doc))
+    model = doc["model"]
+    return dict(
+        plan={k: model[k] for k in ("label", "name", "bytes", "context")},
+        files=[f for f in found if isinstance(f, str)][:20] if isinstance(found, list) else [],
+    )
+
+
+def logs(host):
+    if windows(host):
+        lines = run(host, "logs", 30)
+    else:
+        out = _ssh_run(
+            host,
+            ['tail -n 60 "$HOME/.local/share/agent-workbench-node/server.log" 2>/dev/null || true'],
+            None,
+            30,
+        ).decode(errors="replace")
+        lines = out.splitlines()
+    return [x for x in lines if isinstance(x, str)][-60:] if isinstance(lines, list) else []
 
 
 def _load(path):
@@ -578,12 +771,14 @@ def tunnel(host):
         raise ValueError(
             f"The model on {host} did not answer through the SSH forward; use Check connection, then retry."
         )
+    size = remote.get("context")
+    whole = isinstance(size, int) and not isinstance(size, bool) and size >= 1024
     account = dict(
         provider="Attached endpoint",
         name=labels().get(host, host),
         endpoint=addr,
         remote_model="local-agent",
-        context=8192,
+        context=size if whole else 8192,
         harness="OMP",
         connection_id=ident,
         host=host,
@@ -662,13 +857,53 @@ def _endpoint_row(row):
     )
 
 
+def extra_ports(host):
+    """Ports beyond the usual ones that the user asked Workbench to look at on this machine."""
+    listed = system(host).get("ports")
+    return [p for p in listed if _port(p) and p != NODE_PORT][:8] if isinstance(listed, list) else []
+
+
+def set_ports(host, value):
+    if isinstance(value, str):
+        value = [v for v in re.split(r"[\s,]+", value.strip()) if v]
+    if not isinstance(value, list) or len(value) > 8:
+        raise ValueError("List up to 8 port numbers, separated by commas.")
+    ports = []
+    for item in value:
+        number = int(item) if isinstance(item, str) and item.isdecimal() and len(item) < 6 else item
+        if not _port(number) or number < 1024 or number == NODE_PORT:
+            raise ValueError("Use port numbers from 1024 to 65535, separated by commas.")
+        if number not in ports:
+            ports.append(number)
+    _note_system(host, ports=ports)
+    return ports
+
+
 def discover(host):
     """List model servers answering on the machine's own loopback; nothing here scans a network."""
     import endpoints
 
-    script = endpoints.remote_probe_script()
-    command = "sh -s" if script.startswith("#!/bin/sh") else "python3 -"
-    found = execute(host, script.encode(), command, 30)
+    extra = extra_ports(host)
+
+    def ports():
+        import providers
+
+        return list(dict.fromkeys([*providers.SWEEP_PORTS, *extra]))
+
+    def posix():
+        script = (
+            endpoints.remote_probe_script(ports=ports())
+            if extra
+            else endpoints.remote_probe_script()
+        )
+        command = "sh -s" if script.startswith("#!/bin/sh") else "python3 -"
+        return execute(host, script.encode(), command, 30)
+
+    def win():
+        table = endpoints.remote_probe_table(ports() if extra else None)
+        return execute(host, remote_win.probe(table), remote_win.POWERSHELL, 60)
+
+    found = _either(host, posix, win)
     if isinstance(found, dict):
         found = found.get("endpoints")
     if not isinstance(found, list):
@@ -842,6 +1077,10 @@ def forget(host):
         rows = labels()
         rows.pop(host, None)
         write_json(HOSTS, rows)
+    with FileLock(str(SYSTEMS) + ".lock"):
+        rows = systems()
+        if rows.pop(host, None) is not None:
+            write_json(SYSTEMS, rows)
     key.unlink(missing_ok=True)
     public.unlink(missing_ok=True)
     shutil.rmtree(key.parent, ignore_errors=True)
@@ -884,6 +1123,8 @@ def remote_command(host, folder, harness, mode):
         + "; }"
     )
     if mode == "shell":
+        if windows(host):
+            return remote_win.terminal(system(host).get("shell"), folder, harness, None, [])
         return "exec /bin/sh -c " + shlex.quote(enter + "; " + LOGIN)
     if mode == "device":
         args = {
@@ -912,6 +1153,15 @@ def remote_command(host, folder, harness, mode):
         args = ["--offline", "--model", "workbench/local-agent"]
     else:
         args = []
+    if windows(host):
+        return remote_win.terminal(
+            system(host).get("shell"),
+            folder,
+            harness,
+            cmd,
+            args,
+            managed=mode == "local-model",
+        )
     inner = (
         'export PATH="$HOME/.local/share/agent-workbench-node/bin:$HOME/.local/bin:$PATH"; '
         + enter
@@ -953,6 +1203,9 @@ def _field(p, name, default=""):
 def dispatch(action, p):
     if action == "machine-list":
         return labels()
+    if action == "machine-systems":
+        names = labels()
+        return {h: row for h, row in systems().items() if h in names and isinstance(row, dict)}
     if action == "machine-forwards":
         return forwards()
     if action == "machine-detach":
@@ -968,13 +1221,19 @@ def dispatch(action, p):
     if action == "machine-key":
         return pairing_line(h)
     if action == "machine-probe":
-        return run(h, "probe", 20)
+        return check(h)
     if action == "machine-install":
-        return run(h, "install", 3600)
+        return install(h, _field(p, "source"))
+    if action == "machine-files":
+        return model_files(h)
+    if action == "machine-logs":
+        return logs(h)
     if action == "machine-connect":
         return tunnel(h)
     if action == "machine-discover":
-        return dict(host=h, endpoints=discover(h))
+        if "ports" in p:
+            set_ports(h, p.get("ports"))
+        return dict(host=h, endpoints=discover(h), ports=extra_ports(h))
     if action == "machine-attach":
         return attach(
             h,
@@ -1015,7 +1274,15 @@ def dispatch(action, p):
         # Remove only the dedicated public key, even if other authorized users share the account.
         public = key.with_suffix(".pub").read_text().strip()
         try:
-            _ssh_run(h, [shlex.join(["python3", "-c", REVOKE, public])], None, 30)
+            if windows(h):
+                _ssh_run(
+                    h,
+                    [remote_win.POWERSHELL],
+                    remote_win.feed(remote_win.revoke_script(public)),
+                    30,
+                )
+            else:
+                _ssh_run(h, [shlex.join(["python3", "-c", REVOKE, public])], None, 30)
         except Unreachable:
             raise _offline(h, "its key was not revoked") from None
         disconnect(h)

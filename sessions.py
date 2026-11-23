@@ -576,6 +576,8 @@ def terminal_row(t):
         started=t["started"],
         state="attached" if away else "running",
     )
+    if away and t.get("lasting") is False:
+        row["lasting"] = False
     return row | dict(host=t["host"], name=t["name"]) if away else row
 
 

@@ -217,6 +217,9 @@ release/README.md
 release/build.py
 release/public-files.txt
 remote_node.py
+remote_node_win.py
+remote_probe.ps1
+remote_win.py
 requirements.lock
 requirements.txt
 results/amd-vulkan-iq3.json
@@ -343,6 +346,7 @@ tests/test_setup_engines.py
 tests/test_starter_kits.py
 tests/test_studio.py
 tests/test_tooling.py
+tests/test_windows_machines.py
 tests/test_workbench.py
 tests/test_workspace.py
 tests/ui-format.test.cjs

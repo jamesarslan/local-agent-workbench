@@ -92,9 +92,20 @@ class Session:
     run = ""
 
     def __init__(
-        self, argv, env, project, title, harness=None, kind="embedded", host="", name=""
+        self,
+        argv,
+        env,
+        project,
+        title,
+        harness=None,
+        kind="embedded",
+        host="",
+        name="",
+        lasting=True,
     ):
         self.harness, self.kind, self.host, self.name = harness, kind, host, name
+        # A remote session without tmux (Windows) ends with its tab; nothing to reattach.
+        self.lasting = lasting
         self.project = str(Path(project).resolve())
         self.title = title
         self.output, self.offset, self.ended = "", 0, False
@@ -389,6 +400,7 @@ def active():
             host=s.host,
             name=s.name,
         )
+        | ({} if getattr(s, "lasting", True) else {"lasting": False})
         for k, s in items
         if isinstance(s, Session) and not s.ended
     ]
@@ -451,6 +463,7 @@ def dispatch(action, p):
                     harness=getattr(s, "harness", None) or "",
                     run=getattr(s, "run", "") or "",
                 )
+                | ({} if getattr(s, "lasting", True) else {"lasting": False})
                 for k, s in SESSIONS.items()
                 if s.project == project
             ]
@@ -491,21 +504,25 @@ def dispatch(action, p):
                     repr((project, host, folder, harness, mode)).encode()
                 ).hexdigest()[:16]
             )
-            tmux = shlex.join(
-                [
-                    "tmux",
-                    "-L",
-                    "agent-workbench",
-                    "new-session",
-                    "-A",
-                    "-s",
-                    name,
-                    remote,
-                ]
-            )
             agent = harness if mode != "shell" else None
+            lasting = not machines.windows(host)
+            if lasting:
+                remote = shlex.join(
+                    [
+                        "tmux",
+                        "-L",
+                        "agent-workbench",
+                        "new-session",
+                        "-A",
+                        "-s",
+                        name,
+                        remote,
+                    ]
+                )
             where = dict(kind="remote", host=host, name=name)
-            argv = machines.ssh(host) + ["-tt", host, tmux]
+            if not lasting:
+                where["lasting"] = False
+            argv = machines.ssh(host) + ["-tt", host, remote]
             title = f"{machines.labels()[host]} · {'Shell' if mode == 'shell' else harness} · {folder}"
         elif p.get("kind") == "shell":
             exe = (
@@ -546,7 +563,7 @@ def dispatch(action, p):
             SESSIONS[ident] = session = Session(argv, env, project, title, agent, **where)
         if action == "term-open" and agent:
             session.run = note_run(agent, p.get("kind"), facts)
-        if action == "term-remote":
+        if action == "term-remote" and where.get("lasting", True):
             # The terminal is open; a failed registry write must not lose its id.
             try:
                 sessions.remember_remote(
