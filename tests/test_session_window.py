@@ -87,11 +87,18 @@ class SessionWindowTests(unittest.TestCase):
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline and not (self.folder / "t2.ready").exists():
                 time.sleep(0.01)
-            try:
-                seen["ready"] = self.read("t2.ready")
-                seen["record"] = self.read("t2.json")
-            except (OSError, ValueError) as exc:
-                seen["problem"] = exc
+            # Windows briefly refuses to open a file another process is atomically replacing.
+            while True:
+                try:
+                    seen["ready"] = self.read("t2.ready")
+                    seen["record"] = self.read("t2.json")
+                    seen.pop("problem", None)
+                    return
+                except (OSError, ValueError) as exc:
+                    seen["problem"] = exc
+                    if time.monotonic() >= deadline:
+                        return
+                    time.sleep(0.02)
 
         watcher = threading.Thread(target=watch, daemon=True)
         watcher.start()
