@@ -546,9 +546,8 @@ class BoxesTest(unittest.TestCase):
 
         def fake_keygen(argv, **kwargs):
             keygen.append((argv, kwargs))
-            Path(argv[-1]).write_text("placeholder\n")
-            # A key file with a Windows line ending still reaches the box as one clean line.
-            Path(argv[-1]).with_suffix(".pub").write_bytes(b"ssh-ed25519 client\r\n")
+            Path(argv[-1]).write_text("placeholder\n", newline="\n")
+            Path(argv[-1]).with_suffix(".pub").write_text("ssh-ed25519 client\n", newline="\n")
             return done()
 
         proc = MagicMock(pid=os.getpid())

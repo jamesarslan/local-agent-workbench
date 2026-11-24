@@ -118,7 +118,6 @@ class PathsTest(unittest.TestCase):
         file.write_text("{}")
         self.assertIsNone(paths.try_key(missing))
         self.assertIsNone(paths.try_key(None))
-        # A key is case-folded on Windows, where file names ignore case.
         self.assertEqual(paths.try_key(file), paths.fold(str(file)))
         self.assertTrue(paths.same(self.tmp, self.tmp + os.sep))
         self.assertFalse(paths.same(self.tmp, missing))

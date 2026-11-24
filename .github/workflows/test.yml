@@ -39,8 +39,6 @@ jobs:
         with:
           node-version: "22"
       - run: npm ci --prefix desktop
-      # Newer npm releases skip dependency install scripts, so fetch Electron's binary explicitly.
-      - run: node desktop/node_modules/electron/install.js
       - name: Run the desktop unit tests
         shell: bash
         run: node --test tests/*.test.cjs
@@ -53,8 +51,10 @@ jobs:
       - name: Exercise sandboxed desktop on Linux
         if: runner.os == 'Linux'
         run: |
-          sudo chown root:root desktop/node_modules/electron/dist/chrome-sandbox
-          sudo chmod 4755 desktop/node_modules/electron/dist/chrome-sandbox
+          electron="$(node -p 'require("./desktop/node_modules/electron")')"
+          sandbox="$(dirname "$electron")/chrome-sandbox"
+          sudo chown root:root "$sandbox"
+          sudo chmod 4755 "$sandbox"
           WORKBENCH_TEST_CLIPBOARD=1 WORKBENCH_PYTHON="$(command -v python)" xvfb-run -a node tests/desktop-smoke.cjs
       - name: Exercise desktop on macOS
         if: runner.os == 'macOS'

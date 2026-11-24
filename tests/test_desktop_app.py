@@ -241,8 +241,7 @@ class SandboxTest(DesktopAppCase):
 
         nested = self.profiles / "local"
         nested.mkdir()
-        runtime = self.data / "desktop-runtime"
-        wanted = f"profile agent-workbench {runtime}/*/electron flags=(unconfined) {{}}\n"
+        wanted = f"profile agent-workbench {self.data / 'desktop-runtime'}/*/electron flags=(unconfined) {{}}\n"
         (nested / "agent-workbench").write_text(wanted)
         (self.profiles / "big").write_text(wanted + "#" * 65536)
         (self.profiles / "other").write_text("profile chrome /opt/chrome/chrome {}\n")
@@ -259,7 +258,7 @@ class SandboxTest(DesktopAppCase):
         )
         self.assertEqual(problem(self.engine), "")
         (self.profiles / "agent-workbench").write_text(
-            f"profile agent-workbench {runtime} flags=(unconfined) {{}}\n"
+            f"profile agent-workbench {self.data}/desktop-runtime flags=(unconfined) {{}}\n"
         )
         self.assertIn("sudo chown root:root", problem(self.engine))
         with patch.object(desktop_app, "APPARMOR", self.base / "missing"):

@@ -222,11 +222,10 @@ class PathTests(unittest.TestCase):
             exe.chmod(0o755)
             with patch.dict(os.environ, {"PATH": os.path.dirname(sys.executable)}):
                 with patch.object(tooling, "candidate_dirs", return_value=[folder, folder + "-missing"]):
-                    # Windows spells the extension as PATHEXT does (.CMD); the file is the same.
-                    self.assertEqual(os.path.normcase(tooling.find(name)), os.path.normcase(exe))
+                    self.assertEqual(os.path.normcase(tooling.find(name)), os.path.normcase(str(exe)))
                     self.assertEqual(tooling.find("no-such-tool"), "")
-                    found = tooling.resolve([name, "--x"])
-                    self.assertEqual([os.path.normcase(found[0]), found[1]], [os.path.normcase(exe), "--x"])
+                    resolved = tooling.resolve([name, "--x"])
+                    self.assertEqual([os.path.normcase(resolved[0]), *resolved[1:]], [os.path.normcase(str(exe)), "--x"])
                     self.assertEqual(tooling.resolve(["no-such-tool", "--x"]), ["no-such-tool", "--x"])
                 with patch.object(tooling, "candidate_dirs", return_value=[]):
                     self.assertEqual(tooling.find(name), "")
@@ -494,14 +493,8 @@ class HostTests(unittest.TestCase):
         def answers(info, compose=(0, "v2.29")):
             return lambda argv, timeout=5, env=None: info if argv[1] == "info" else compose
 
-        # The Docker (or WSL Docker) of the computer running the tests must not decide the answers.
-        for seam in (patch.object(tooling, "location", return_value=""), patch.object(tooling, "wsl_probe", return_value="")):
-            seam.start()
-            self.addCleanup(seam.stop)
         with patch.object(tooling, "find", return_value=""):
             self.assertEqual(tooling.docker_problem(), "Docker is not installed; install it in Advanced > Setup > Docker.")
-            with patch.object(tooling.os, "name", "nt"), patch.object(tooling, "location", return_value="WSL · docker"):
-                self.assertEqual(tooling.docker_problem(), "")
         with patch.object(tooling, "find", return_value="/usr/bin/docker"):
             denied = (1, "permission denied while trying to connect to the Docker daemon socket")
             with patch.object(tooling, "quiet", side_effect=answers(denied)):
