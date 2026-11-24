@@ -86,6 +86,15 @@ function Get-WorkbenchFolders {
     }
 }
 
+# The Start menu shortcut is shared by every install of this user. Only the install it points at, or none, may replace or remove it.
+function Test-WorkbenchShortcutOwner([string]$Shortcut, [string]$Bin) {
+    if (-not (Test-Path -LiteralPath $Shortcut)) { return $true }
+    try { $target = (New-Object -ComObject WScript.Shell).CreateShortcut($Shortcut).TargetPath }
+    catch { return $false }
+    if (-not $target) { return $true }
+    return [string]::Equals([System.IO.Path]::GetDirectoryName($target).TrimEnd('\'), $Bin.TrimEnd('\'), [System.StringComparison]::OrdinalIgnoreCase)
+}
+
 function Test-WorkbenchInstall([string]$Folder) {
     return (Test-Path -LiteralPath (Join-Path $Folder 'Run.cmd')) -and (Test-Path -LiteralPath (Join-Path $Folder 'desktop_app.py'))
 }
@@ -121,7 +130,7 @@ function Uninstall-AgentWorkbench {
     }
     if (-not $found) { Write-Host "No Agent Workbench install was found in $($f.Base). If it was installed with WORKBENCH_INSTALL_DIR set, set it to the same folder and run the uninstall again." }
     if ((Test-Path -LiteralPath $f.Bin) -and -not (Get-ChildItem -LiteralPath $f.Bin -Force)) { Remove-Item -LiteralPath $f.Bin -Force }
-    if ($f.Shortcut -and (Test-Path -LiteralPath $f.Shortcut)) { Remove-Item -LiteralPath $f.Shortcut -Force }
+    if ($f.Shortcut -and (Test-Path -LiteralPath $f.Shortcut) -and (Test-WorkbenchShortcutOwner $f.Shortcut $f.Bin)) { Remove-Item -LiteralPath $f.Shortcut -Force }
     try {
         $folders = @(Get-WorkbenchUserPath)
         if ($folders -contains $f.Bin) {
@@ -211,7 +220,10 @@ function Install-AgentWorkbench {
     Write-WorkbenchBatch (Join-Path $f.Bin 'workbench.cmd') $CommandLines
     Write-WorkbenchBatch (Join-Path $f.Bin 'Agent Workbench.cmd') $ShortcutLines
     $menu = ''
-    if ($f.Shortcut) {
+    if ($f.Shortcut -and -not (Test-WorkbenchShortcutOwner $f.Shortcut $f.Bin)) {
+        Write-Host 'The Start menu shortcut belongs to another Agent Workbench install and was left as it is.'
+    }
+    elseif ($f.Shortcut) {
         try {
             $link = (New-Object -ComObject WScript.Shell).CreateShortcut($f.Shortcut)
             $link.TargetPath = Join-Path $f.Bin 'Agent Workbench.cmd'
