@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Questions, setups and hardware reports (Discussions)
+    url: https://github.com/jamesarslan/local-agent-workbench/discussions
+    about: Ask a question, share a model/hardware setup, or discuss ideas before opening an issue.
   - name: Report a security problem privately
     url: https://github.com/jamesarslan/local-agent-workbench/security/advisories/new
     about: Use a private advisory for anything that could expose keys, files or a machine. Do not open a public issue.
