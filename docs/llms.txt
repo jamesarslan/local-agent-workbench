@@ -1,0 +1,38 @@
+# Agent Workbench
+
+> Free, MIT-licensed desktop app (Electron + Python) created by James Arslan. Pick where your model runs and which coding agent you use, remembered per project folder, with no account and no telemetry.
+
+Version 0.5.0. Runs on Linux x64, Windows x64 and macOS on Apple Silicon (preview).
+
+## What Agent Workbench does
+- Launches six coding-agent CLIs from one desktop app: OMP, Claude Code, Codex, opencode, Pi and Hermes. Each agent is offered only where the selected model source speaks the API that agent needs.
+- Connects to local, remote and hosted model sources: managed local llama.cpp (CUDA, Vulkan, Metal, CPU, SHA-256 pinned), Strata on NVIDIA, running Ollama, LM Studio, vLLM and llama.cpp servers, Linux or Windows GPU boxes over plain SSH, and hosted APIs (OpenAI, Anthropic, OpenRouter, Gemini, Groq, DeepSeek and more).
+- Keeps folder settings in plain, committable files (`.agent-workbench/profiles.json` and `project.json`, with no keys or machine paths), beside `AGENTS.md`, skills and MCP servers.
+- Ships eight MIT starter kits (General software, Web front end, Python and data, 3D scenes and assets, Research and writing, DevOps and infrastructure, Game development including Roblox Studio MCP, and Blank) with a review step before writing files.
+- Keeps API keys in the operating system credential vault, sends no telemetry, and verifies downloads against `SHA256SUMS`.
+
+## Install
+- Linux or macOS: `curl -fsSL https://github.com/jamesarslan/local-agent-workbench/releases/latest/download/install.sh | sh`
+- Windows (PowerShell): `irm https://github.com/jamesarslan/local-agent-workbench/releases/latest/download/install.ps1 | iex`
+
+## Guides & Documentation
+- [Landing page](https://jamesarslan.github.io/local-agent-workbench/): overview, install commands, screenshots, verification status and FAQ
+- [Getting started](https://jamesarslan.github.io/local-agent-workbench/getting-started.md): setup guide
+- [Model sources](https://jamesarslan.github.io/local-agent-workbench/model-sources.md): local models, running servers, SSH GPU machines and hosted APIs
+- [Project setup](https://jamesarslan.github.io/local-agent-workbench/project-setup.md): instructions, skills, MCP servers and starter kits
+- [Sessions and terminals](https://jamesarslan.github.io/local-agent-workbench/sessions.md): terminals, sessions, run summaries and Docker sandbox
+- [Security and your data](https://jamesarslan.github.io/local-agent-workbench/security-and-data.md): where data and keys live
+- [Reference](https://jamesarslan.github.io/local-agent-workbench/reference.md): commands, environment variables, engines and ports
+- [Troubleshooting](https://jamesarslan.github.io/local-agent-workbench/troubleshooting.md): Doctor checks and uninstalling
+
+## Repository & Verification
+- [GitHub repository](https://github.com/jamesarslan/local-agent-workbench)
+- [Releases & SHA256SUMS](https://github.com/jamesarslan/local-agent-workbench/releases)
+- [Security policy](https://github.com/jamesarslan/local-agent-workbench/blob/main/SECURITY.md)
+- [Measurements](https://github.com/jamesarslan/local-agent-workbench/blob/main/MEASUREMENTS.md)
+- [Changelog](https://github.com/jamesarslan/local-agent-workbench/blob/main/CHANGELOG.md)
+
+## Creator
+- Created by [James Arslan](https://jamesarslan.com/), Stockholm-based AI and full-stack software engineer, AI systems architect and CTO (Sweden and Europe).
+- Author project guide: https://jamesarslan.com/agent-workbench
+- Author LLM summary: https://jamesarslan.com/llms.txt

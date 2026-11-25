@@ -137,12 +137,15 @@ docs/images/settings-places.png
 docs/images/terminal-dark.png
 docs/images/terminal.png
 docs/index.html
+docs/llms.txt
 docs/model-sources.md
 docs/project-setup.md
 docs/reference.md
+docs/robots.txt
 docs/security-and-data.md
 docs/sessions.md
 docs/site.json
+docs/sitemap.xml
 docs/troubleshooting.md
 docs/verification.json
 doctor.py

@@ -299,7 +299,7 @@ VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "met
 class Page(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
-        self.tags, self.ids, self.css, self.text = [], [], "", []
+        self.tags, self.ids, self.css, self.text, self.json_ld = [], [], "", [], []
         self.headings, self.summaries, self.pre, self.eyebrow = [], [], [], ""
         self.labels, self.status, self.panels, self.descs = {}, [], {}, []
         self.stack, self.open = [], []
@@ -374,6 +374,11 @@ class Page(HTMLParser):
         names = [name for name, _ in self.stack]
         if names and names[-1] == "style":
             self.css += data
+            return
+        if names and names[-1] == "script":
+            attrs = self.stack[-1][1]
+            if attrs.get("type") == "application/ld+json":
+                self.json_ld.append(data)
             return
         for item in self.open:
             item[3].append(data)
@@ -765,20 +770,29 @@ class LandingPageTests(unittest.TestCase):
     def test_page_loads_nothing_from_elsewhere(self):
         p = page()
         for tag, attrs in p.tags:
-            self.assertNotIn(tag, ("script", "iframe", "object", "embed", "video", "audio", "form"), msg=f"docs/index.html contains a <{tag}>; the page must work without it and load nothing.")
+            if tag == "script":
+                self.assertEqual(attrs.get("type"), "application/ld+json", msg="docs/index.html: only non-executable application/ld+json script blocks are allowed.")
+                self.assertNotIn("src", attrs, msg="docs/index.html: JSON-LD script must not load an external src.")
+            else:
+                self.assertNotIn(tag, ("iframe", "object", "embed", "video", "audio", "form"), msg=f"docs/index.html contains a <{tag}>; the page must work without it and load nothing.")
             for name in attrs:
                 self.assertFalse(name.startswith("on"), msg=f"docs/index.html has an {name} attribute; the page has no script.")
                 self.assertNotEqual(name, "style", msg="docs/index.html has a style attribute; put the rule in the style element.")
             if tag == "link":
-                self.assertIn(attrs.get("rel"), ("canonical", "icon"), msg=f"docs/index.html has a link rel={attrs.get('rel')}; only canonical and icon are allowed.")
+                self.assertIn(attrs.get("rel"), ("canonical", "icon", "alternate"), msg=f"docs/index.html has a link rel={attrs.get('rel')}; only canonical, icon and alternate are allowed.")
                 if attrs.get("rel") == "icon":
                     self.assertTrue(attrs.get("href", "").startswith("data:"), msg="docs/index.html: the icon must be a data: address.")
+                if attrs.get("rel") == "alternate":
+                    self.assertEqual(attrs.get("href"), "llms.txt", msg="docs/index.html: alternate link must point to local llms.txt.")
             for name in ("src", "srcset", "poster", "data"):
                 value = attrs.get(name, "")
                 if value:
                     self.assertFalse(re.match(r"[a-z]+:|//|/", value), msg=f"docs/index.html loads {value}; load only files beside the page.")
             if tag == "meta" and attrs.get("http-equiv") == "Content-Security-Policy":
                 self.assertEqual(attrs.get("content"), CSP, msg="docs/index.html: the Content-Security-Policy must be exactly the one in docs-site.md 10.1.")
+        for raw_json in p.json_ld:
+            parsed = json.loads(raw_json)
+            self.assertIn("@context", parsed, msg="docs/index.html JSON-LD block needs @context.")
         self.assertTrue(any(tag == "meta" and attrs.get("http-equiv") == "Content-Security-Policy" for tag, attrs in p.tags), msg="docs/index.html needs its Content-Security-Policy meta element.")
         for pattern in ("@import", "@font-face", "url("):
             self.assertNotIn(pattern, p.css, msg=f"docs/index.html CSS contains {pattern}; the page loads no fonts or files from CSS.")
