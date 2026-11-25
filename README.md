@@ -173,6 +173,6 @@ Agent Workbench is MIT-licensed ([LICENSE](LICENSE)). The bundled xterm.js and i
 
 Upstream: [OMP](https://github.com/can1357/oh-my-pi), [Pi](https://github.com/earendil-works/pi), [Strata](https://github.com/Niko1221/Strata), [llama.cpp](https://github.com/ggml-org/llama.cpp), [vLLM](https://github.com/vllm-project/vllm), [Firecrawl](https://github.com/firecrawl/firecrawl), [DDGS](https://github.com/deedy5/ddgs), [Windows-MCP](https://github.com/CursorTouch/Windows-MCP).
 
-Created by James Arslan.
+Created by [James Arslan](https://jamesarslan.com/) ([project guide](https://jamesarslan.com/agent-workbench)).
 
 Product names belong to their owners. Agent Workbench is not affiliated with or endorsed by them.
